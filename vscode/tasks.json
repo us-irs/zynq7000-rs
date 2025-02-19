@@ -1,0 +1,163 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "env": {
+      // Pass environment variables to the zynq7000-init.py script.
+      "AMD_TOOLS": "/tools/Xilinx/Vitis/2024.1",
+      "TCL_INIT_SCRIPT": "${workspaceFolder}/zedboard-fpga-design/sdt_out/ps7_init.tcl",
+      // Leading _, otherwise the Python script will always flash it.
+      "_ZYNQ_BITSTREAM": "${workspaceFolder}/zedboard-fpga-design/sdt_out/zedboard-rust.bit"
+    }
+  },
+  "tasks": [
+    {
+      "label": "zedboard-init",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/zynq7000-init.py",
+      "args": [
+        "--bit",
+        "${BITSTREAM}"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "flash-blinky",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/zynq7000-init.py",
+      "args": [
+        "-a",
+        "${workspaceFolder}/target/armv7a-none-eabihf/debug/simple"
+      ],
+      "dependsOn": [
+        "build-blinky"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "build-blinky",
+      "type": "shell",
+      "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+      "args": [
+        "build",
+        "-p",
+        "simple"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "flash-logger",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/zynq7000-init.py",
+      "args": [
+        "-a",
+        "${workspaceFolder}/target/armv7a-none-eabihf/debug/logger"
+      ],
+      "dependsOn": [
+        "build-logger"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "build-logger",
+      "type": "shell",
+      "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+      "args": [
+        "build",
+        "--bin",
+        "logger"
+      ],
+      "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "flash-embassy",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/zynq7000-init.py",
+      "args": [
+        "-a",
+        "${workspaceFolder}/target/armv7a-none-eabihf/debug/embassy-examples"
+      ],
+      "dependsOn": [
+        "build-embassy"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "build-embassy",
+      "type": "shell",
+      "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+      "args": [
+        "build",
+        "-p",
+        "embassy-examples"
+      ],
+      "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "flash-zed-gpios",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/zynq7000-init.py",
+      "args": [
+        "-a",
+        "${workspaceFolder}/target/armv7a-none-eabihf/debug/zedboard",
+        // The bitstream does not necesarilly need to be flashed each time, but doing so here requires one
+        // less extra step to prepare the system.
+        "--bit",
+        "${_ZYNQ_BITSTREAM}"
+      ],
+      "dependsOn": [
+        "build-zed-gpios"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "build-zed-gpios",
+      "type": "shell",
+      "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+      "args": [
+        "build",
+        "--bin",
+        "zedboard"
+      ],
+      "group": {
+        "kind": "build"
+      }
+    },
+    {
+      "label": "flash-uart-non-blocking",
+      "type": "shell",
+      "command": "${workspaceFolder}/scripts/zynq7000-init.py",
+      "args": [
+        "-a",
+        "${workspaceFolder}/target/armv7a-none-eabihf/debug/uart-non-blocking",
+        // The bitstream does not necesarilly need to be flashed each time, but doing so here requires one
+        // less extra step to prepare the system.
+        "--bit",
+        "${_ZYNQ_BITSTREAM}"
+      ],
+      "dependsOn": [
+        "build-uart-non-blocking"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "build-uart-non-blocking",
+      "type": "shell",
+      "command": "~/.cargo/bin/cargo", // note: full path to the cargo
+      "args": [
+        "build",
+        "--bin",
+        "uart-non-blocking"
+      ],
+      "group": {
+        "kind": "build"
+      }
+    }
+  ]
+}

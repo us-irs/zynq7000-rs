@@ -1,0 +1,9 @@
+[package]
+name = "experiments"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+static_assertions = "1.1"
+derive-mmio = { path = "../../derive-mmio", default-features = false }
+zynq7000 = { path = "../zynq7000", default-features = false }

@@ -1,0 +1,5 @@
+/zedboard-rust
+/.Xil
+/vivado*
+/sdt_out
+/xsct-output.log

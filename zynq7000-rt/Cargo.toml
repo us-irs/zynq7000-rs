@@ -1,0 +1,26 @@
+[package]
+name = "zynq7000-rt"
+version = "0.1.0"
+authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
+edition = "2024"
+description = "Run-time support for the Zynq7000 family of SoCs for running bare-metal applications"
+homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+license = "MIT OR Apache-2.0"
+keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
+categories = ["embedded", "no-std", "hardware-support"]
+
+[dependencies]
+cortex-a-rt = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", optional = true, features = ["vfp-dp"] }
+cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", features = ["critical-section-single-core"] }
+
+[features]
+default = ["rt"]
+tools = []
+rt = ["dep:cortex-a-rt"]
+
+[[bin]]
+name = "table-gen"
+path = "src/bin/table-gen.rs"
+# Prevents default build
+required-features = ["tools"]

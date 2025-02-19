@@ -1,0 +1,12 @@
+[workspace]
+resolver = "3"
+members = [
+  "zynq7000-rt",
+  "zynq7000",
+  "zynq7000-hal",
+  "zynq7000-embassy",
+  "examples/simple",
+  "examples/embassy",
+  "examples/zedboard",
+]
+exclude = ["experiments"]

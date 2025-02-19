@@ -1,0 +1,155 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Blinky Example",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/armv7a-none-eabihf/debug/simple",
+      "miDebuggerServerAddress": "localhost:3000",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "stopAtEntry": true,
+      "useExtendedRemote": true,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Load symbols for the program",
+          "text": "symbol-file ${workspaceFolder}/target/armv7a-none-eabihf/debug/simple",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set output-radix 16"
+        }
+      ],
+      "preLaunchTask": "flash-blinky"
+    },
+    {
+      "name": "Debug Logger Example",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/armv7a-none-eabihf/debug/logger",
+      "miDebuggerServerAddress": "localhost:3000",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "stopAtEntry": true,
+      "useExtendedRemote": true,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Load symbols for the program",
+          "text": "symbol-file ${workspaceFolder}/target/armv7a-none-eabihf/debug/logger",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set output-radix 16"
+        }
+      ],
+      "preLaunchTask": "flash-logger"
+    },
+    {
+      "name": "Debug Embassy Example",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/armv7a-none-eabihf/debug/embassy-examples",
+      "miDebuggerServerAddress": "localhost:3000",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "stopAtEntry": true,
+      "useExtendedRemote": true,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Load symbols for the program",
+          "text": "symbol-file ${workspaceFolder}/target/armv7a-none-eabihf/debug/embassy-examples",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set output-radix 16"
+        }
+      ],
+      "preLaunchTask": "flash-embassy"
+    },
+    {
+      "name": "Debug Zedboard GPIOs",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/armv7a-none-eabihf/debug/zedboard",
+      "miDebuggerServerAddress": "localhost:3000",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "stopAtEntry": true,
+      "useExtendedRemote": true,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Load symbols for the program",
+          "text": "symbol-file ${workspaceFolder}/target/armv7a-none-eabihf/debug/zedboard",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set output-radix 16"
+        }
+      ],
+      "preLaunchTask": "flash-zed-gpios"
+    },
+    {
+      "name": "Debug UART Non-Blocking",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/armv7a-none-eabihf/debug/uart-non-blocking",
+      "miDebuggerServerAddress": "localhost:3000",
+      "miDebuggerPath": "/usr/bin/gdb-multiarch",
+      "stopAtEntry": true,
+      "useExtendedRemote": true,
+      "cwd": "${workspaceFolder}",
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "launchCompleteCommand": "None",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Load symbols for the program",
+          "text": "symbol-file ${workspaceFolder}/target/armv7a-none-eabihf/debug/uart-non-blocking",
+          "ignoreFailures": false
+        },
+        {
+          "text": "set output-radix 16"
+        }
+      ],
+      "preLaunchTask": "flash-uart-non-blocking"
+    }
+  ]
+}

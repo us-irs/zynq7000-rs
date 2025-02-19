@@ -1,0 +1,24 @@
+[package]
+name = "blinky"
+version = "0.1.0"
+authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
+edition = "2024"
+description = "Simple examples for the Zynq7000 SoC"
+homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+cortex-ar = { git = "https://github.com/us-irs/cortex-ar.git", branch = "cortex-a-addition", features = ["critical-section-single-core"] }
+zynq7000-rt = { path = "../../zynq7000-rt" }
+zynq7000 = { path = "../../zynq7000" }
+zynq7000-hal = { path = "../../zynq7000-hal" }
+embedded-io = "0.6"
+embedded-hal = "1"
+fugit = "0.3"
+log = "0.4"
+
+[profile.release]
+codegen-units = 1
+debug = true
+lto = true

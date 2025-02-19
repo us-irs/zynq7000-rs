@@ -1,0 +1,33 @@
+[target.armv7a-none-eabihf]
+runner = "./scripts/runner.sh"
+
+rustflags = [
+  "-Ctarget-cpu=cortex-a9",
+  "-Ctarget-feature=+vfp3",
+  "-Ctarget-feature=+neon",
+  "-Clink-arg=-Tlink.x",
+  # If this is not enabled, debugging / stepping can become problematic.
+  "-Cforce-frame-pointers=yes",
+  # Can be useful for debugging.
+  # "-Clink-args=-Map=app.map"
+]
+
+# Tier 3 target, so no pre-compiled artifacts included.
+[unstable]
+build-std = ["core", "alloc"]
+
+[build]
+target = "armv7a-none-eabihf"
+
+[env]
+# The following two env variables need to be set for the supplied runner.sh script to work.
+
+# Absolute path to the Vitis install directory.
+# AMD_TOOLS = "/tools/Xilinx/Vitis/2024.1"
+# Absolute path to the PS7 initialization TCL script.
+# TCL_INIT_SCRIPT = "/home/$user/$project/$sdt_dir/ps7_init.tcl"
+
+# Absolute path to the Zynq bitstream file, which will be flashed to the target before
+# running the application. You only need to do this once for unchanged bitstream as long as you
+# do not reset the whole board.
+# ZYNQ_BITSTREAM = "/home/$user/$project/$sdt_dir/bitstream.bit"
