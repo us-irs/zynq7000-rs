@@ -28,14 +28,15 @@ embedded-hal-async = "1"
 fugit = "0.3"
 log = "0.4"
 
-embassy-executor = { path = "/home/rmueller/Rust/embassy/embassy-executor", features = [
+embassy-executor = { git = "https://github.com/us-irs/embassy", branch = "add-cortex-ar-support", features = [
   "arch-cortex-ar",
-  "executor-thread"
+  "executor-thread",
+  "task-arena-size-65536"
 ]}
-embassy-time = { path = "/home/rmueller/Rust/embassy/embassy-time", version = "0.4" }
+embassy-time = { git = "https://github.com/us-irs/embassy", branch = "add-cortex-ar-support", version = "0.4", features = ["tick-hz-1_000_000"] }
 heapless = "0.8"
-axi-uartlite = { path = "/home/rmueller/Rust/axi-uartlite-rs" }
-axi-uart16550 = { path = "/home/rmueller/Rust/axi-uart16550-rs" }
+axi-uartlite = { git = "https://egit.irs.uni-stuttgart.de/rust/axi-uartlite.git" }
+axi-uart16550 = { git = "https://egit.irs.uni-stuttgart.de/rust/axi-uart16550.git" }
 
 [profile.release]
 codegen-units = 1

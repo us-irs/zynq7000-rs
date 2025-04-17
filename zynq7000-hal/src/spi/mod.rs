@@ -83,34 +83,6 @@ pub trait SsPin: MioPinMarker {
 
 pub const SPI_MUX_CONF: MuxConf = MuxConf::new_with_l3(u3::new(0b101));
 
-/*
-macro_rules! impl_into_spi {
-    (($($Mio:ident),+)) => {
-        $(
-            impl From<Pin<$Mio>> for IoPeriphPin {
-                /// Convert the pin into SPI pins by configuring the pin routing via the
-                /// MIO multiplexer bits. Also disables pull-ups for the pins.
-                fn from(pin: Pin<$Mio>) -> Self {
-                    IoPeriphPin::new(pin, SPI_MUX_CONF, Some(false))
-                }
-
-            }
-        )+
-    };
-}
-
-#[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl_into_spi!((
-    Mio16, Mio21, Mio17, Mio18, Mio19, Mio20, Mio40, Mio45, Mio41, Mio42, Mio43, Mio44, Mio24,
-    Mio22, Mio23, Mio25, Mio26, Mio27, Mio48, Mio46, Mio47, Mio49, Mio50, Mio51
-));
-
-impl_into_spi!((
-    Mio28, Mio33, Mio29, Mio30, Mio31, Mio32, Mio12, Mio10, Mio11, Mio13, Mio14, Mio15, Mio36,
-    Mio34, Mio35, Mio37, Mio38, Mio39
-));
-*/
-
 // SPI0, choice 1
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 impl SckPin for Pin<Mio16> {

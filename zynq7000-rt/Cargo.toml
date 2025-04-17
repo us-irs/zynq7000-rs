@@ -12,7 +12,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 cortex-a-rt = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", optional = true, features = ["vfp-dp"] }
-cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", features = ["critical-section-single-core"] }
+cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main" }
 
 [features]
 default = ["rt"]

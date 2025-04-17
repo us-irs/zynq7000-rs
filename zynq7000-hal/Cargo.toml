@@ -11,7 +11,7 @@ keywords = ["no-std", "hal", "amd", "zynq7000", "xilinx", "bare-metal"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", features = ["critical-section-single-core"] }
+cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main" }
 zynq7000 = { path = "../zynq7000" }
 
 arbitrary-int = "1.3"

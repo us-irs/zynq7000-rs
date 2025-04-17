@@ -11,13 +11,12 @@ keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-cortex-ar = { path = "/home/rmueller/Rust/cortex-ar/cortex-ar", features = ["critical-section-single-core"] }
+cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal" }
 zynq7000-embassy = { path = "../../zynq7000-embassy" }
-# dht-sensor = { git = "https://github.com/robamu/dht-sensor.git", branch = "bump-embedded-hal-deps-update-async", features = ["async"] }
-dht-sensor = { path = "../../../../Rust/dht-sensor", features = ["async"] }
+dht-sensor = { git = "https://github.com/robamu/dht-sensor.git", branch = "bump-embedded-hal-deps-update-async", features = ["async"] }
 static_cell = "2"
 critical-section = "1"
 heapless = "0.8"
@@ -26,12 +25,12 @@ embedded-hal = "1"
 fugit = "0.3"
 log = "0.4"
 
-embassy-executor = { path = "/home/rmueller/Rust/embassy/embassy-executor", features = [
+embassy-executor = { git = "https://github.com/us-irs/embassy", branch = "add-cortex-ar-support", features = [
   "arch-cortex-ar",
   "executor-thread",
   "task-arena-size-65536"
 ]}
-embassy-time = { path = "/home/rmueller/Rust/embassy/embassy-time", version = "0.4", features = ["tick-hz-1_000_000"] }
+embassy-time = { git = "https://github.com/us-irs/embassy", branch = "add-cortex-ar-support", version = "0.4", features = ["tick-hz-1_000_000"] }
 
 [profile.release]
 codegen-units = 1

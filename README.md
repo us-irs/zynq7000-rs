@@ -6,7 +6,7 @@ family of SoCs.
 
 # List of crates
 
-This workspace contains the following released crates:
+This workspace contains the following crates:
 
 - The [`zynq7000-rt`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000-rt)
   run-time crate containing basic low-level startup code necessary to boot a Rust app on the
