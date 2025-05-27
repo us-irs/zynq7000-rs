@@ -384,12 +384,51 @@ pub struct IoPeriphPin {
 }
 
 impl IoPeriphPin {
+    /// Constructor for IO peripheral pins where only the multiplexer and pullup configuration
+    /// need to be changed.
     pub fn new(pin: impl MioPinMarker, mux_conf: MuxConf, pullup: Option<bool>) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
         low_level.configure_as_io_periph_pin(mux_conf, pullup);
         Self {
             pin: low_level,
             mux_conf,
+        }
+    }
+
+    /// Constructor to fully configure an IO peripheral pin with a specific MIO pin configuration.
+    pub fn new_with_full_config(
+        pin: impl MioPinMarker,
+        config: zynq7000::slcr::mio::Config,
+    ) -> Self {
+        let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
+        low_level.set_mio_pin_config(config);
+        Self {
+            pin: low_level,
+            mux_conf: MuxConf::new(
+                config.l0_sel(),
+                config.l1_sel(),
+                config.l2_sel(),
+                config.l3_sel(),
+            ),
+        }
+    }
+
+    /// Constructor to fully configure an IO peripheral pin with a specific MIO pin configuration.
+    pub fn new_with_full_config_and_unlocked_slcr(
+        pin: impl MioPinMarker,
+        slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
+        config: zynq7000::slcr::mio::Config,
+    ) -> Self {
+        let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
+        low_level.set_mio_pin_config_with_unlocked_slcr(slcr, config);
+        Self {
+            pin: low_level,
+            mux_conf: MuxConf::new(
+                config.l0_sel(),
+                config.l1_sel(),
+                config.l2_sel(),
+                config.l3_sel(),
+            ),
         }
     }
 }

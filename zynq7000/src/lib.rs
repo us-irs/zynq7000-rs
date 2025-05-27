@@ -17,10 +17,12 @@ extern crate std;
 
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
+pub mod eth;
 pub mod gic;
 pub mod gpio;
 pub mod gtc;
 pub mod i2c;
+pub mod l2_cache;
 pub mod mpcore;
 pub mod slcr;
 pub mod spi;
@@ -48,6 +50,8 @@ pub struct PsPeripherals {
     pub slcr: slcr::MmioSlcr<'static>,
     pub ttc_0: ttc::MmioTtc<'static>,
     pub ttc_1: ttc::MmioTtc<'static>,
+    pub eth_0: eth::MmioEthernet<'static>,
+    pub eth_1: eth::MmioEthernet<'static>,
 }
 
 impl PsPeripherals {
@@ -81,6 +85,8 @@ impl PsPeripherals {
                 i2c_1: i2c::I2c::new_mmio_fixed_1(),
                 ttc_0: ttc::Ttc::new_mmio_fixed_0(),
                 ttc_1: ttc::Ttc::new_mmio_fixed_1(),
+                eth_0: eth::Ethernet::new_mmio_fixed_0(),
+                eth_1: eth::Ethernet::new_mmio_fixed_1(),
             }
         }
     }

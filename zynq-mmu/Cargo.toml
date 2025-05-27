@@ -1,0 +1,12 @@
+[package]
+name = "zynq-mmu"
+description = "Zynq MMU structures"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = { version = "2", default-features = false }
+cortex-ar = { version = "0.2", git = "https://github.com/rust-embedded/cortex-ar.git", rev = "79dba7000d2090d13823bfb783d9d64be8b778d2" }
+
+[features]
+tools = []

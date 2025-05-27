@@ -8,5 +8,16 @@ members = [
   "examples/simple",
   "examples/embassy",
   "examples/zedboard",
+  "zynq-mmu",
 ]
 exclude = ["experiments"]
+
+# cargo build/run --release
+[profile.release]
+codegen-units = 1
+debug = 2
+debug-assertions = false # <-
+incremental = false
+lto = true
+opt-level = 3            # <-
+overflow-checks = false  # <-

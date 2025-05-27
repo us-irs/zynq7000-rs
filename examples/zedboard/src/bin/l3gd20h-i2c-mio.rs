@@ -131,7 +131,7 @@ async fn main(_spawner: Spawner) -> ! {
         Output::new_for_emio(gpio_pins.emio.take(7).unwrap(), PinState::Low),
     ];
     for (idx, led) in emio_leds.iter_mut().enumerate() {
-        if idx % 2 == 0 {
+        if idx.is_multiple_of(2) {
             led.set_high();
         } else {
             led.set_low();

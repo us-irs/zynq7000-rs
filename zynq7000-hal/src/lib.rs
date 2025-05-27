@@ -12,7 +12,9 @@
 use slcr::Slcr;
 use zynq7000::slcr::LevelShifterReg;
 
+pub mod cache;
 pub mod clocks;
+pub mod eth;
 pub mod gic;
 pub mod gpio;
 pub mod gtc;
