@@ -31,6 +31,10 @@ impl MuxConf {
         Self { l3, l2, l1, l0 }
     }
 
+    pub const fn new_with_l0() -> Self {
+        Self::new(true, false, u2::new(0b00), u3::new(0b000))
+    }
+
     pub const fn new_with_l3(l3: u3) -> Self {
         Self::new(false, false, u2::new(0b00), l3)
     }

@@ -35,6 +35,23 @@ pub struct GpioClockReset {
     gpio_cpu1x_rst: bool,
 }
 
+#[bitbybit::bitfield(u32, default = 0x0)]
+#[derive(Debug)]
+pub struct EthernetReset {
+    #[bit(5, rw)]
+    gem1_ref_rst: bool,
+    #[bit(4, rw)]
+    gem0_ref_rst: bool,
+    #[bit(3, rw)]
+    gem1_rx_rst: bool,
+    #[bit(2, rw)]
+    gem0_rx_rst: bool,
+    #[bit(1, rw)]
+    gem1_cpu1x_rst: bool,
+    #[bit(0, rw)]
+    gem0_cpu1x_rst: bool,
+}
+
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct ResetControl {
@@ -45,7 +62,7 @@ pub struct ResetControl {
     topsw: u32,
     dmac: u32,
     usb: u32,
-    gem: u32,
+    eth: EthernetReset,
     sdio: DualRefAndClockReset,
     spi: DualRefAndClockReset,
     can: DualClockReset,

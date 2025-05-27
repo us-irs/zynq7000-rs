@@ -15,10 +15,12 @@ extern crate std;
 
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
+pub mod eth;
 pub mod gic;
 pub mod gpio;
 pub mod gtc;
 pub mod i2c;
+pub mod l2_cache;
 pub mod mpcore;
 pub mod slcr;
 pub mod spi;

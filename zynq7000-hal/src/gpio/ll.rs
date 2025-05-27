@@ -4,7 +4,7 @@ use zynq7000::gpio::{Gpio, MaskedOutput, MmioGpio};
 
 use crate::slcr::Slcr;
 
-use super::{mio::MuxConf, PinIsOutputOnly};
+use super::{PinIsOutputOnly, mio::MuxConf};
 
 #[derive(Debug, Clone, Copy)]
 pub enum PinOffset {
@@ -146,6 +146,23 @@ impl LowLevelGpio {
     /// Convert the pin into an IO peripheral pin.
     pub fn configure_as_io_periph_pin(&mut self, mux_conf: MuxConf, pullup: Option<bool>) {
         self.reconfigure_slcr_mio_cfg(false, pullup, Some(mux_conf));
+    }
+
+    pub fn set_mio_pin_config(&mut self, config: zynq7000::slcr::mio::Config) {
+        let raw_offset = self.offset.offset();
+        // Safety: We only modify the MIO config of the pin.
+        let mut slcr_wrapper = unsafe { Slcr::steal() };
+        slcr_wrapper.modify(|mut_slcr| mut_slcr.write_mio_pins(raw_offset, config).unwrap());
+    }
+
+    /// Set the MIO pin configuration with an unlocked SLCR.
+    pub fn set_mio_pin_config_with_unlocked_slcr(
+        &mut self,
+        slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
+        config: zynq7000::slcr::mio::Config,
+    ) {
+        let raw_offset = self.offset.offset();
+        slcr.write_mio_pins(raw_offset, config).unwrap();
     }
 
     #[inline]

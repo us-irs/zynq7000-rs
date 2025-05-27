@@ -10,13 +10,13 @@ use embedded_hal::{delay::DelayNs, digital::StatefulOutputPin};
 use embedded_io::Write;
 use log::{error, info, warn};
 use zynq7000_hal::{
+    BootMode,
     clocks::Clocks,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
-    gpio::{mio, Flex, Output, PinState},
+    gpio::{Flex, Output, PinState, mio},
     gtc::Gtc,
     time::Hertz,
     uart::{ClkConfigRaw, Uart, UartConfig},
-    BootMode,
 };
 
 use zynq7000::PsPeripherals;

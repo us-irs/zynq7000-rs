@@ -7,6 +7,6 @@ members = [
   "zynq7000-embassy",
   "examples/simple",
   "examples/embassy",
-  "examples/zedboard",
+  "examples/zedboard", "zynq-mmu",
 ]
 exclude = ["experiments"]
