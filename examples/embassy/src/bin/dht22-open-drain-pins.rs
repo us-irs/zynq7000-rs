@@ -141,7 +141,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
     loop {
         if DHT22_AT_MIO0 {
-            let result = dht_sensor::dht22::asynch::read(&mut delay, &mut one_wire_pin).await;
+            let result = dht_sensor::dht22::r#async::read(&mut delay, &mut one_wire_pin).await;
             match result {
                 Ok(reading) => {
                     info!("Temperature: {} C", reading.temperature);

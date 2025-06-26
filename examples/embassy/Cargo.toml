@@ -16,7 +16,7 @@ zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal" }
 zynq7000-embassy = { path = "../../zynq7000-embassy" }
-dht-sensor = { git = "https://github.com/robamu/dht-sensor.git", branch = "bump-embedded-hal-deps-update-async", features = ["async"] }
+dht-sensor = { git = "https://github.com/michaelbeaumont/dht-sensor.git", rev = "10319bdeae9ace3bb0fc79a15da2869c5bf50f52", features = ["async"] }
 static_cell = "2"
 critical-section = "1"
 heapless = "0.8"
@@ -25,12 +25,11 @@ embedded-hal = "1"
 fugit = "0.3"
 log = "0.4"
 
-embassy-executor = { git = "https://github.com/us-irs/embassy", branch = "add-cortex-ar-support", features = [
+embassy-executor = { git = "https://github.com/embassy-rs/embassy.git", branch = "main", features = [
   "arch-cortex-ar",
   "executor-thread",
-  "task-arena-size-65536"
 ]}
-embassy-time = { git = "https://github.com/us-irs/embassy", branch = "add-cortex-ar-support", version = "0.4", features = ["tick-hz-1_000_000"] }
+embassy-time = { git = "https://github.com/embassy-rs/embassy.git", branch = "main", version = "0.4", features = ["tick-hz-1_000_000"] }
 
 [profile.release]
 codegen-units = 1
