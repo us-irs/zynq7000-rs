@@ -11,8 +11,8 @@ keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-cortex-a-rt = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main", optional = true, features = ["vfp-dp"] }
-cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main" }
+cortex-a-rt = { version = "0.1", optional = true, features = ["vfp-dp"] }
+cortex-ar = "0.2"
 
 [features]
 default = ["rt"]

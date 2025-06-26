@@ -148,6 +148,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }

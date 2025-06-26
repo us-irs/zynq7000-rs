@@ -172,7 +172,8 @@ impl Flex {
 
     pub fn configure_as_output_open_drain(&mut self, level: PinState, with_internal_pullup: bool) {
         self.mode = PinMode::OutputOpenDrain;
-        self.ll.configure_as_output_open_drain(level, with_internal_pullup);
+        self.ll
+            .configure_as_output_open_drain(level, with_internal_pullup);
     }
 
     /// If the pin is configured as an input pin, this function does nothing.

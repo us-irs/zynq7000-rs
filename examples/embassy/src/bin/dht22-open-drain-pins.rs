@@ -10,13 +10,13 @@ use embedded_hal::{delay::DelayNs, digital::StatefulOutputPin};
 use embedded_io::Write;
 use log::{error, info, warn};
 use zynq7000_hal::{
+    BootMode,
     clocks::Clocks,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
-    gpio::{mio, Flex, Output, PinState},
+    gpio::{Flex, Output, PinState, mio},
     gtc::Gtc,
     time::Hertz,
     uart::{ClkConfigRaw, Uart, UartConfig},
-    BootMode,
 };
 
 use zynq7000::PsPeripherals;
@@ -148,7 +148,7 @@ async fn main(_spawner: Spawner) -> ! {
                     info!("Humidity: {} %", reading.relative_humidity);
                 }
                 Err(err) => {
-                    warn!("Reading error: {:?}", err);
+                    warn!("Reading error: {err:?}");
                 }
             }
         }
@@ -202,6 +202,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }

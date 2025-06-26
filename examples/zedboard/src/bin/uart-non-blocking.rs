@@ -309,7 +309,7 @@ async fn main(spawner: Spawner) -> ! {
             read_buf[i] = unsafe { uart_0_cons.dequeue_unchecked() };
         });
         if read_bytes > 0 {
-            info!("Received {} bytes on UART0", read_bytes);
+            info!("Received {read_bytes} bytes on UART0");
             info!(
                 "Data: {:?}",
                 core::str::from_utf8(&read_buf[0..read_bytes]).unwrap()
@@ -321,7 +321,7 @@ async fn main(spawner: Spawner) -> ! {
             read_buf[i] = unsafe { uartlite_cons.dequeue_unchecked() };
         });
         if read_bytes > 0 {
-            info!("Received {} bytes on UARTLITE", read_bytes);
+            info!("Received {read_bytes} bytes on UARTLITE");
             info!(
                 "Data: {:?}",
                 core::str::from_utf8(&read_buf[0..read_bytes]).unwrap()
@@ -333,7 +333,7 @@ async fn main(spawner: Spawner) -> ! {
             read_buf[i] = unsafe { uart16550_cons.dequeue_unchecked() };
         });
         if read_bytes > 0 {
-            info!("Received {} bytes on UART16550", read_bytes);
+            info!("Received {read_bytes} bytes on UART16550");
             info!(
                 "Data: {:?}",
                 core::str::from_utf8(&read_buf[0..read_bytes]).unwrap()
@@ -344,7 +344,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 fn build_print_string(prefix: &str, base_str: &str) -> alloc::string::String {
-    format!("{} {}\n\r", prefix, base_str)
+    format!("{prefix} {base_str}\n\r")
 }
 
 #[embassy_executor::task]
@@ -490,7 +490,7 @@ pub fn on_interrupt_axi_16550() {
         match int_id {
             axi_uart16550::registers::IntId2::ReceiverLineStatus => {
                 let errors = rx.on_interrupt_receiver_line_status(iir);
-                warn!("Receiver line status error: {:?}", errors);
+                warn!("Receiver line status error: {errors:?}");
             }
             axi_uart16550::registers::IntId2::RxDataAvailable
             | axi_uart16550::registers::IntId2::CharTimeout => {
@@ -565,6 +565,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }

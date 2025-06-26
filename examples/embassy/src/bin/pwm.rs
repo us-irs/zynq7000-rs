@@ -98,7 +98,7 @@ async fn main(_spawner: Spawner) -> ! {
         led.toggle().unwrap();
 
         pwm.set_duty_cycle_percent(current_duty).unwrap();
-        info!("Setting duty cycle to {}%", current_duty);
+        info!("Setting duty cycle to {current_duty}%");
         current_duty += 5;
         if current_duty > 100 {
             current_duty = 0;
@@ -152,6 +152,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }

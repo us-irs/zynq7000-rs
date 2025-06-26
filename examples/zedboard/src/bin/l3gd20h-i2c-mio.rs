@@ -144,7 +144,7 @@ async fn main(_spawner: Spawner) -> ! {
         mio_led.toggle().unwrap();
 
         let measurements = l3gd20.all().unwrap();
-        info!("L3GD20: {:?}", measurements);
+        info!("L3GD20: {measurements:?}");
         info!("L3GD20 Temp: {:?}", measurements.temp_celcius());
         for led in emio_leds.iter_mut() {
             led.toggle().unwrap();
@@ -198,6 +198,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }

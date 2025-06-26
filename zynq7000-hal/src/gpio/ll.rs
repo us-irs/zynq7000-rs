@@ -4,7 +4,7 @@ use zynq7000::gpio::{Gpio, MaskedOutput, MmioGpio};
 
 use crate::slcr::Slcr;
 
-use super::{mio::MuxConf, PinIsOutputOnly};
+use super::{PinIsOutputOnly, mio::MuxConf};
 
 #[derive(Debug, Clone, Copy)]
 pub enum PinOffset {

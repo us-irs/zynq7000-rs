@@ -77,13 +77,13 @@ pub fn main() -> ! {
     };
 
     let boot_mode = BootMode::new();
-    info!("Boot mode: {:?}", boot_mode);
+    info!("Boot mode: {boot_mode:?}");
 
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
     loop {
         let gtc = gtc.read_timer();
         info!("Hello, world!");
-        info!("GTC ticks: {}", gtc);
+        info!("GTC ticks: {gtc}");
         led.toggle().unwrap();
         for _ in 0..5_000_000 {
             nop();
@@ -134,6 +134,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }

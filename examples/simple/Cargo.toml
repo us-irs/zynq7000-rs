@@ -9,7 +9,7 @@ repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-cortex-ar = { git = "https://github.com/rust-embedded/cortex-ar", branch = "main" }
+cortex-ar = "0.2"
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal" }

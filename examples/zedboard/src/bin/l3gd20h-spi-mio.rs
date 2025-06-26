@@ -185,7 +185,7 @@ pub async fn blocking_application(
     let spi_dev = SpiWithHwCs::new(spi, spi::ChipSelect::Slave0, delay.clone());
     let mut l3gd20 = l3gd20::spi::L3gd20::new(spi_dev).unwrap();
     let who_am_i = l3gd20.who_am_i().unwrap();
-    info!("L3GD20 WHO_AM_I: 0x{:02X}", who_am_i);
+    info!("L3GD20 WHO_AM_I: 0x{who_am_i:02X}");
 
     let mut ticker = Ticker::every(Duration::from_millis(400));
 
@@ -195,7 +195,7 @@ pub async fn blocking_application(
         mio_led.toggle().unwrap();
 
         let measurements = l3gd20.all().unwrap();
-        info!("L3GD20: {:?}", measurements);
+        info!("L3GD20: {measurements:?}");
         info!("L3GD20 Temp: {:?}", measurements.temp_celcius());
         for led in emio_leds.iter_mut() {
             led.toggle().unwrap();
@@ -217,7 +217,7 @@ pub async fn non_blocking_application(
         .await
         .unwrap();
     let who_am_i = l3gd20.who_am_i().await.unwrap();
-    info!("L3GD20 WHO_AM_I: 0x{:02X}", who_am_i);
+    info!("L3GD20 WHO_AM_I: 0x{who_am_i:02X}");
 
     let mut ticker = Ticker::every(Duration::from_millis(400));
 
@@ -227,7 +227,7 @@ pub async fn non_blocking_application(
         mio_led.toggle().unwrap();
 
         let measurements = l3gd20.all().await.unwrap();
-        info!("L3GD20: {:?}", measurements);
+        info!("L3GD20: {measurements:?}");
         info!("L3GD20 Temp: {:?}", measurements.temp_celcius());
         for led in emio_leds.iter_mut() {
             led.toggle().unwrap();
@@ -287,6 +287,6 @@ pub extern "C" fn _prefetch_handler() {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {:?}", info);
+    error!("Panic: {info:?}");
     loop {}
 }
