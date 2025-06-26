@@ -48,7 +48,7 @@ static ETH_TX_BUFS: static_cell::ConstStaticCell<[AlignedBuffer; NUM_TX_BUFS]> =
 
 /// See memory.x file. 1 MB starting at this address will be configured as uncached memory using the
 /// MMU.
-const UNCACHED_ADDR: u32 = 0x40000000;
+const UNCACHED_ADDR: u32 = 0x4000000;
 
 /// Entry point (not called like a normal main function)
 #[unsafe(no_mangle)]

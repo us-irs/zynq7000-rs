@@ -20,7 +20,6 @@ pub mod gpio;
 pub mod gtc;
 pub mod i2c;
 pub mod log;
-pub mod mmu;
 pub mod prelude;
 pub mod slcr;
 pub mod spi;
