@@ -6,6 +6,8 @@
 //!
 //! This crate is purposely kept low-level to allow building higher level abstractions like HALs
 //! on top of it.
+//! [The Zynq7000 HAL library](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000-hal)
+//! contains such a HAL which builds on this PAC.
 #![no_std]
 
 use core::sync::atomic::{AtomicBool, Ordering};
