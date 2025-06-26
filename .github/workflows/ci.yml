@@ -1,0 +1,47 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  check:
+    name: Check build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      # Copy config file for rustflags and to build core/alloc.
+      - run: cp .cargo/def-config.toml .cargo/config.toml
+      - run: cargo check --target armv7a-none-eabihf -p zynq7000
+      - run: cargo check --target armv7a-none-eabihf -p zynq7000-rt
+
+  fmt:
+    name: Check formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
+      - run: cargo fmt --all -- --check
+
+  docs:
+    name: Check Documentation Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt --all-features
+      - run: RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 --all-features
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: clippy, rust-src
+      # Copy config file for rustflags and to build core/alloc.
+      - run: cp .cargo/def-config.toml .cargo/config.toml
+      - run: cargo clippy --target armv7a-none-eabihf -- -D warnings
