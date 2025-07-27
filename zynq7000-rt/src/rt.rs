@@ -1,8 +1,10 @@
 //! Start-up code for Zynq 7000
 //!
-//! The bootup routine was kepts as similar to the one
+//! The bootup routine was is based on the one
 //! [provided by Xilinx](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S)
-//! as possible. The boot routine includes stack, MMU, cache and .bss/.data section initialization.
+//! but does NOT provide the L2 cache initialization.
+//!
+//! The boot routine includes stack, MMU and .bss/.data section initialization.
 use cortex_a_rt as _;
 use cortex_ar::register::{Cpsr, cpsr::ProcessorMode};
 
@@ -195,61 +197,6 @@ initialize:
     orr	r0, r0, #(0x01 << 6)		/* set SMP bit */
     orr	r0, r0, #(0x01 )		/* Cache/TLB maintenance broadcast */
     mcr	p15, 0, r0, c1, c0, 1		/* Write ACTLR*/
-
-    /* Invalidate L2 Cache and enable L2 Cache*/
-    /* For AMP, assume running on CPU1. Don't initialize L2 Cache (up to Linux) */
-    ldr	r0,=L2CCCrtl			/* Load L2CC base address base + control register */
-    mov	r1, #0				/* force the disable bit */
-    str	r1, [r0]			/* disable the L2 Caches */
-
-    ldr	r0,=L2CCAuxCrtl			/* Load L2CC base address base + Aux control register */
-    ldr	r1,[r0]				/* read the register */
-    ldr	r2,=L2CCAuxControl		/* set the default bits */
-    orr	r1,r1,r2
-    str	r1, [r0]			/* store the Aux Control Register */
-
-    ldr	r0,=L2CCTAGLatReg		/* Load L2CC base address base + TAG Latency address */
-    ldr	r1,=L2CCTAGLatency		/* set the latencies for the TAG*/
-    str	r1, [r0]			/* store the TAG Latency register Register */
-
-    ldr	r0,=L2CCDataLatReg		/* Load L2CC base address base + Data Latency address */
-    ldr	r1,=L2CCDataLatency		/* set the latencies for the Data*/
-    str	r1, [r0]			/* store the Data Latency register Register */
-
-    ldr	r0,=L2CCWay			/* Load L2CC base address base + way register*/
-    ldr	r2, =0xFFFF
-    str	r2, [r0]			/* force invalidate */
-
-    ldr	r0,=L2CCSync			/* need to poll 0x730, PSS_L2CC_CACHE_SYNC_OFFSET */
-    /* Load L2CC base address base + sync register*/
-    /* poll for completion */
-Sync:
-    ldr	r1, [r0]
-    cmp	r1, #0
-    bne	Sync
-
-    ldr	r0,=L2CCIntRaw			/* clear pending interrupts */
-    ldr	r1,[r0]
-    ldr	r0,=L2CCIntClear
-    str	r1,[r0]
-
-    ldr	r0,=SLCRUnlockReg		/* Load SLCR base address base + unlock register */
-    ldr	r1,=SLCRUnlockKey	    	/* set unlock key */
-    str	r1, [r0]		    	/* Unlock SLCR */
-
-    ldr	r0,=SLCRL2cRamReg		/* Load SLCR base address base + l2c Ram Control register */
-    ldr	r1,=SLCRL2cRamConfig        	/* set the configuration value */
-    str	r1, [r0]	        	/* store the L2c Ram Control Register */
-
-    ldr	r0,=SLCRlockReg         	/* Load SLCR base address base + lock register */
-    ldr	r1,=SLCRlockKey	        	/* set lock key */
-    str	r1, [r0]	        	/* lock SLCR */
-
-    ldr	r0,=L2CCCrtl			/* Load L2CC base address base + control register */
-    ldr	r1,[r0]				/* read the register */
-    mov	r2, #L2CCControl		/* set the enable bit */
-    orr	r1,r1,r2
-    str	r1, [r0]			/* enable the L2 Caches */
 
     mov	r0, r0
     mrc	p15, 0, r1, c1, c0, 2		/* read cp access control register (CACR) into r1 */

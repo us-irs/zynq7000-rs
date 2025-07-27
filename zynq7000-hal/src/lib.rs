@@ -19,6 +19,7 @@ pub mod gic;
 pub mod gpio;
 pub mod gtc;
 pub mod i2c;
+pub mod l2_cache;
 pub mod log;
 pub mod prelude;
 pub mod slcr;

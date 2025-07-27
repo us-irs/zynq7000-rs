@@ -6,7 +6,10 @@ use core::panic::PanicInfo;
 use cortex_ar::asm::nop;
 use embedded_hal::digital::StatefulOutputPin;
 use zynq7000::PsPeripherals;
-use zynq7000_hal::gpio::{Output, PinState, mio};
+use zynq7000_hal::{
+    gpio::{Output, PinState, mio},
+    l2_cache,
+};
 use zynq7000_rt as _;
 
 /// One user LED is MIO7
@@ -31,6 +34,7 @@ pub extern "C" fn boot_core(cpu_id: u32) -> ! {
 
 #[unsafe(export_name = "main")]
 pub fn main() -> ! {
+    l2_cache::init_with_defaults(&mut unsafe { zynq7000::l2_cache::L2Cache::new_mmio_fixed() });
     match LIB {
         Lib::Pac => {
             let mut gpio = unsafe { zynq7000::gpio::Gpio::new_mmio_fixed() };

@@ -16,6 +16,7 @@ use zynq7000_hal::{
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{Output, PinState, mio},
     gtc::Gtc,
+    l2_cache,
     time::Hertz,
     uart::{ClkConfigRaw, TxAsync, Uart, UartConfig, on_interrupt_tx},
 };
@@ -37,7 +38,9 @@ pub extern "C" fn boot_core(cpu_id: u32) -> ! {
 #[unsafe(export_name = "main")]
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
-    let dp = PsPeripherals::take().unwrap();
+    let mut dp = PsPeripherals::take().unwrap();
+    l2_cache::init_with_defaults(&mut dp.l2c);
+
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
