@@ -1,7 +1,12 @@
-//! Rust bare metal run-time support for the AMD Zynq 7000 SoCs
+//! # Rust bare metal run-time support for the AMD Zynq 7000 SoCs
 //!
 //! This includes basic low-level startup code similar to the bare-metal boot routines
 //! [provided by Xilinx](https://github.com/Xilinx/embeddedsw/tree/master/lib/bsp/standalone/src/arm/cortexa9/gcc).
+//! Some major differences:
+//!
+//! - No L2 cache initialization is performed.
+//! - MMU table is specified as Rust code.
+//! - Modification to the stack setup code, because a different linker script is used.
 #![no_std]
 #[cfg(feature = "rt")]
 pub use cortex_a_rt::*;
