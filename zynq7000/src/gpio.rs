@@ -83,22 +83,22 @@ pub struct Gpio {
 
     _reserved_2: [u32; 101],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_0: BankCtrl,
 
     _reserved_3: [u32; 7],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_1: BankCtrl,
 
     _reserved_4: [u32; 7],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_2: BankCtrl,
 
     _reserved_5: [u32; 7],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     bank_3: BankCtrl,
 }
 

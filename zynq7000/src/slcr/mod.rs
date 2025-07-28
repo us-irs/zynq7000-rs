@@ -50,10 +50,27 @@ impl DdrIoB {
 
 static_assertions::const_assert_eq!(core::mem::size_of::<DdrIoB>(), 0x38);
 
+#[bitbybit::bitenum(u3, exhaustive = false)]
+pub enum VrefSel {
+    Disabled = 0b000,
+    Vref0_9V = 0b001,
+}
+
+#[bitbybit::bitfield(u32)]
+#[derive(Debug)]
+pub struct GpiobControl {
+    #[bit(11, rw)]
+    vref_sw_en: bool,
+    #[bits(4..=6, rw)]
+    vref_sel: Option<VrefSel>,
+    #[bit(0, rw)]
+    vref_en: bool,
+}
+
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct GpiobCtrl {
-    ctrl: u32,
+pub struct GpiobRegisters {
+    ctrl: GpiobControl,
     cfg_cmos18: u32,
     cfg_cmos25: u32,
     cfg_cmos33: u32,
@@ -62,7 +79,7 @@ pub struct GpiobCtrl {
     drvr_bias_ctrl: u32,
 }
 
-impl GpiobCtrl {
+impl GpiobRegisters {
     /// Create a new handle to this peripheral.
     ///
     /// Writing to this register requires unlocking the SLCR registers first.
@@ -71,12 +88,13 @@ impl GpiobCtrl {
     ///
     /// If you create multiple instances of this handle at the same time, you are responsible for
     /// ensuring that there are no read-modify-write races on any of the registers.
-    pub unsafe fn new_mmio_fixed() -> MmioGpiobCtrl<'static> {
+    pub unsafe fn new_mmio_fixed() -> MmioGpiobRegisters<'static> {
         unsafe { Self::new_mmio_at(SLCR_BASE_ADDR + GPIOB_OFFSET) }
     }
 }
 
 #[bitbybit::bitfield(u32)]
+#[derive(Debug)]
 pub struct BootModeRegister {
     #[bit(4, r)]
     pll_bypass: bool,
@@ -113,12 +131,12 @@ pub struct Slcr {
 
     _gap0: [u32; 0x3C],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     clk_ctrl: ClockControl,
 
     _gap1: [u32; 0x0E],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     reset_ctrl: ResetControl,
 
     _gap2: [u32; 0x02],
@@ -176,16 +194,17 @@ pub struct Slcr {
 
     _gap15: [u32; 0x42],
 
-    reserved: u32,
+    /// Xilinx marks this as reserved but writes to it in their low-level L2 cache configuration.
+    magic_l2c_register: u32,
 
     _gap16: [u32; 0x38],
 
     _gap18: [u32; 0x09],
 
-    #[mmio(inner)]
-    gpiob: GpiobCtrl,
+    #[mmio(Inner)]
+    gpiob: GpiobRegisters,
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     ddriob: DdrIoB,
 }
 

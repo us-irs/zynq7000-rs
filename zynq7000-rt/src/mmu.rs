@@ -84,9 +84,15 @@ pub mod segments {
 }
 
 pub mod section_attrs {
+    use arbitrary_int::u4;
     use cortex_ar::mmu::{
         AccessPermissions, CacheableMemoryAttribute, MemoryRegionAttributes, SectionAttributes,
     };
+
+    pub const DEFAULT_DOMAIN: u4 = u4::new(0b0000);
+    // DDR is in different domain, but all domains are set as manager domains during run-time
+    // initialization.
+    pub const DDR_DOMAIN: u4 = u4::new(0b1111);
 
     pub const DDR: SectionAttributes = SectionAttributes {
         non_global: false,
@@ -94,7 +100,7 @@ pub mod section_attrs {
         shareable: true,
         access: AccessPermissions::FullAccess,
         // Manager domain
-        domain: 0b1111,
+        domain: DDR_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::CacheableMemory {
             inner: CacheableMemoryAttribute::WriteBackWriteAlloc,
@@ -107,7 +113,7 @@ pub mod section_attrs {
         p_bit: false,
         shareable: false,
         access: AccessPermissions::FullAccess,
-        domain: 0b0000,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::StronglyOrdered.as_raw(),
     };
@@ -116,7 +122,7 @@ pub mod section_attrs {
         p_bit: false,
         shareable: false,
         access: AccessPermissions::FullAccess,
-        domain: 0b0000,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::ShareableDevice.as_raw(),
     };
@@ -125,7 +131,7 @@ pub mod section_attrs {
         p_bit: false,
         shareable: false,
         access: AccessPermissions::FullAccess,
-        domain: 0b0000,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::OuterAndInnerWriteBackNoWriteAlloc.as_raw(),
     };
@@ -134,7 +140,7 @@ pub mod section_attrs {
         p_bit: false,
         shareable: false,
         access: AccessPermissions::FullAccess,
-        domain: 0b0000,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::OuterAndInnerWriteThroughNoWriteAlloc.as_raw(),
     };
@@ -143,7 +149,7 @@ pub mod section_attrs {
         p_bit: false,
         shareable: false,
         access: AccessPermissions::FullAccess,
-        domain: 0b0000,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::CacheableMemory {
             inner: CacheableMemoryAttribute::WriteThroughNoWriteAlloc,
@@ -156,17 +162,11 @@ pub mod section_attrs {
         p_bit: false,
         shareable: false,
         access: AccessPermissions::PermissionFault,
-        domain: 0b0000,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::StronglyOrdered.as_raw(),
     };
 }
-
-pub const NUM_L1_PAGE_TABLE_ENTRIES: usize = 4096;
-
-#[repr(C, align(16384))]
-#[cfg(feature = "rt")]
-pub struct L1Table(pub(crate) [u32; NUM_L1_PAGE_TABLE_ENTRIES]);
 
 /// Load the MMU translation table base address into the MMU.
 ///
@@ -178,7 +178,7 @@ pub struct L1Table(pub(crate) [u32; NUM_L1_PAGE_TABLE_ENTRIES]);
 #[unsafe(no_mangle)]
 #[cfg(feature = "rt")]
 unsafe extern "C" fn load_mmu_table() {
-    let table_base = &crate::mmu_table::MMU_L1_PAGE_TABLE.0 as *const _ as u32;
+    let table_base = crate::mmu_table::MMU_L1_PAGE_TABLE.0.get() as u32;
 
     unsafe {
         core::arch::asm!(

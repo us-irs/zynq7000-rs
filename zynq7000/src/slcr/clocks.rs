@@ -172,12 +172,31 @@ pub enum ClockRatioSelect {
 }
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, Eq)]
 pub enum SrcSelIo {
     IoPll = 0b00,
     IoPllAlt = 0b01,
     ArmPll = 0b10,
     DdrPll = 0b11,
+}
+
+impl PartialEq for SrcSelIo {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            // IoPll and IoPllAlt are equal to each other
+            (Self::IoPll, Self::IoPll)
+            | (Self::IoPll, Self::IoPllAlt)
+            | (Self::IoPllAlt, Self::IoPll)
+            | (Self::IoPllAlt, Self::IoPllAlt) => true,
+
+            // For other variants, only equal if exactly the same
+            (Self::ArmPll, Self::ArmPll) => true,
+            (Self::DdrPll, Self::DdrPll) => true,
+
+            // Otherwise, not equal
+            _ => false,
+        }
+    }
 }
 
 #[bitbybit::bitfield(u32)]
@@ -193,6 +212,23 @@ pub struct GigEthClkCtrl {
     srcsel: SrcSelIo,
     #[bit(0, rw)]
     clk_act: bool,
+}
+
+#[bitbybit::bitenum(u1, exhaustive = true)]
+#[derive(Debug)]
+pub enum SrcSelGigEthRclk {
+    Mio = 0,
+    Emio = 1,
+}
+
+#[bitbybit::bitfield(u32)]
+#[derive(Debug)]
+pub struct GigEthRclkCtrl {
+    #[bit(4, rw)]
+    srcsel: SrcSelGigEthRclk,
+    // Enable the ethernet controller RX clock.
+    #[bit(0, rw)]
+    clk_enable: bool,
 }
 
 #[bitbybit::bitfield(u32)]
@@ -320,8 +356,8 @@ pub struct ClockControl {
     aper_clk_ctrl: AperClkCtrl,
     usb_0_clk_ctrl: u32,
     usb_1_clk_ctrl: u32,
-    gem_0_rclk_ctrl: u32,
-    gem_1_rclk_ctrl: u32,
+    gem_0_rclk_ctrl: GigEthRclkCtrl,
+    gem_1_rclk_ctrl: GigEthRclkCtrl,
     gem_0_clk_ctrl: GigEthClkCtrl,
     gem_1_clk_ctrl: GigEthClkCtrl,
     smc_clk_ctrl: SingleCommonPeriphIoClkCtrl,
@@ -335,13 +371,13 @@ pub struct ClockControl {
     dbg_clk_ctrl: TracePortClkCtrl,
     pcap_clk_ctrl: SingleCommonPeriphIoClkCtrl,
     topsw_clk_ctrl: u32,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     fpga_0_clk_ctrl: FpgaClkBlock,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     fpga_1_clk_ctrl: FpgaClkBlock,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     fpga_2_clk_ctrl: FpgaClkBlock,
-    #[mmio(inner)]
+    #[mmio(Inner)]
     fpga_3_clk_ctrl: FpgaClkBlock,
     _gap1: [u32; 5],
     clk_621_true: ClockRatioSelectReg,

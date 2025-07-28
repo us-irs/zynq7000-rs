@@ -17,7 +17,7 @@ pub enum IoType {
     Hstl = 0b100,
 }
 
-#[bitbybit::bitfield(u32)]
+#[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
 pub struct Config {
     #[bit(13, rw)]

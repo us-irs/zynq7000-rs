@@ -57,8 +57,8 @@ pub fn main() -> ! {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _irq_handler() {}
+#[zynq7000_rt::irq]
+pub fn irq_handler() {}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _abort_handler() {

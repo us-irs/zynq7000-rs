@@ -178,6 +178,8 @@ pub struct I2c {
     idr: InterruptControl,
 }
 
+static_assertions::const_assert_eq!(core::mem::size_of::<I2c>(), 0x2C);
+
 impl I2c {
     /// Create a new I2C MMIO instance for I2C0 at address [I2C_0_BASE_ADDR].
     ///

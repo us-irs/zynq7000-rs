@@ -47,15 +47,15 @@ const_assert_eq!(core::mem::size_of::<Scu>(), 0x58);
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Mpcore {
-    #[mmio(inner)]
+    #[mmio(Inner)]
     scu: Scu,
 
     _reserved_0: [u32; 0x2A],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     gicc: Gicc,
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     gt: Gtc,
 
     _reserved_1: [u32; 0xF9],
@@ -76,7 +76,7 @@ pub struct Mpcore {
 
     _reserved_3: [u32; 0x272],
 
-    #[mmio(inner)]
+    #[mmio(Inner)]
     gicd: Gicd,
 }
 
