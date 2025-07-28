@@ -5,8 +5,11 @@ Startup code and minimal runtime for the AMD Zynq7000 SoC to write bare metal Ru
 This run-time crate is strongly based on the
 [startup code provided by AMD](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S).
 
-One major difference is that the MMU table is specified as Rust code. There are also modification
-to the stack setup code, because a different linker script is used.
+Some major differences:
+
+- No L2 cache initialization is performed.
+- MMU table is specified as Rust code.
+- Modification to the stack setup code, because a different linker script is used.
 
 This crate pulls in the [cortex-a-rt](https://github.com/us-irs/cortex-ar/tree/cortex-a-addition/cortex-a-rt)
 crate to provide ARM vectors and the linker script.
