@@ -24,7 +24,7 @@ use zynq7000_hal::{
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::Gtc,
-    i2c,
+    i2c, l2_cache,
     time::Hertz,
     uart,
 };
@@ -48,9 +48,12 @@ pub extern "C" fn boot_core(cpu_id: u32) -> ! {
 #[embassy_executor::main]
 #[unsafe(export_name = "main")]
 async fn main(_spawner: Spawner) -> ! {
+    let mut dp = PsPeripherals::take().unwrap();
+    l2_cache::init_with_defaults(&mut dp.l2c);
+
     // Enable PS-PL level shifters.
     configure_level_shifter(LevelShifterConfig::EnableAll);
-    let dp = PsPeripherals::take().unwrap();
+
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 

@@ -39,6 +39,7 @@ static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
 pub struct PsPeripherals {
     pub gicc: gic::MmioGicc<'static>,
     pub gicd: gic::MmioGicd<'static>,
+    pub l2c: l2_cache::MmioL2Cache<'static>,
     pub uart_0: uart::MmioUart<'static>,
     pub uart_1: uart::MmioUart<'static>,
     pub spi_0: spi::MmioSpi<'static>,
@@ -74,6 +75,7 @@ impl PsPeripherals {
             Self {
                 gicc: gic::Gicc::new_mmio_fixed(),
                 gicd: gic::Gicd::new_mmio_fixed(),
+                l2c: l2_cache::L2Cache::new_mmio_fixed(),
                 uart_0: uart::Uart::new_mmio_fixed_0(),
                 uart_1: uart::Uart::new_mmio_fixed_1(),
                 gtc: gtc::Gtc::new_mmio_fixed(),

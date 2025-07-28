@@ -29,7 +29,7 @@ pub fn clean_and_invalidate_data_cache() {
 
     // Clean all ways in L2 cache.
     let mut l2c = unsafe { L2Cache::new_mmio_fixed() };
-    l2c.write_clean_invalidate_by_way(0xff);
+    l2c.write_clean_invalidate_by_way(0xffff);
     while l2c.read_cache_sync().busy() {}
     compiler_fence(core::sync::atomic::Ordering::SeqCst);
 
