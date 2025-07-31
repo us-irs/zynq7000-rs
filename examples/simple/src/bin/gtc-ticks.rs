@@ -11,7 +11,7 @@ use zynq7000_hal::{
     clocks::Clocks,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{Output, PinState, mio},
-    gtc::Gtc,
+    gtc::GlobalTimerCounter,
     l2_cache,
     prelude::*,
     time::Hertz,
@@ -52,7 +52,7 @@ pub fn main() -> ! {
     let uart_clk_config = ClkConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mut gtc = Gtc::new(dp.gtc, clocks.arm_clocks());
+    let mut gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
     let ticks = gtc.frequency_to_ticks(1000.Hz());
     gtc.set_auto_increment_value(ticks);
     gtc.set_comparator(gtc.read_timer() + ticks as u64);

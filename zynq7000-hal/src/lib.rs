@@ -40,7 +40,7 @@ pub enum BootDevice {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum BootPllConfig {
+pub enum BootPllCfg {
     Enabled,
     Bypassed,
 }
@@ -48,7 +48,7 @@ pub enum BootPllConfig {
 #[derive(Debug)]
 pub struct BootMode {
     boot_mode: Option<BootDevice>,
-    pll_config: BootPllConfig,
+    pll_config: BootPllCfg,
 }
 
 impl BootMode {
@@ -82,9 +82,9 @@ impl BootMode {
             _ => None,
         };
         let pll_config = if (raw_register >> 4) & 0b1 == 0 {
-            BootPllConfig::Enabled
+            BootPllCfg::Enabled
         } else {
-            BootPllConfig::Bypassed
+            BootPllCfg::Bypassed
         };
         Self {
             boot_mode,
@@ -95,7 +95,7 @@ impl BootMode {
         self.boot_mode
     }
 
-    pub const fn pll_enable(&self) -> BootPllConfig {
+    pub const fn pll_enable(&self) -> BootPllCfg {
         self.pll_config
     }
 }
@@ -104,7 +104,7 @@ impl BootMode {
 /// system (PS).
 ///
 /// The Zynq-7000 TRM p.32 specifies more information about this register and how to use it.
-pub fn configure_level_shifter(config: zynq7000::slcr::LevelShifterConfig) {
+pub fn cfg_level_shifter(config: zynq7000::slcr::LevelShifterCfg) {
     // Safety: We only manipulate the level shift registers.
     unsafe {
         Slcr::with(|slcr_unlocked| {
@@ -114,7 +114,7 @@ pub fn configure_level_shifter(config: zynq7000::slcr::LevelShifterConfig) {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum PeripheralSelect {
+pub enum PeriphSelect {
     Smc = 24,
     Lqspi = 23,
     Gpio = 22,
@@ -138,29 +138,29 @@ pub enum PeripheralSelect {
 /// Enable the AMBA peripheral clock, which is required to read the registers of a peripheral
 /// block.
 #[inline]
-pub fn enable_amba_peripheral_clock(select: PeripheralSelect) {
+pub fn enable_amba_periph_clk(select: PeriphSelect) {
     unsafe {
         Slcr::with(|regs| {
             regs.clk_ctrl().modify_aper_clk_ctrl(|mut val| {
                 match select {
-                    PeripheralSelect::Smc => val.set_smc_1x_clk_act(true),
-                    PeripheralSelect::Lqspi => val.set_lqspi_1x_clk_act(true),
-                    PeripheralSelect::Gpio => val.set_gpio_1x_clk_act(true),
-                    PeripheralSelect::Uart1 => val.set_uart_1_1x_clk_act(true),
-                    PeripheralSelect::Uart0 => val.set_uart_0_1x_clk_act(true),
-                    PeripheralSelect::I2c1 => val.set_i2c_1_1x_clk_act(true),
-                    PeripheralSelect::I2c0 => val.set_i2c_0_1x_clk_act(true),
-                    PeripheralSelect::Can1 => val.set_can_1_1x_clk_act(true),
-                    PeripheralSelect::Can0 => val.set_can_0_1x_clk_act(true),
-                    PeripheralSelect::Spi1 => val.set_spi_1_1x_clk_act(true),
-                    PeripheralSelect::Spi0 => val.set_spi_1_1x_clk_act(true),
-                    PeripheralSelect::Sdio1 => val.set_sdio_1_1x_clk_act(true),
-                    PeripheralSelect::Sdio0 => val.set_sdio_0_1x_clk_act(true),
-                    PeripheralSelect::Gem1 => val.set_gem_1_1x_clk_act(true),
-                    PeripheralSelect::Gem0 => val.set_gem_0_1x_clk_act(true),
-                    PeripheralSelect::Usb1 => val.set_usb_1_cpu_1x_clk_act(true),
-                    PeripheralSelect::Usb0 => val.set_usb_0_cpu_1x_clk_act(true),
-                    PeripheralSelect::Dma => val.set_dma_cpu_2x_clk_act(true),
+                    PeriphSelect::Smc => val.set_smc_1x_clk_act(true),
+                    PeriphSelect::Lqspi => val.set_lqspi_1x_clk_act(true),
+                    PeriphSelect::Gpio => val.set_gpio_1x_clk_act(true),
+                    PeriphSelect::Uart1 => val.set_uart_1_1x_clk_act(true),
+                    PeriphSelect::Uart0 => val.set_uart_0_1x_clk_act(true),
+                    PeriphSelect::I2c1 => val.set_i2c_1_1x_clk_act(true),
+                    PeriphSelect::I2c0 => val.set_i2c_0_1x_clk_act(true),
+                    PeriphSelect::Can1 => val.set_can_1_1x_clk_act(true),
+                    PeriphSelect::Can0 => val.set_can_0_1x_clk_act(true),
+                    PeriphSelect::Spi1 => val.set_spi_1_1x_clk_act(true),
+                    PeriphSelect::Spi0 => val.set_spi_1_1x_clk_act(true),
+                    PeriphSelect::Sdio1 => val.set_sdio_1_1x_clk_act(true),
+                    PeriphSelect::Sdio0 => val.set_sdio_0_1x_clk_act(true),
+                    PeriphSelect::Gem1 => val.set_gem_1_1x_clk_act(true),
+                    PeriphSelect::Gem0 => val.set_gem_0_1x_clk_act(true),
+                    PeriphSelect::Usb1 => val.set_usb_1_cpu_1x_clk_act(true),
+                    PeriphSelect::Usb0 => val.set_usb_0_cpu_1x_clk_act(true),
+                    PeriphSelect::Dma => val.set_dma_cpu_2x_clk_act(true),
                 }
                 val
             })
@@ -171,29 +171,29 @@ pub fn enable_amba_peripheral_clock(select: PeripheralSelect) {
 /// Disable the AMBA peripheral clock, which is required to read the registers of a peripheral
 /// block.
 #[inline]
-pub fn disable_amba_peripheral_clock(select: PeripheralSelect) {
+pub fn disable_amba_periph_clk(select: PeriphSelect) {
     unsafe {
         Slcr::with(|regs| {
             regs.clk_ctrl().modify_aper_clk_ctrl(|mut val| {
                 match select {
-                    PeripheralSelect::Smc => val.set_smc_1x_clk_act(false),
-                    PeripheralSelect::Lqspi => val.set_lqspi_1x_clk_act(false),
-                    PeripheralSelect::Gpio => val.set_gpio_1x_clk_act(false),
-                    PeripheralSelect::Uart1 => val.set_uart_1_1x_clk_act(false),
-                    PeripheralSelect::Uart0 => val.set_uart_0_1x_clk_act(false),
-                    PeripheralSelect::I2c1 => val.set_i2c_1_1x_clk_act(false),
-                    PeripheralSelect::I2c0 => val.set_i2c_0_1x_clk_act(false),
-                    PeripheralSelect::Can1 => val.set_can_1_1x_clk_act(false),
-                    PeripheralSelect::Can0 => val.set_can_0_1x_clk_act(false),
-                    PeripheralSelect::Spi1 => val.set_spi_1_1x_clk_act(false),
-                    PeripheralSelect::Spi0 => val.set_spi_1_1x_clk_act(false),
-                    PeripheralSelect::Sdio1 => val.set_sdio_1_1x_clk_act(false),
-                    PeripheralSelect::Sdio0 => val.set_sdio_0_1x_clk_act(false),
-                    PeripheralSelect::Gem1 => val.set_gem_1_1x_clk_act(false),
-                    PeripheralSelect::Gem0 => val.set_gem_0_1x_clk_act(false),
-                    PeripheralSelect::Usb1 => val.set_usb_1_cpu_1x_clk_act(false),
-                    PeripheralSelect::Usb0 => val.set_usb_0_cpu_1x_clk_act(false),
-                    PeripheralSelect::Dma => val.set_dma_cpu_2x_clk_act(false),
+                    PeriphSelect::Smc => val.set_smc_1x_clk_act(false),
+                    PeriphSelect::Lqspi => val.set_lqspi_1x_clk_act(false),
+                    PeriphSelect::Gpio => val.set_gpio_1x_clk_act(false),
+                    PeriphSelect::Uart1 => val.set_uart_1_1x_clk_act(false),
+                    PeriphSelect::Uart0 => val.set_uart_0_1x_clk_act(false),
+                    PeriphSelect::I2c1 => val.set_i2c_1_1x_clk_act(false),
+                    PeriphSelect::I2c0 => val.set_i2c_0_1x_clk_act(false),
+                    PeriphSelect::Can1 => val.set_can_1_1x_clk_act(false),
+                    PeriphSelect::Can0 => val.set_can_0_1x_clk_act(false),
+                    PeriphSelect::Spi1 => val.set_spi_1_1x_clk_act(false),
+                    PeriphSelect::Spi0 => val.set_spi_1_1x_clk_act(false),
+                    PeriphSelect::Sdio1 => val.set_sdio_1_1x_clk_act(false),
+                    PeriphSelect::Sdio0 => val.set_sdio_0_1x_clk_act(false),
+                    PeriphSelect::Gem1 => val.set_gem_1_1x_clk_act(false),
+                    PeriphSelect::Gem0 => val.set_gem_0_1x_clk_act(false),
+                    PeriphSelect::Usb1 => val.set_usb_1_cpu_1x_clk_act(false),
+                    PeriphSelect::Usb0 => val.set_usb_0_cpu_1x_clk_act(false),
+                    PeriphSelect::Dma => val.set_dma_cpu_2x_clk_act(false),
                 }
                 val
             })

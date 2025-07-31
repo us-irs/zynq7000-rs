@@ -14,12 +14,12 @@ pub mod mio;
 
 use core::convert::Infallible;
 use ll::PinOffset;
-use mio::{MioPinMarker, MuxConf};
+use mio::{MioPinMarker, MuxCfg};
 
 use crate::gpio::ll::LowLevelGpio;
-use crate::{enable_amba_peripheral_clock, slcr::Slcr};
+use crate::{enable_amba_periph_clk, slcr::Slcr};
 pub use embedded_hal::digital::PinState;
-use zynq7000::{gpio::MmioGpio, slcr::reset::GpioClockReset};
+use zynq7000::{gpio::MmioGpio, slcr::reset::GpioClkRst};
 
 #[derive(Debug, thiserror::Error)]
 #[error("MIO pins 7 and 8 can only be output pins")]
@@ -33,7 +33,7 @@ pub struct GpioPins {
 
 impl GpioPins {
     pub fn new(gpio: MmioGpio) -> Self {
-        enable_amba_peripheral_clock(crate::PeripheralSelect::Gpio);
+        enable_amba_periph_clk(crate::PeriphSelect::Gpio);
         Self {
             mio: mio::Pins::new(unsafe { gpio.clone() }),
             emio: emio::Pins::new(gpio),
@@ -47,11 +47,11 @@ pub fn reset() {
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl()
-                .write_gpio(GpioClockReset::builder().with_gpio_cpu1x_rst(true).build());
+                .write_gpio(GpioClkRst::builder().with_gpio_cpu1x_rst(true).build());
             // Keep it in reset for one cycle.. not sure if this is necessary.
             cortex_ar::asm::nop();
             regs.reset_ctrl()
-                .write_gpio(GpioClockReset::builder().with_gpio_cpu1x_rst(false).build());
+                .write_gpio(GpioClkRst::builder().with_gpio_cpu1x_rst(false).build());
         });
     }
 }
@@ -66,7 +66,7 @@ pub enum PinMode {
     InputFloating,
     InputPullUp,
     /// MIO-only peripheral pin configuration
-    MioIoPeriph(MuxConf),
+    MioIoPeriph(MuxCfg),
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -380,13 +380,13 @@ impl embedded_hal::digital::InputPin for Input {
 /// IO peripheral pin.
 pub struct IoPeriphPin {
     pin: LowLevelGpio,
-    mux_conf: MuxConf,
+    mux_conf: MuxCfg,
 }
 
 impl IoPeriphPin {
     /// Constructor for IO peripheral pins where only the multiplexer and pullup configuration
     /// need to be changed.
-    pub fn new(pin: impl MioPinMarker, mux_conf: MuxConf, pullup: Option<bool>) -> Self {
+    pub fn new(pin: impl MioPinMarker, mux_conf: MuxCfg, pullup: Option<bool>) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
         low_level.configure_as_io_periph_pin(mux_conf, pullup);
         Self {
@@ -404,7 +404,7 @@ impl IoPeriphPin {
         low_level.set_mio_pin_config(config);
         Self {
             pin: low_level,
-            mux_conf: MuxConf::new(
+            mux_conf: MuxCfg::new(
                 config.l0_sel(),
                 config.l1_sel(),
                 config.l2_sel(),
@@ -423,7 +423,7 @@ impl IoPeriphPin {
         low_level.set_mio_pin_config_with_unlocked_slcr(slcr, config);
         Self {
             pin: low_level,
-            mux_conf: MuxConf::new(
+            mux_conf: MuxCfg::new(
                 config.l0_sel(),
                 config.l1_sel(),
                 config.l2_sel(),

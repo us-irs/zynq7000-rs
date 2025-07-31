@@ -20,7 +20,7 @@ use zynq7000_hal::{
     clocks::Clocks,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{Output, PinState, mio},
-    gtc::Gtc,
+    gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
     uart::{ClkConfigRaw, Uart, UartConfig},
@@ -60,7 +60,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mio_pins = mio::Pins::new(dp.gpio);
 
     // Set up global timer counter and embassy time driver.
-    let gtc = Gtc::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
     zynq7000_embassy::init(clocks.arm_clocks(), gtc);
 
     // Unwrap is okay, the address is definitely valid.

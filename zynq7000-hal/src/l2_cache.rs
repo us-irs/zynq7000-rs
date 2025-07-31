@@ -3,7 +3,7 @@ use core::sync::atomic::compiler_fence;
 use arbitrary_int::{u2, u3};
 pub use zynq7000::l2_cache::LatencyConfig;
 use zynq7000::l2_cache::{
-    Associativity, AuxControl, Control, InterruptControl, MmioL2Cache, ReplacementPolicy, WaySize,
+    Associativity, AuxControl, Ctrl, InterruptControl, MmioL2Cache, ReplacementPolicy, WaySize,
 };
 
 use crate::slcr::Slcr;
@@ -60,7 +60,7 @@ pub fn init(
     tag_ram_latency: LatencyConfig,
     data_ram_latency: LatencyConfig,
 ) {
-    l2c_mmio.write_control(Control::new_disabled());
+    l2c_mmio.write_control(Ctrl::new_disabled());
     l2c_mmio.write_aux_control(AUX_CTRL_DEFAULT);
     l2c_mmio.write_tag_ram_latency(tag_ram_latency);
     l2c_mmio.write_data_ram_latency(data_ram_latency);
@@ -77,5 +77,5 @@ pub fn init(
             slcr.write_magic_l2c_register(SLCR_L2C_CONFIG_MAGIC_VALUE);
         });
     }
-    l2c_mmio.write_control(Control::new_enabled());
+    l2c_mmio.write_control(Ctrl::new_enabled());
 }

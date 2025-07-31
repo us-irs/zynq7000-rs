@@ -18,7 +18,7 @@ pub struct CacheSync {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct DebugControl {
+pub struct DebugCtrl {
     #[bit(2, rw)]
     spniden: bool,
     #[bit(1, rw)]
@@ -41,9 +41,9 @@ pub struct CacheId {
 }
 
 #[repr(transparent)]
-pub struct Control(u32);
+pub struct Ctrl(u32);
 
-impl Control {
+impl Ctrl {
     pub fn new_enabled() -> Self {
         Self(0x1)
     }
@@ -87,7 +87,7 @@ pub enum Associativity {
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct AuxControl {
+pub struct AuxCtrl {
     #[bit(30, rw)]
     early_bresp_enable: bool,
     #[bit(29, rw)]
@@ -127,7 +127,7 @@ pub struct AuxControl {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug, PartialEq, Eq)]
-pub struct LatencyConfig {
+pub struct LatencyCfg {
     /// Latency is the numerical value + 1 cycles.
     #[bits(8..=10, rw)]
     write_access_latency: u3,
@@ -165,7 +165,7 @@ pub struct InterruptStatus {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct InterruptControl {
+pub struct InterruptCtrl {
     #[bit(8, w)]
     dec_error_l3: bool,
     #[bit(7, w)]
@@ -197,10 +197,10 @@ pub struct L2Cache {
 
     _reserved: [u32; 0x3E],
 
-    control: Control,
-    aux_control: AuxControl,
-    tag_ram_latency: LatencyConfig,
-    data_ram_latency: LatencyConfig,
+    control: Ctrl,
+    aux_control: AuxCtrl,
+    tag_ram_latency: LatencyCfg,
+    data_ram_latency: LatencyCfg,
 
     _reserved2: [u32; 0x3C],
 
@@ -215,7 +215,7 @@ pub struct L2Cache {
     #[mmio(PureRead)]
     interrupt_raw_status: InterruptStatus,
     #[mmio(Write)]
-    interrupt_clear: InterruptControl,
+    interrupt_clear: InterruptCtrl,
 
     _reserved3: [u32; 0x143],
 
@@ -264,7 +264,7 @@ pub struct L2Cache {
 
     _reserved13: [u32; 0xCE],
 
-    debug_control: DebugControl,
+    debug_control: DebugCtrl,
 
     _reserved14: [u32; 0x7],
 

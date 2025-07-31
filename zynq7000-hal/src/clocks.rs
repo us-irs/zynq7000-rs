@@ -4,7 +4,7 @@ use arbitrary_int::Number;
 use zynq7000::slcr::{
     ClockControl,
     clocks::{
-        ClockRatioSelect, DualCommonPeriphIoClkCtrl, FpgaClkControl, GigEthClkCtrl,
+        ClkRatioSelect, DualCommonPeriphIoClkCtrl, FpgaClkCtrl, GigEthClkCtrl,
         SingleCommonPeriphIoClkCtrl,
     },
 };
@@ -228,14 +228,14 @@ impl Clocks {
         }
         let arm_clk_divided = arm_base_clk / arm_clk_ctrl.divisor().as_u32();
         let arm_clks = match clk_sel.sel() {
-            ClockRatioSelect::FourToTwoToOne => ArmClocks {
+            ClkRatioSelect::FourToTwoToOne => ArmClocks {
                 ref_clk: arm_pll_out,
                 cpu_1x_clk: arm_clk_divided / 4,
                 cpu_2x_clk: arm_clk_divided / 2,
                 cpu_3x2x_clk: arm_clk_divided / 2,
                 cpu_6x4x_clk: arm_clk_divided,
             },
-            ClockRatioSelect::SixToTwoToOne => ArmClocks {
+            ClkRatioSelect::SixToTwoToOne => ArmClocks {
                 ref_clk: arm_pll_out,
                 cpu_1x_clk: arm_clk_divided / 6,
                 cpu_2x_clk: arm_clk_divided / 3,
@@ -340,7 +340,7 @@ impl Clocks {
             | zynq7000::slcr::clocks::SrcSelTpiu::EmioTraceClkAlt1
             | zynq7000::slcr::clocks::SrcSelTpiu::EmioTraceClkAlt2 => None,
         };
-        let calculate_fpga_clk = |fpga_clk_ctrl: FpgaClkControl| -> Result<Hertz, ClockReadError> {
+        let calculate_fpga_clk = |fpga_clk_ctrl: FpgaClkCtrl| -> Result<Hertz, ClockReadError> {
             if fpga_clk_ctrl.divisor_0().as_u32() == 0 || fpga_clk_ctrl.divisor_1().as_u32() == 0 {
                 return Err(ClockReadError::DivisorZero(DivisorZero(
                     ClockModuleId::Fpga,
@@ -387,10 +387,10 @@ impl Clocks {
             // TODO: There should be a mut and a non-mut getter for an inner block. We only do pure
             // reads with the inner block here.
             pl: [
-                calculate_fpga_clk(clk_regs.fpga_0_clk_ctrl().read_clk_ctrl())?,
-                calculate_fpga_clk(clk_regs.fpga_1_clk_ctrl().read_clk_ctrl())?,
-                calculate_fpga_clk(clk_regs.fpga_2_clk_ctrl().read_clk_ctrl())?,
-                calculate_fpga_clk(clk_regs.fpga_3_clk_ctrl().read_clk_ctrl())?,
+                calculate_fpga_clk(clk_regs.fpga_0_clk_ctrl().read_ctrl())?,
+                calculate_fpga_clk(clk_regs.fpga_1_clk_ctrl().read_ctrl())?,
+                calculate_fpga_clk(clk_regs.fpga_2_clk_ctrl().read_ctrl())?,
+                calculate_fpga_clk(clk_regs.fpga_3_clk_ctrl().read_ctrl())?,
             ],
         })
     }

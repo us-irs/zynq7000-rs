@@ -1,10 +1,10 @@
 use arbitrary_int::{Number, u6};
 use zynq7000::{
-    eth::{InterruptControl, NetworkControl, RxStatus, TxStatus},
-    slcr::reset::EthernetReset,
+    eth::{InterruptCtrl, NetworkCtrl, RxStatus, TxStatus},
+    slcr::reset::EthernetRst,
 };
 
-use crate::{clocks::IoClocks, enable_amba_peripheral_clock, slcr::Slcr, time::Hertz};
+use crate::{clocks::IoClocks, enable_amba_periph_clk, slcr::Slcr, time::Hertz};
 
 use super::{EthernetId, PsEthernet as _};
 
@@ -204,7 +204,7 @@ impl EthernetLowLevel {
 
     pub fn reset(&mut self, cycles: usize) {
         let assert_reset = match self.id {
-            EthernetId::Eth0 => EthernetReset::builder()
+            EthernetId::Eth0 => EthernetRst::builder()
                 .with_gem1_ref_rst(false)
                 .with_gem0_ref_rst(true)
                 .with_gem1_rx_rst(false)
@@ -212,7 +212,7 @@ impl EthernetLowLevel {
                 .with_gem1_cpu1x_rst(false)
                 .with_gem0_cpu1x_rst(true)
                 .build(),
-            EthernetId::Eth1 => EthernetReset::builder()
+            EthernetId::Eth1 => EthernetRst::builder()
                 .with_gem1_ref_rst(true)
                 .with_gem0_ref_rst(false)
                 .with_gem1_rx_rst(true)
@@ -227,7 +227,7 @@ impl EthernetLowLevel {
                 for _ in 0..cycles {
                     cortex_ar::asm::nop();
                 }
-                regs.reset_ctrl().write_eth(EthernetReset::DEFAULT);
+                regs.reset_ctrl().write_eth(EthernetRst::DEFAULT);
             });
         }
     }
@@ -235,10 +235,10 @@ impl EthernetLowLevel {
     #[inline]
     pub fn enable_peripheral_clock(&mut self) {
         let periph_sel = match self.id {
-            EthernetId::Eth0 => crate::PeripheralSelect::Gem0,
-            EthernetId::Eth1 => crate::PeripheralSelect::Gem1,
+            EthernetId::Eth0 => crate::PeriphSelect::Gem0,
+            EthernetId::Eth1 => crate::PeriphSelect::Gem1,
         };
-        enable_amba_peripheral_clock(periph_sel);
+        enable_amba_periph_clk(periph_sel);
     }
 
     /// Completely configures the clock based on the provided [ClkConfig].
@@ -362,7 +362,7 @@ impl EthernetLowLevel {
     ///
     /// These steps do not include any resets or clock configuration.
     pub fn initialize(&mut self, reset_rx_tx_queue_base_addr: bool) {
-        let mut ctrl_val = NetworkControl::new_with_raw_value(0);
+        let mut ctrl_val = NetworkCtrl::new_with_raw_value(0);
         self.regs.write_net_ctrl(ctrl_val);
         // Now clear statistics.
         ctrl_val.set_clear_statistics(true);
@@ -370,7 +370,7 @@ impl EthernetLowLevel {
         self.regs.write_tx_status(TxStatus::new_clear_all());
         self.regs.write_rx_status(RxStatus::new_clear_all());
         self.regs
-            .write_interrupt_disable(InterruptControl::new_clear_all());
+            .write_interrupt_disable(InterruptCtrl::new_clear_all());
         if reset_rx_tx_queue_base_addr {
             self.regs.write_rx_buf_queue_base_addr(0);
             self.regs.write_tx_buf_queue_base_addr(0);

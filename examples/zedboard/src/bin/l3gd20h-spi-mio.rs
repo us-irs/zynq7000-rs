@@ -20,17 +20,17 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
+    cfg_level_shifter,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{GpioPins, Output, PinState},
-    gtc::Gtc,
+    gtc::GlobalTimerCounter,
     l2_cache,
     spi::{self, SpiAsync, SpiId, SpiWithHwCs, SpiWithHwCsAsync, on_interrupt},
     time::Hertz,
     uart::{self, TxAsync, on_interrupt_tx},
 };
 
-use zynq7000::{PsPeripherals, slcr::LevelShifterConfig, spi::DelayControl};
+use zynq7000::{PsPeripherals, slcr::LevelShifterCfg, spi::DelayControl};
 use zynq7000_rt as _;
 
 // Define the clock frequency as a constant
@@ -55,7 +55,7 @@ async fn main(spawner: Spawner) -> ! {
     l2_cache::init_with_defaults(&mut dp.l2c);
 
     // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterConfig::EnableAll);
+    cfg_level_shifter(LevelShifterCfg::EnableAll);
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let mut clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
@@ -79,7 +79,7 @@ async fn main(spawner: Spawner) -> ! {
     let mut gpio_pins = GpioPins::new(dp.gpio);
 
     // Set up global timer counter and embassy time driver.
-    let gtc = Gtc::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
     zynq7000_embassy::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
@@ -114,7 +114,7 @@ async fn main(spawner: Spawner) -> ! {
         clocks.io_clocks(),
         spi::Config::new(
             // 10 MHz maximum rating of the sensor.
-            zynq7000::spi::BaudDivSelect::By64,
+            zynq7000::spi::BaudDivSel::By64,
             //l3gd20::MODE,
             embedded_hal::spi::MODE_3,
             spi::SlaveSelectConfig::AutoWithAutoStart,

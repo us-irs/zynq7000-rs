@@ -12,15 +12,15 @@ use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
+    cfg_level_shifter,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{GpioPins, Output, PinState},
-    gtc::Gtc,
+    gtc::GlobalTimerCounter,
     l2_cache,
     uart::{ClkConfigRaw, Uart, UartConfig},
 };
 
-use zynq7000::{PsPeripherals, slcr::LevelShifterConfig};
+use zynq7000::{PsPeripherals, slcr::LevelShifterCfg};
 use zynq7000_rt as _;
 
 const INIT_STRING: &str = "-- Zynq 7000 Zedboard GPIO blinky example --\n\r";
@@ -41,7 +41,7 @@ async fn main(_spawner: Spawner) -> ! {
     l2_cache::init_with_defaults(&mut dp.l2c);
 
     // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterConfig::EnableAll);
+    cfg_level_shifter(LevelShifterCfg::EnableAll);
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
@@ -56,7 +56,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mut gpio_pins = GpioPins::new(dp.gpio);
 
     // Set up global timer counter and embassy time driver.
-    let gtc = Gtc::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
     zynq7000_embassy::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.

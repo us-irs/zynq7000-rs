@@ -37,8 +37,8 @@ static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
 /// The [`svd2rust` documentation](https://docs.rs/svd2rust/latest/svd2rust/#peripheral-api)
 /// provides some more information about this.
 pub struct PsPeripherals {
-    pub gicc: gic::MmioGicc<'static>,
-    pub gicd: gic::MmioGicd<'static>,
+    pub gicc: gic::MmioGicCpuInterface<'static>,
+    pub gicd: gic::MmioGicDistributor<'static>,
     pub l2c: l2_cache::MmioL2Cache<'static>,
     pub uart_0: uart::MmioUart<'static>,
     pub uart_1: uart::MmioUart<'static>,
@@ -46,7 +46,7 @@ pub struct PsPeripherals {
     pub spi_1: spi::MmioSpi<'static>,
     pub i2c_0: i2c::MmioI2c<'static>,
     pub i2c_1: i2c::MmioI2c<'static>,
-    pub gtc: gtc::MmioGtc<'static>,
+    pub gtc: gtc::MmioGlobalTimerCounter<'static>,
     pub gpio: gpio::MmioGpio<'static>,
     pub slcr: slcr::MmioSlcr<'static>,
     pub ttc_0: ttc::MmioTtc<'static>,
@@ -73,12 +73,12 @@ impl PsPeripherals {
     pub unsafe fn steal() -> Self {
         unsafe {
             Self {
-                gicc: gic::Gicc::new_mmio_fixed(),
-                gicd: gic::Gicd::new_mmio_fixed(),
+                gicc: gic::GicCpuInterface::new_mmio_fixed(),
+                gicd: gic::GicDistributor::new_mmio_fixed(),
                 l2c: l2_cache::L2Cache::new_mmio_fixed(),
                 uart_0: uart::Uart::new_mmio_fixed_0(),
                 uart_1: uart::Uart::new_mmio_fixed_1(),
-                gtc: gtc::Gtc::new_mmio_fixed(),
+                gtc: gtc::GlobalTimerCounter::new_mmio_fixed(),
                 gpio: gpio::Gpio::new_mmio_fixed(),
                 slcr: slcr::Slcr::new_mmio_fixed(),
                 spi_0: spi::Spi::new_mmio_fixed_0(),

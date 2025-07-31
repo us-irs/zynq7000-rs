@@ -2,7 +2,7 @@ use super::{RESET_BLOCK_OFFSET, SLCR_BASE_ADDR};
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct DualClockReset {
+pub struct DualClkRst {
     /// Peripheral 1 AMBA software reset.
     #[bit(1, rw)]
     periph1_cpu1x_rst: bool,
@@ -13,7 +13,7 @@ pub struct DualClockReset {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct DualRefAndClockReset {
+pub struct DualRefAndClkRst {
     /// Periperal 1 Reference software reset.
     #[bit(3, rw)]
     periph1_ref_rst: bool,
@@ -30,14 +30,14 @@ pub struct DualRefAndClockReset {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct GpioClockReset {
+pub struct GpioClkRst {
     #[bit(0, rw)]
     gpio_cpu1x_rst: bool,
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct EthernetReset {
+pub struct EthernetRst {
     #[bit(5, rw)]
     gem1_ref_rst: bool,
     #[bit(4, rw)]
@@ -62,13 +62,13 @@ pub struct ResetControl {
     topsw: u32,
     dmac: u32,
     usb: u32,
-    eth: EthernetReset,
-    sdio: DualRefAndClockReset,
-    spi: DualRefAndClockReset,
-    can: DualClockReset,
-    i2c: DualClockReset,
-    uart: DualRefAndClockReset,
-    gpio: GpioClockReset,
+    eth: EthernetRst,
+    sdio: DualRefAndClkRst,
+    spi: DualRefAndClkRst,
+    can: DualClkRst,
+    i2c: DualClkRst,
+    uart: DualRefAndClkRst,
+    gpio: GpioClkRst,
     lqspi: u32,
     smc: u32,
     ocm: u32,

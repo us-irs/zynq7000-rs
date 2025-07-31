@@ -25,7 +25,7 @@ pub struct InterruptStatus {
 /// Global timer counter.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Gtc {
+pub struct GlobalTimerCounter {
     /// Count register 0, lower 32 bits
     count_lower: u32,
     /// Count register 1, upper 32 bits
@@ -43,9 +43,9 @@ pub struct Gtc {
     auto_increment: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Gtc>(), 0x1C);
+static_assertions::const_assert_eq!(core::mem::size_of::<GlobalTimerCounter>(), 0x1C);
 
-impl Gtc {
+impl GlobalTimerCounter {
     /// Create a new GTC MMIO instance at the fixed base address.
     ///
     /// # Safety
@@ -54,7 +54,7 @@ impl Gtc {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGtc<'static> {
-        unsafe { Gtc::new_mmio_at(GTC_BASE_ADDR) }
+    pub const unsafe fn new_mmio_fixed() -> MmioGlobalTimerCounter<'static> {
+        unsafe { GlobalTimerCounter::new_mmio_at(GTC_BASE_ADDR) }
     }
 }

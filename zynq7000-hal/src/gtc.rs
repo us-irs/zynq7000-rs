@@ -4,7 +4,7 @@
 //!
 //! - [GTC ticks example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/examples/simple/src/bin/gtc-ticks.rs)
 //! - [Embassy Timer Driver](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000-embassy/src/lib.rs)
-use zynq7000::gtc::MmioGtc;
+use zynq7000::gtc::MmioGlobalTimerCounter;
 
 use crate::{clocks::ArmClocks, time::Hertz};
 
@@ -13,21 +13,21 @@ use crate::{clocks::ArmClocks, time::Hertz};
 /// This structure also allows an optional clock member, which is required for the
 /// [frequency_to_ticks] function and the [embedded_hal::delay::DelayNs] implementation
 /// to work.
-pub struct Gtc {
-    regs: MmioGtc<'static>,
+pub struct GlobalTimerCounter {
+    regs: MmioGlobalTimerCounter<'static>,
     cpu_3x2x_clock: Option<Hertz>,
 }
 
-unsafe impl Send for Gtc {}
+unsafe impl Send for GlobalTimerCounter {}
 
 pub const fn frequency_to_ticks(clock: Hertz, frequency: Hertz) -> u32 {
     clock.raw().div_ceil(frequency.raw())
 }
 
-impl Gtc {
+impl GlobalTimerCounter {
     /// Create a peripheral driver from a MMIO GTC block.
     #[inline]
-    pub const fn new(_regs: MmioGtc<'static>, clocks: &ArmClocks) -> Self {
+    pub const fn new(_regs: MmioGlobalTimerCounter<'static>, clocks: &ArmClocks) -> Self {
         unsafe { Self::steal_fixed(Some(clocks.cpu_3x2x_clk())) }
     }
 
@@ -42,7 +42,7 @@ impl Gtc {
     #[inline]
     pub const unsafe fn steal_fixed(cpu_3x2x_clk: Option<Hertz>) -> Self {
         Self {
-            regs: unsafe { zynq7000::gtc::Gtc::new_mmio_fixed() },
+            regs: unsafe { zynq7000::gtc::GlobalTimerCounter::new_mmio_fixed() },
             cpu_3x2x_clock: cpu_3x2x_clk,
         }
     }
@@ -157,7 +157,7 @@ impl Gtc {
 }
 
 /// GTC can be used for blocking delays.
-impl embedded_hal::delay::DelayNs for Gtc {
+impl embedded_hal::delay::DelayNs for GlobalTimerCounter {
     fn delay_ns(&mut self, ns: u32) {
         if self.cpu_3x2x_clock.is_none() {
             return;

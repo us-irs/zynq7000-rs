@@ -7,7 +7,7 @@ pub const SPI_1_BASE_ADDR: usize = 0xE000_7000;
 /// The SPI reference block will be divided by a divisor value.
 #[bitbybit::bitenum(u3)]
 #[derive(Debug, PartialEq, Eq)]
-pub enum BaudDivSelect {
+pub enum BaudDivSel {
     By4 = 0b001,
     By8 = 0b010,
     By16 = 0b011,
@@ -17,23 +17,23 @@ pub enum BaudDivSelect {
     By256 = 0b111,
 }
 
-impl BaudDivSelect {
+impl BaudDivSel {
     pub const fn div_value(&self) -> usize {
         match self {
-            BaudDivSelect::By4 => 4,
-            BaudDivSelect::By8 => 8,
-            BaudDivSelect::By16 => 16,
-            BaudDivSelect::By32 => 32,
-            BaudDivSelect::By64 => 64,
-            BaudDivSelect::By128 => 128,
-            BaudDivSelect::By256 => 256,
+            BaudDivSel::By4 => 4,
+            BaudDivSel::By8 => 8,
+            BaudDivSel::By16 => 16,
+            BaudDivSel::By32 => 32,
+            BaudDivSel::By64 => 64,
+            BaudDivSel::By128 => 128,
+            BaudDivSel::By256 => 256,
         }
     }
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct Config {
+pub struct Cfg {
     #[bit(17, rw)]
     modefail_gen_en: bool,
     #[bit(16, w)]
@@ -53,7 +53,7 @@ pub struct Config {
     #[bit(8, r)]
     ref_clk: bool,
     #[bits(3..=5, rw)]
-    baud_rate_div: Option<BaudDivSelect>,
+    baud_rate_div: Option<BaudDivSel>,
     /// Clock phase. 1: The SPI clock is inactive outside the word.
     #[bit(2, rw)]
     cpha: bool,
@@ -182,7 +182,7 @@ pub struct DelayControl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Spi {
-    cr: Config,
+    cr: Cfg,
     #[mmio(PureRead, Write)]
     isr: InterruptStatus,
     /// Interrupt Enable Register.

@@ -14,7 +14,7 @@ pub enum ClockSource {
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct ClockControl {
+pub struct ClkCtrl {
     /// When this bit is set and the external clock is selected, the counter clocks on the
     /// negative edge of the external clock input.
     #[bit(6, rw)]
@@ -146,7 +146,7 @@ pub struct EventCount {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Ttc {
-    clk_cntr: [ClockControl; 3],
+    clk_cntr: [ClkCtrl; 3],
     cnt_ctrl: [CounterControl; 3],
     #[mmio(PureRead)]
     current_counter: [Counter; 3],
