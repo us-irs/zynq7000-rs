@@ -1,15 +1,15 @@
 use core::sync::atomic::compiler_fence;
 
 use arbitrary_int::{u2, u3};
-pub use zynq7000::l2_cache::LatencyConfig;
+pub use zynq7000::l2_cache::LatencyCfg;
 use zynq7000::l2_cache::{
-    Associativity, AuxControl, Control, InterruptControl, MmioL2Cache, ReplacementPolicy, WaySize,
+    Associativity, AuxCtrl, Ctrl, InterruptCtrl, MmioL2Cache, ReplacementPolicy, WaySize,
 };
 
 use crate::slcr::Slcr;
 
 /// This is the default configuration used by Xilinx/AMD.
-pub const AUX_CTRL_DEFAULT: AuxControl = AuxControl::builder()
+pub const AUX_CTRL_DEFAULT: AuxCtrl = AuxCtrl::builder()
     .with_early_bresp_enable(true)
     .with_isntruction_prefetch_enable(true)
     .with_data_prefetch_enable(true)
@@ -30,14 +30,14 @@ pub const AUX_CTRL_DEFAULT: AuxControl = AuxControl::builder()
     .build();
 
 /// Xilinx/AMD default configuration. 2 cycles for setup, write and read.
-pub const DEFAULT_TAG_RAM_LATENCY: LatencyConfig = LatencyConfig::builder()
+pub const DEFAULT_TAG_RAM_LATENCY: LatencyCfg = LatencyCfg::builder()
     .with_write_access_latency(u3::new(0b001))
     .with_read_access_latency(u3::new(0b001))
     .with_setup_latency(u3::new(0b001))
     .build();
 
 /// Xilinx/AMD default configuration. 2 cycles for setup and write, 3 cycles for read.
-pub const DEFAULT_DATA_RAM_LATENCY: LatencyConfig = LatencyConfig::builder()
+pub const DEFAULT_DATA_RAM_LATENCY: LatencyCfg = LatencyCfg::builder()
     .with_write_access_latency(u3::new(0b001))
     .with_read_access_latency(u3::new(0b010))
     .with_setup_latency(u3::new(0b001))
@@ -57,10 +57,10 @@ pub fn init_with_defaults(l2c_mmio: &mut MmioL2Cache<'static>) {
 /// the runtime initialization provided by Xilinx/AMD.
 pub fn init(
     l2c_mmio: &mut MmioL2Cache<'static>,
-    tag_ram_latency: LatencyConfig,
-    data_ram_latency: LatencyConfig,
+    tag_ram_latency: LatencyCfg,
+    data_ram_latency: LatencyCfg,
 ) {
-    l2c_mmio.write_control(Control::new_disabled());
+    l2c_mmio.write_control(Ctrl::new_disabled());
     l2c_mmio.write_aux_control(AUX_CTRL_DEFAULT);
     l2c_mmio.write_tag_ram_latency(tag_ram_latency);
     l2c_mmio.write_data_ram_latency(data_ram_latency);
@@ -71,11 +71,11 @@ pub fn init(
     compiler_fence(core::sync::atomic::Ordering::SeqCst);
 
     let pending = l2c_mmio.read_interrupt_raw_status();
-    l2c_mmio.write_interrupt_clear(InterruptControl::new_with_raw_value(pending.raw_value()));
+    l2c_mmio.write_interrupt_clear(InterruptCtrl::new_with_raw_value(pending.raw_value()));
     unsafe {
         Slcr::with(|slcr| {
             slcr.write_magic_l2c_register(SLCR_L2C_CONFIG_MAGIC_VALUE);
         });
     }
-    l2c_mmio.write_control(Control::new_enabled());
+    l2c_mmio.write_control(Ctrl::new_enabled());
 }

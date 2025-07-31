@@ -6,7 +6,7 @@ pub const GEM_1_BASE_ADDR: usize = 0xE000_C000;
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct NetworkControl {
+pub struct NetworkCtrl {
     #[bit(18, w)]
     flush_next_rx_dpram_pkt: bool,
     #[bit(17, w)]
@@ -84,7 +84,7 @@ impl MdcClkDiv {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct NetworkConfig {
+pub struct NetworkCfg {
     #[bit(30, rw)]
     ignore_ipg_rx_error: bool,
     #[bit(29, rw)]
@@ -217,7 +217,7 @@ impl DmaRxBufSize {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct DmaConfig {
+pub struct DmaCfg {
     #[bit(24, rw)]
     discard_when_ahb_full: bool,
     /// DMA receive buffer size in AHB system memory.
@@ -340,7 +340,7 @@ pub struct InterruptStatus {
 
 #[bitbybit::bitfield(u32, default = 0x00)]
 #[derive(Debug)]
-pub struct InterruptControl {
+pub struct InterruptCtrl {
     #[bit(26, w)]
     tsu_sec_incr: bool,
     /// Marked N/A in datasheet. Probably because external PHYs are used.
@@ -380,7 +380,7 @@ pub struct InterruptControl {
     mgmt_frame_sent: bool,
 }
 
-impl InterruptControl {
+impl InterruptCtrl {
     pub fn new_clear_all() -> Self {
         Self::new_with_raw_value(0xFFFF_FFFF)
     }
@@ -430,19 +430,19 @@ pub struct MatchRegister {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Ethernet {
-    net_ctrl: NetworkControl,
-    net_cfg: NetworkConfig,
+    net_ctrl: NetworkCtrl,
+    net_cfg: NetworkCfg,
     #[mmio(PureRead)]
     net_status: NetworkStatus,
     _reserved0: u32,
-    dma_cfg: DmaConfig,
+    dma_cfg: DmaCfg,
     tx_status: TxStatus,
     rx_buf_queue_base_addr: u32,
     tx_buf_queue_base_addr: u32,
     rx_status: RxStatus,
     interrupt_status: InterruptStatus,
-    interrupt_enable: InterruptControl,
-    interrupt_disable: InterruptControl,
+    interrupt_enable: InterruptCtrl,
+    interrupt_disable: InterruptCtrl,
     interrupt_mask: InterruptStatus,
     phy_maintenance: PhyMaintenance,
     #[mmio(PureRead)]

@@ -6,7 +6,7 @@ use embassy_time_driver::{Driver, TICK_HZ, time_driver_impl};
 use embassy_time_queue_utils::Queue;
 use once_cell::sync::OnceCell;
 
-use zynq7000_hal::{clocks::ArmClocks, gtc::Gtc, time::Hertz};
+use zynq7000_hal::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
 
 static SCALE: OnceCell<u64> = OnceCell::new();
 static CPU_3X2X_CLK: OnceCell<Hertz> = OnceCell::new();
@@ -28,7 +28,7 @@ unsafe impl Send for AlarmState {}
 /// This is the initialization method for the embassy time driver.
 ///
 /// It should be called ONCE at system initialization.
-pub fn init(arm_clocks: &ArmClocks, gtc: Gtc) {
+pub fn init(arm_clocks: &ArmClocks, gtc: GlobalTimerCounter) {
     if SCALE.get().is_some() || CPU_3X2X_CLK.get().is_some() {
         return;
     }
@@ -46,7 +46,7 @@ pub unsafe fn on_interrupt() {
 }
 
 pub struct GtcTimerDriver {
-    gtc: Mutex<RefCell<Gtc>>,
+    gtc: Mutex<RefCell<GlobalTimerCounter>>,
     // Timestamp at which to fire alarm. u64::MAX if no alarm is scheduled.
     alarms: Mutex<AlarmState>,
     queue: Mutex<RefCell<Queue>>,
@@ -58,7 +58,7 @@ impl GtcTimerDriver {
     /// # Safety
     ///
     /// This has to be called ONCE at system initialization.
-    pub unsafe fn init(&'static self, arm_clock: &ArmClocks, mut gtc: Gtc) {
+    pub unsafe fn init(&'static self, arm_clock: &ArmClocks, mut gtc: GlobalTimerCounter) {
         CPU_3X2X_CLK.set(arm_clock.cpu_3x2x_clk()).unwrap();
         SCALE
             .set(arm_clock.cpu_3x2x_clk().raw() as u64 / TICK_HZ)
@@ -148,7 +148,7 @@ impl Driver for GtcTimerDriver {
         }
         // This is okay, we only read the GTC and do not re-configure it, avoids the
         // need for a lock.
-        let gtc = unsafe { Gtc::steal_fixed(Some(*CPU_3X2X_CLK.get().unwrap())) };
+        let gtc = unsafe { GlobalTimerCounter::steal_fixed(Some(*CPU_3X2X_CLK.get().unwrap())) };
 
         gtc.read_timer() / SCALE.get().unwrap()
     }
@@ -170,7 +170,7 @@ impl Driver for GtcTimerDriver {
 time_driver_impl!(
     // We assume ownership of the GTC, so it is okay to steal here.
     static GTC_TIME_DRIVER: GtcTimerDriver = GtcTimerDriver {
-        gtc: Mutex::new(RefCell::new(unsafe { Gtc::steal_fixed(None)})),
+        gtc: Mutex::new(RefCell::new(unsafe { GlobalTimerCounter::steal_fixed(None)})),
         alarms: Mutex::new(AlarmState::new()),
         queue: Mutex::new(RefCell::new(Queue::new())),
 });

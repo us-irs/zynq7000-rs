@@ -6,7 +6,7 @@ use core::convert::Infallible;
 use arbitrary_int::u3;
 use libm::round;
 use zynq7000::{
-    slcr::reset::DualRefAndClockReset,
+    slcr::reset::DualRefAndClkRst,
     uart::{
         BaudRateDiv, Baudgen, ChMode, ClkSel, FifoTrigger, InterruptControl, MmioUart, Mode,
         UART_0_BASE, UART_1_BASE,
@@ -14,13 +14,13 @@ use zynq7000::{
 };
 
 use crate::{
-    enable_amba_peripheral_clock,
+    enable_amba_periph_clk,
     gpio::{
         IoPeriphPin,
         mio::{
             Mio8, Mio9, Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31,
             Mio32, Mio33, Mio34, Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, Mio52, Mio53,
-            MioPinMarker, MuxConf, Pin,
+            MioPinMarker, MuxCfg, Pin,
         },
     },
     slcr::Slcr,
@@ -45,7 +45,7 @@ pub use rx::*;
 
 pub const FIFO_DEPTH: usize = 64;
 pub const DEFAULT_RX_TRIGGER_LEVEL: u8 = 32;
-pub const UART_MUX_CONF: MuxConf = MuxConf::new_with_l3(u3::new(0b111));
+pub const UART_MUX_CONF: MuxCfg = MuxCfg::new_with_l3(u3::new(0b111));
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum UartId {
@@ -436,7 +436,7 @@ pub enum UartConstructionError {
     #[error("missmatch between pins index and passed index")]
     IdxMissmatch,
     #[error("invalid pin mux conf for UART")]
-    InvalidMuxConf(MuxConf),
+    InvalidMuxConf(MuxCfg),
 }
 
 impl Uart {
@@ -491,10 +491,10 @@ impl Uart {
         cfg: UartConfig,
     ) -> Uart {
         let periph_sel = match uart_id {
-            UartId::Uart0 => crate::PeripheralSelect::Uart0,
-            UartId::Uart1 => crate::PeripheralSelect::Uart1,
+            UartId::Uart0 => crate::PeriphSelect::Uart0,
+            UartId::Uart1 => crate::PeriphSelect::Uart1,
         };
-        enable_amba_peripheral_clock(periph_sel);
+        enable_amba_periph_clk(periph_sel);
         reset(uart_id);
         reg_block.modify_cr(|mut v| {
             v.set_tx_dis(true);
@@ -644,13 +644,13 @@ impl embedded_io::Read for Uart {
 #[inline]
 pub fn reset(id: UartId) {
     let assert_reset = match id {
-        UartId::Uart0 => DualRefAndClockReset::builder()
+        UartId::Uart0 => DualRefAndClkRst::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        UartId::Uart1 => DualRefAndClockReset::builder()
+        UartId::Uart1 => DualRefAndClkRst::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -662,7 +662,7 @@ pub fn reset(id: UartId) {
             regs.reset_ctrl().write_uart(assert_reset);
             // Keep it in reset for one cycle.. not sure if this is necessary.
             cortex_ar::asm::nop();
-            regs.reset_ctrl().write_uart(DualRefAndClockReset::DEFAULT);
+            regs.reset_ctrl().write_uart(DualRefAndClkRst::DEFAULT);
         });
     }
 }

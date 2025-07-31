@@ -1,7 +1,7 @@
 use arbitrary_int::{u2, u3};
 pub use zynq7000::eth::MdcClkDiv;
 use zynq7000::eth::{
-    BurstLength, DmaRxBufSize, GEM_0_BASE_ADDR, GEM_1_BASE_ADDR, InterruptControl, InterruptStatus,
+    BurstLength, DmaRxBufSize, GEM_0_BASE_ADDR, GEM_1_BASE_ADDR, InterruptCtrl, InterruptStatus,
     MmioEthernet, RxStatus, TxStatus,
 };
 
@@ -32,14 +32,14 @@ use crate::{
         IoPeriphPin,
         mio::{
             Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34, Mio35, Mio36, Mio37, Mio38, Mio39,
-            Mio52, Mio53, MioPinMarker, MuxConf, Pin,
+            Mio52, Mio53, MioPinMarker, MuxCfg, Pin,
         },
     },
     time::Hertz,
 };
 
-pub const MUX_CONF_PHY: MuxConf = MuxConf::new_with_l0();
-pub const MUX_CONF_MDIO: MuxConf = MuxConf::new_with_l3(u3::new(0b100));
+pub const MUX_CONF_PHY: MuxCfg = MuxCfg::new_with_l0();
+pub const MUX_CONF_MDIO: MuxCfg = MuxCfg::new_with_l3(u3::new(0b100));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EthernetId {
@@ -284,7 +284,7 @@ pub struct Ethernet {
     current_clk_divs: ClkDivisors,
 }
 
-const IRQ_CONTROL: InterruptControl = InterruptControl::builder()
+const IRQ_CONTROL: InterruptCtrl = InterruptCtrl::builder()
     .with_tsu_sec_incr(false)
     .with_partner_pg_rx(false)
     .with_auto_negotiation_complete(false)
@@ -721,7 +721,7 @@ pub(crate) fn on_interrupt(
     let mut clear = InterruptStatus::new_with_raw_value(0);
     let mut tx_status_clear = TxStatus::new_with_raw_value(0);
     let mut rx_status_clear = RxStatus::new_with_raw_value(0);
-    let mut disable = InterruptControl::new_with_raw_value(0);
+    let mut disable = InterruptCtrl::new_with_raw_value(0);
     let mut result = InterruptResult::default();
 
     if status.frame_sent() {

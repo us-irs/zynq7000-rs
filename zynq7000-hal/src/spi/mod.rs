@@ -2,11 +2,11 @@
 use core::convert::Infallible;
 
 use crate::clocks::Clocks;
-use crate::enable_amba_peripheral_clock;
+use crate::enable_amba_periph_clk;
 use crate::gpio::IoPeriphPin;
 use crate::gpio::mio::{
     Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34,
-    Mio35, Mio36, Mio37, Mio38, Mio39, MioPinMarker, MuxConf, Pin,
+    Mio35, Mio36, Mio37, Mio38, Mio39, MioPinMarker, MuxCfg, Pin,
 };
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 use crate::gpio::mio::{
@@ -19,9 +19,9 @@ use arbitrary_int::{Number, u3, u4, u6};
 use embedded_hal::delay::DelayNs;
 pub use embedded_hal::spi::Mode;
 use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, SpiBus as _};
-use zynq7000::slcr::reset::DualRefAndClockReset;
+use zynq7000::slcr::reset::DualRefAndClkRst;
 use zynq7000::spi::{
-    BaudDivSelect, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
+    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
     MmioSpi, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
@@ -81,7 +81,7 @@ pub trait SsPin: MioPinMarker {
     const GROUP: usize;
 }
 
-pub const SPI_MUX_CONF: MuxConf = MuxConf::new_with_l3(u3::new(0b101));
+pub const SPI_MUX_CONF: MuxCfg = MuxCfg::new_with_l3(u3::new(0b101));
 
 // SPI0, choice 1
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
@@ -364,14 +364,14 @@ pub enum SlaveSelectConfig {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Config {
-    baud_div: BaudDivSelect,
+    baud_div: BaudDivSel,
     init_mode: Mode,
     ss_config: SlaveSelectConfig,
     with_ext_decoding: bool,
 }
 
 impl Config {
-    pub fn new(baud_div: BaudDivSelect, init_mode: Mode, ss_config: SlaveSelectConfig) -> Self {
+    pub fn new(baud_div: BaudDivSel, init_mode: Mode, ss_config: SlaveSelectConfig) -> Self {
         Self {
             baud_div,
             init_mode,
@@ -493,7 +493,7 @@ impl SpiLowLevel {
         };
 
         self.regs.write_cr(
-            zynq7000::spi::Config::builder()
+            zynq7000::spi::Cfg::builder()
                 .with_modefail_gen_en(false)
                 .with_manual_start(false)
                 .with_manual_start_enable(man_start)
@@ -819,10 +819,10 @@ impl Spi {
         config: Config,
     ) -> Self {
         let periph_sel = match id {
-            SpiId::Spi0 => crate::PeripheralSelect::Spi0,
-            SpiId::Spi1 => crate::PeripheralSelect::Spi1,
+            SpiId::Spi0 => crate::PeriphSelect::Spi0,
+            SpiId::Spi1 => crate::PeriphSelect::Spi1,
         };
-        enable_amba_peripheral_clock(periph_sel);
+        enable_amba_periph_clk(periph_sel);
         let sclk = clocks.spi_clk() / config.baud_div.div_value() as u32;
         let mut spi = Self {
             inner: SpiLowLevel { regs, id },
@@ -1106,13 +1106,13 @@ impl<Delay: DelayNs> embedded_hal::spi::SpiDevice for SpiWithHwCs<Delay> {
 #[inline]
 pub fn reset(id: SpiId) {
     let assert_reset = match id {
-        SpiId::Spi0 => DualRefAndClockReset::builder()
+        SpiId::Spi0 => DualRefAndClkRst::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        SpiId::Spi1 => DualRefAndClockReset::builder()
+        SpiId::Spi1 => DualRefAndClkRst::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -1127,7 +1127,7 @@ pub fn reset(id: SpiId) {
             for _ in 0..3 {
                 cortex_ar::asm::nop();
             }
-            regs.reset_ctrl().write_spi(DualRefAndClockReset::DEFAULT);
+            regs.reset_ctrl().write_spi(DualRefAndClkRst::DEFAULT);
         });
     }
 }

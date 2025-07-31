@@ -73,7 +73,7 @@ pub struct PllStatus {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct FpgaClkControl {
+pub struct FpgaClkCtrl {
     // Reset value 0x1
     #[bits(20..=25, rw)]
     divisor_1: u6,
@@ -86,14 +86,14 @@ pub struct FpgaClkControl {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct FpgaClkBlock {
-    clk_ctrl: FpgaClkControl,
+pub struct FpgaClkCtrlBlock {
+    ctrl: FpgaClkCtrl,
     thr_ctrl: u32,
     thr_cnt: u32,
     thr_status: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClkBlock>(), 0x10);
+static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClkCtrlBlock>(), 0x10);
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug)]
@@ -156,15 +156,15 @@ pub struct DciClkCtrl {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct ClockRatioSelectReg {
+pub struct ClkRatioSelectReg {
     /// Reset value: 0x1 (6:2:1 clock)
     #[bit(0, rw)]
-    sel: ClockRatioSelect,
+    sel: ClkRatioSelect,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug)]
-pub enum ClockRatioSelect {
+pub enum ClkRatioSelect {
     /// 4:2:1 clock ratio, which is an abbreviation for 4:2:2:1.
     FourToTwoToOne = 0b0,
     /// 6:2:1 clock ratio, which is an abbreviation for 6:3:2:1.
@@ -372,15 +372,15 @@ pub struct ClockControl {
     pcap_clk_ctrl: SingleCommonPeriphIoClkCtrl,
     topsw_clk_ctrl: u32,
     #[mmio(Inner)]
-    fpga_0_clk_ctrl: FpgaClkBlock,
+    fpga_0_clk_ctrl: FpgaClkCtrlBlock,
     #[mmio(Inner)]
-    fpga_1_clk_ctrl: FpgaClkBlock,
+    fpga_1_clk_ctrl: FpgaClkCtrlBlock,
     #[mmio(Inner)]
-    fpga_2_clk_ctrl: FpgaClkBlock,
+    fpga_2_clk_ctrl: FpgaClkCtrlBlock,
     #[mmio(Inner)]
-    fpga_3_clk_ctrl: FpgaClkBlock,
+    fpga_3_clk_ctrl: FpgaClkCtrlBlock,
     _gap1: [u32; 5],
-    clk_621_true: ClockRatioSelectReg,
+    clk_621_true: ClkRatioSelectReg,
 }
 
 impl ClockControl {

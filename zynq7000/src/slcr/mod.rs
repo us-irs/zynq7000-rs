@@ -58,7 +58,7 @@ pub enum VrefSel {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct GpiobControl {
+pub struct GpiobCtrl {
     #[bit(11, rw)]
     vref_sw_en: bool,
     #[bits(4..=6, rw)]
@@ -70,7 +70,7 @@ pub struct GpiobControl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct GpiobRegisters {
-    ctrl: GpiobControl,
+    ctrl: GpiobCtrl,
     cfg_cmos18: u32,
     cfg_cmos25: u32,
     cfg_cmos33: u32,
@@ -95,7 +95,7 @@ impl GpiobRegisters {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct BootModeRegister {
+pub struct BootModeReg {
     #[bit(4, r)]
     pll_bypass: bool,
     #[bits(0..=3, r)]
@@ -104,7 +104,7 @@ pub struct BootModeRegister {
 
 #[bitbybit::bitenum(u4)]
 #[derive(Debug, PartialEq, Eq)]
-pub enum LevelShifterConfig {
+pub enum LevelShifterCfg {
     DisableAll = 0x00,
     EnablePsToPl = 0xA,
     EnableAll = 0xF,
@@ -113,7 +113,7 @@ pub enum LevelShifterConfig {
 #[bitbybit::bitfield(u32)]
 pub struct LevelShifterReg {
     #[bits(0..=3, rw)]
-    user_lvl_shftr_en: Option<LevelShifterConfig>,
+    user_lvl_shftr_en: Option<LevelShifterCfg>,
 }
 
 /// System Level Control Registers
@@ -142,7 +142,7 @@ pub struct Slcr {
     _gap2: [u32; 0x02],
 
     reboot_status: u32,
-    boot_mode: BootModeRegister,
+    boot_mode: BootModeReg,
 
     _gap3: [u32; 0x28],
 

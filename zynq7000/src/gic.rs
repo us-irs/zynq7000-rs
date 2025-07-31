@@ -14,7 +14,7 @@ pub struct Dcr {
 
 /// Read only bit. This register only returns fixed constants.
 #[bitbybit::bitfield(u32)]
-pub struct TypeRegister {
+pub struct TypeReg {
     #[bits(11..=15, r)]
     lspi: u5,
     #[bit(10, r)]
@@ -25,7 +25,7 @@ pub struct TypeRegister {
     it_lines_number: u5,
 }
 
-impl TypeRegister {
+impl TypeReg {
     pub const SECURITY_EXTNS_BIT: bool = true;
     /// 31 LSPIs.
     pub const NUM_LSPI: usize = 0x1f;
@@ -38,12 +38,12 @@ impl TypeRegister {
     pub const NUM_OF_INTERRUPTS: usize = 96;
 }
 
-pub type Typer = TypeRegister;
+pub type Typer = TypeReg;
 
 /// GIC Distributor registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
-pub struct Gicd {
+pub struct GicDistributor {
     /// Distributor Control Register
     pub dcr: Dcr,
     /// Interrupt Controller Type Register
@@ -109,9 +109,9 @@ pub struct Gicd {
     pub cidr: [u32; 4],
 }
 
-const_assert_eq!(core::mem::size_of::<Gicd>(), 0x1000);
+const_assert_eq!(core::mem::size_of::<GicDistributor>(), 0x1000);
 
-impl Gicd {
+impl GicDistributor {
     /// Create a new Global Interrupt Controller Distributor MMIO instance at the fixed address of
     /// the processing system.
     ///
@@ -121,14 +121,14 @@ impl Gicd {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGicd<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioGicDistributor<'static> {
         unsafe { Self::new_mmio_at(GICD_BASE_ADDR) }
     }
 }
 
 /// CPU interface control register.
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct Icr {
+pub struct InterfaceCtrl {
     #[bit(4, rw)]
     sbpr: bool,
     #[bit(3, rw)]
@@ -143,7 +143,7 @@ pub struct Icr {
 
 /// Priority Mask Register
 #[bitbybit::bitfield(u32)]
-pub struct PriorityRegister {
+pub struct PriorityReg {
     #[bits(0..=7, rw)]
     priority: u8,
 }
@@ -161,11 +161,11 @@ pub struct InterruptSignalRegister {
 /// GIC CPU interface registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
-pub struct Gicc {
-    /// CPU Interface Control Register.
-    pub icr: Icr,
+pub struct GicCpuInterface {
+    /// CPU Interface Control Register (ICR).
+    pub icr: InterfaceCtrl,
     /// Interrupt Priority Mask Register.
-    pub pmr: PriorityRegister,
+    pub pmr: PriorityReg,
     /// Binary Point Register.
     pub bpr: u32,
     /// Interrupt Acknowledge Register.
@@ -173,7 +173,7 @@ pub struct Gicc {
     /// End of Interrupt Register.
     pub eoir: InterruptSignalRegister,
     /// Running Priority Register.
-    pub rpr: PriorityRegister,
+    pub rpr: PriorityReg,
     /// Highest Pending Interrupt Register.
     pub hpir: InterruptSignalRegister,
     /// Aliased Binary Point Register
@@ -184,9 +184,9 @@ pub struct Gicc {
     pub iidr: u32,
 }
 
-const_assert_eq!(core::mem::size_of::<Gicc>(), 0x100);
+const_assert_eq!(core::mem::size_of::<GicCpuInterface>(), 0x100);
 
-impl Gicc {
+impl GicCpuInterface {
     /// Create a new Global Interrupt Controller CPU MMIO instance at the fixed address of the
     /// processing system.
     ///
@@ -196,7 +196,7 @@ impl Gicc {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGicc<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioGicCpuInterface<'static> {
         unsafe { Self::new_mmio_at(GICC_BASE_ADDR) }
     }
 }

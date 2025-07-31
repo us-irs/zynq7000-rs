@@ -4,12 +4,15 @@
 
 /// Hertz
 pub type Hertz = fugit::HertzU32;
+pub type Hz = Hertz;
 
 /// KiloHertz
 pub type KiloHertz = fugit::KilohertzU32;
+pub type KHz = KiloHertz;
 
 /// MegaHertz
 pub type MegaHertz = fugit::MegahertzU32;
+pub type MHz = MegaHertz;
 
 // Period based
 

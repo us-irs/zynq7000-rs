@@ -6,7 +6,7 @@ pub const I2C_1_BASE_ADDR: usize = 0xE000_5000;
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug)]
-pub enum Direction {
+pub enum Dir {
     Receiver = 0b1,
     Transmitter = 0b0,
 }
@@ -19,7 +19,7 @@ pub enum Mode {
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct Control {
+pub struct Ctrl {
     /// Divides the input PCLK frequency by this value + 1
     #[bits(14..=15, rw)]
     div_a: u2,
@@ -44,7 +44,7 @@ pub struct Control {
     #[bit(1, rw)]
     mode: Mode,
     #[bit(0, rw)]
-    dir: Direction,
+    dir: Dir,
 }
 
 #[bitbybit::bitfield(u32)]
@@ -159,7 +159,7 @@ pub struct TransferSize {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct I2c {
-    cr: Control,
+    cr: Ctrl,
     #[mmio(PureRead)]
     sr: Status,
     addr: Addr,

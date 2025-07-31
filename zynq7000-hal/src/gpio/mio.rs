@@ -7,14 +7,14 @@ use arbitrary_int::{u2, u3};
 use zynq7000::gpio::MmioGpio;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct MuxConf {
+pub struct MuxCfg {
     l3: u3,
     l2: u2,
     l1: bool,
     l0: bool,
 }
 
-impl From<zynq7000::slcr::mio::Config> for MuxConf {
+impl From<zynq7000::slcr::mio::Config> for MuxCfg {
     fn from(value: zynq7000::slcr::mio::Config) -> Self {
         Self::new(
             value.l0_sel(),
@@ -25,7 +25,7 @@ impl From<zynq7000::slcr::mio::Config> for MuxConf {
     }
 }
 
-impl MuxConf {
+impl MuxCfg {
     #[inline]
     pub const fn new(l0: bool, l1: bool, l2: u2, l3: u3) -> Self {
         Self { l3, l2, l1, l0 }

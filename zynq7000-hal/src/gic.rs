@@ -10,7 +10,7 @@ use arbitrary_int::Number;
 
 use cortex_ar::interrupt;
 use zynq7000::gic::{
-    Dcr, Gicc, Gicd, Icr, InterruptSignalRegister, MmioGicc, MmioGicd, PriorityRegister,
+    Dcr, GicCpuInterface, GicDistributor, InterfaceCtrl, InterruptSignalRegister, MmioGicCpuInterface, MmioGicDistributor, PriorityReg,
 };
 
 const SPURIOUS_INTERRUPT_ID: u32 = 1023;
@@ -223,15 +223,15 @@ pub struct InvalidSgiInterruptId(pub usize);
 /// For the handling of the interrupts, you can use the [GicInterruptHelper] which assumes a
 /// properly configured GIC.
 pub struct GicConfigurator {
-    pub gicc: MmioGicc<'static>,
-    pub gicd: MmioGicd<'static>,
+    pub gicc: MmioGicCpuInterface<'static>,
+    pub gicd: MmioGicDistributor<'static>,
 }
 
 impl GicConfigurator {
     /// Create a new GIC controller instance and calls [Self::initialize] to perform
     /// strongly recommended initialization routines for the GIC.
     #[inline]
-    pub fn new_with_init(gicc: MmioGicc<'static>, gicd: MmioGicd<'static>) -> Self {
+    pub fn new_with_init(gicc: MmioGicCpuInterface<'static>, gicd: MmioGicDistributor<'static>) -> Self {
         let mut gic = GicConfigurator { gicc, gicd };
         gic.initialize();
         gic
@@ -247,8 +247,8 @@ impl GicConfigurator {
     #[inline]
     pub unsafe fn steal() -> Self {
         GicConfigurator {
-            gicc: unsafe { Gicc::new_mmio_fixed() },
-            gicd: unsafe { Gicd::new_mmio_fixed() },
+            gicc: unsafe { GicCpuInterface::new_mmio_fixed() },
+            gicd: unsafe { GicDistributor::new_mmio_fixed() },
         }
     }
 
@@ -280,7 +280,7 @@ impl GicConfigurator {
     /// 8-bit bitfield. See p.83 of the ARM GICv1 architecture specification.
     pub fn set_priority_mask(&mut self, mask: u8) {
         self.gicc
-            .write_pmr(PriorityRegister::new_with_raw_value(mask as u32));
+            .write_pmr(PriorityReg::new_with_raw_value(mask as u32));
     }
 
     /// Set the sensitivity of a the Programmable Logic SPI interrupts.
@@ -442,7 +442,7 @@ impl GicConfigurator {
     /// to call [Self::enable_interrupts] for interrupts to work.
     pub fn enable(&mut self) {
         self.update_ctrl_regs(
-            Icr::builder()
+            InterfaceCtrl::builder()
                 .with_sbpr(false)
                 .with_fiq_en(false)
                 .with_ack_ctrl(false)
@@ -476,7 +476,7 @@ impl GicConfigurator {
 
     /// Update the control registers which control the safety configuration and which also enable
     /// the GIC.
-    pub fn update_ctrl_regs(&mut self, icr: Icr, dcr: Dcr) {
+    pub fn update_ctrl_regs(&mut self, icr: InterfaceCtrl, dcr: Dcr) {
         self.gicc.write_icr(icr);
         self.gicd.write_dcr(dcr);
     }
@@ -484,12 +484,12 @@ impl GicConfigurator {
 
 /// Helper structure which should only be used inside the interrupt handler once the GIC has
 /// been configured with the [GicConfigurator].
-pub struct GicInterruptHelper(MmioGicc<'static>);
+pub struct GicInterruptHelper(MmioGicCpuInterface<'static>);
 
 impl GicInterruptHelper {
     /// Create the interrupt helper with the fixed GICC MMIO instance.
     pub const fn new() -> Self {
-        GicInterruptHelper(unsafe { Gicc::new_mmio_fixed() })
+        GicInterruptHelper(unsafe { GicCpuInterface::new_mmio_fixed() })
     }
 
     /// Acknowledges an interrupt by reading the IAR register and returning the interrupt context

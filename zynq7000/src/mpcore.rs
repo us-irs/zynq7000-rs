@@ -4,8 +4,8 @@
 use static_assertions::const_assert_eq;
 
 use crate::{
-    gic::{Gicc, Gicd, MmioGicc, MmioGicd},
-    gtc::{Gtc, MmioGtc},
+    gic::{GicCpuInterface, GicDistributor, MmioGicCpuInterface, MmioGicDistributor},
+    gtc::{GlobalTimerCounter, MmioGlobalTimerCounter},
 };
 
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
@@ -53,10 +53,10 @@ pub struct Mpcore {
     _reserved_0: [u32; 0x2A],
 
     #[mmio(Inner)]
-    gicc: Gicc,
+    gicc: GicCpuInterface,
 
     #[mmio(Inner)]
-    gt: Gtc,
+    gt: GlobalTimerCounter,
 
     _reserved_1: [u32; 0xF9],
 
@@ -77,7 +77,7 @@ pub struct Mpcore {
     _reserved_3: [u32; 0x272],
 
     #[mmio(Inner)]
-    gicd: Gicd,
+    gicd: GicDistributor,
 }
 
 const_assert_eq!(core::mem::size_of::<Mpcore>(), 0x2000);

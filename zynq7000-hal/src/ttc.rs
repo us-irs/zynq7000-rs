@@ -13,7 +13,7 @@ use crate::{
     clocks::ArmClocks,
     gpio::{
         IoPeriphPin,
-        mio::{Mio28, Mio29, Mio30, Mio31, MioPinMarker, MuxConf, Pin},
+        mio::{Mio28, Mio29, Mio30, Mio31, MioPinMarker, MuxCfg, Pin},
     },
     time::Hertz,
 };
@@ -55,7 +55,7 @@ impl PsTtc for MmioTtc<'static> {
     }
 }
 
-pub const TTC_MUX_CONF: MuxConf = MuxConf::new_with_l3(u3::new(0b110));
+pub const TTC_MUX_CONF: MuxCfg = MuxCfg::new_with_l3(u3::new(0b110));
 
 pub trait ClockInPin: MioPinMarker {
     const ID: TtcId;
@@ -172,7 +172,7 @@ impl TtcChannel {
 
 #[derive(Debug, thiserror::Error)]
 #[error("invalid TTC pin configuration")]
-pub struct InvalidTtcPinConfigError(pub MuxConf);
+pub struct InvalidTtcPinConfigError(pub MuxCfg);
 
 #[derive(Debug, thiserror::Error)]
 #[error("frequency is zero")]
@@ -186,7 +186,7 @@ pub enum TtcConstructionError {
     FrequencyIsZero(#[from] FrequencyIsZeroError),
 }
 
-pub fn calculate_prescaler_reg_and_interval_ticks(
+pub fn calc_prescaler_reg_and_interval_ticks(
     mut ref_clk: Hertz,
     freq: Hertz,
 ) -> (Option<u4>, u16) {
@@ -246,7 +246,7 @@ impl Pwm {
         if freq.raw() == 0 {
             return Err(FrequencyIsZeroError);
         }
-        let (prescaler_reg, tick_val) = calculate_prescaler_reg_and_interval_ticks(ref_clk, freq);
+        let (prescaler_reg, tick_val) = calc_prescaler_reg_and_interval_ticks(ref_clk, freq);
         let id = channel.id() as usize;
         let mut pwm = Self { channel, ref_clk };
         pwm.set_up_and_configure_pwm(id, prescaler_reg, tick_val);
@@ -262,7 +262,7 @@ impl Pwm {
         }
         let id = self.channel.id() as usize;
         let (prescaler_reg, tick_val) =
-            calculate_prescaler_reg_and_interval_ticks(self.ref_clk, freq);
+            calc_prescaler_reg_and_interval_ticks(self.ref_clk, freq);
         self.set_up_and_configure_pwm(id, prescaler_reg, tick_val);
         Ok(())
     }
@@ -320,7 +320,7 @@ impl Pwm {
             .regs
             .write_clk_cntr(
                 id,
-                zynq7000::ttc::ClockControl::builder()
+                zynq7000::ttc::ClkCtrl::builder()
                     .with_ext_clk_edge(false)
                     .with_clk_src(zynq7000::ttc::ClockSource::Pclk)
                     .with_prescaler(prescaler_reg.unwrap_or(u4::new(0)))
