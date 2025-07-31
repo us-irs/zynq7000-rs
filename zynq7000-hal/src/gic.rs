@@ -10,7 +10,7 @@ use arbitrary_int::Number;
 
 use cortex_ar::interrupt;
 use zynq7000::gic::{
-    Dcr, GicCpuInterface, GicDistributor, Icr, InterruptSignalRegister, MmioGicCpuInterface, MmioGicDistributor, PriorityReg,
+    Dcr, GicCpuInterface, GicDistributor, InterfaceCtrl, InterruptSignalRegister, MmioGicCpuInterface, MmioGicDistributor, PriorityReg,
 };
 
 const SPURIOUS_INTERRUPT_ID: u32 = 1023;
@@ -442,7 +442,7 @@ impl GicConfigurator {
     /// to call [Self::enable_interrupts] for interrupts to work.
     pub fn enable(&mut self) {
         self.update_ctrl_regs(
-            Icr::builder()
+            InterfaceCtrl::builder()
                 .with_sbpr(false)
                 .with_fiq_en(false)
                 .with_ack_ctrl(false)
@@ -476,7 +476,7 @@ impl GicConfigurator {
 
     /// Update the control registers which control the safety configuration and which also enable
     /// the GIC.
-    pub fn update_ctrl_regs(&mut self, icr: Icr, dcr: Dcr) {
+    pub fn update_ctrl_regs(&mut self, icr: InterfaceCtrl, dcr: Dcr) {
         self.gicc.write_icr(icr);
         self.gicd.write_dcr(dcr);
     }

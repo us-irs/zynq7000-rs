@@ -104,7 +104,7 @@ impl BootMode {
 /// system (PS).
 ///
 /// The Zynq-7000 TRM p.32 specifies more information about this register and how to use it.
-pub fn cfg_level_shifter(config: zynq7000::slcr::LevelShifterCfg) {
+pub fn configure_level_shifter(config: zynq7000::slcr::LevelShifterCfg) {
     // Safety: We only manipulate the level shift registers.
     unsafe {
         Slcr::with(|slcr_unlocked| {

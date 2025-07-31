@@ -40,7 +40,7 @@ use zedboard::{
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    cfg_level_shifter,
+    configure_level_shifter,
     eth::{
         AlignedBuffer, ClkDivCollection, EthernetConfig, EthernetLowLevel,
         embassy_net::InterruptResult,
@@ -213,7 +213,7 @@ async fn main(spawner: Spawner) -> ! {
     l2_cache::init_with_defaults(&mut dp.l2c);
 
     // Enable PS-PL level shifters.
-    cfg_level_shifter(LevelShifterCfg::EnableAll);
+    configure_level_shifter(LevelShifterCfg::EnableAll);
 
     // Configure the uncached memory region using the MMU.
     mmu_l1_table_mut()

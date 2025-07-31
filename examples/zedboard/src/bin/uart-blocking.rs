@@ -15,7 +15,7 @@ use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    cfg_level_shifter,
+    configure_level_shifter,
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
@@ -105,7 +105,7 @@ async fn main(_spawner: Spawner) -> ! {
     l2_cache::init_with_defaults(&mut dp.l2c);
 
     // Enable PS-PL level shifters.
-    cfg_level_shifter(LevelShifterCfg::EnableAll);
+    configure_level_shifter(LevelShifterCfg::EnableAll);
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
