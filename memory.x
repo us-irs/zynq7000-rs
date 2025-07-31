@@ -1,8 +1,7 @@
-
 MEMORY
 {
   /* Zedboard: 512 MB DDR3. Only use 63 MB for now, should be plenty for a bare-metal app.
-  Leave 1 MB of memory which will be configured as uncached device memory by the MPU. This is
+  Leave 1 MB of memory which will be configured as uncached device memory by the MMU. This is
   recommended for something like DMA descriptors. */
   CODE(rx) : ORIGIN = 0x00100000, LENGTH = 63M
   UNCACHED(rx): ORIGIN = 0x4000000, LENGTH = 1M

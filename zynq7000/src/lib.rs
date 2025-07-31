@@ -17,6 +17,7 @@ extern crate std;
 
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
+pub mod ddrc;
 pub mod eth;
 pub mod gic;
 pub mod gpio;
@@ -40,6 +41,7 @@ pub struct PsPeripherals {
     pub gicc: gic::MmioGicCpuInterface<'static>,
     pub gicd: gic::MmioGicDistributor<'static>,
     pub l2c: l2_cache::MmioL2Cache<'static>,
+    pub ddrc: ddrc::MmioDdrController<'static>,
     pub uart_0: uart::MmioUart<'static>,
     pub uart_1: uart::MmioUart<'static>,
     pub spi_0: spi::MmioSpi<'static>,
@@ -76,6 +78,7 @@ impl PsPeripherals {
                 gicc: gic::GicCpuInterface::new_mmio_fixed(),
                 gicd: gic::GicDistributor::new_mmio_fixed(),
                 l2c: l2_cache::L2Cache::new_mmio_fixed(),
+                ddrc: ddrc::DdrController::new_mmio_fixed(),
                 uart_0: uart::Uart::new_mmio_fixed_0(),
                 uart_1: uart::Uart::new_mmio_fixed_1(),
                 gtc: gtc::GlobalTimerCounter::new_mmio_fixed(),

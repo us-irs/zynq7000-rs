@@ -64,22 +64,22 @@ pub fn main() -> ! {
 #[zynq7000_rt::irq]
 pub fn irq_handler() {}
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _abort_handler() {
+#[zynq7000_rt::exception(DataAbort)]
+fn data_abort_handler(_faulting_addr: usize) -> ! {
     loop {
         nop();
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _undefined_handler() {
+#[zynq7000_rt::exception(Undefined)]
+fn undefined_handler(_faulting_addr: usize) -> ! {
     loop {
         nop();
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _prefetch_handler() {
+#[zynq7000_rt::exception(PrefetchAbort)]
+fn prefetch_handler(_faulting_addr: usize) -> ! {
     loop {
         nop();
     }

@@ -40,8 +40,8 @@ impl Slcr {
     /// Returns a mutable reference to the SLCR MMIO block.
     ///
     /// The MMIO block will not be unlocked. However, the registers can still be read.
-    pub fn regs(&mut self) -> &mut MmioSlcr<'static> {
-        &mut self.0
+    pub fn regs(&self) -> &MmioSlcr<'static> {
+        &self.0
     }
 
     /// Modify the SLCR register.

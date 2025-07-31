@@ -10,10 +10,11 @@
 #![no_std]
 
 use slcr::Slcr;
-use zynq7000::slcr::LevelShifterReg;
+use zynq7000::slcr::{BootModeReg, BootPllCfg, LevelShifterReg};
 
 pub mod cache;
 pub mod clocks;
+pub mod ddr;
 pub mod eth;
 pub mod gic;
 pub mod gpio;
@@ -40,36 +41,26 @@ pub enum BootDevice {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum BootPllCfg {
-    Enabled,
-    Bypassed,
-}
-
-#[derive(Debug)]
 pub struct BootMode {
     boot_mode: Option<BootDevice>,
     pll_config: BootPllCfg,
 }
 
 impl BootMode {
-    #[allow(clippy::new_without_default)]
     /// Create a new boot mode information structure by reading the boot mode register from the
     /// fixed SLCR block.
-    pub fn new() -> Self {
+    pub fn new_from_regs() -> Self {
         // Safety: Only read a read-only register here.
-        Self::new_with_raw_reg(
-            unsafe { zynq7000::slcr::Slcr::new_mmio_fixed() }
-                .read_boot_mode()
-                .raw_value(),
-        )
+        Self::new_with_reg(unsafe { zynq7000::slcr::Slcr::new_mmio_fixed() }.read_boot_mode())
     }
 
-    fn new_with_raw_reg(raw_register: u32) -> Self {
-        let msb_three_bits = (raw_register >> 1) & 0b111;
+    fn new_with_reg(boot_mode_reg: BootModeReg) -> Self {
+        let boot_dev = boot_mode_reg.boot_mode();
+        let msb_three_bits = (boot_dev.value() >> 1) & 0b111;
 
         let boot_mode = match msb_three_bits {
             0b000 => {
-                if raw_register & 0b1 == 0 {
+                if boot_dev.value() & 0b1 == 0 {
                     Some(BootDevice::JtagCascaded)
                 } else {
                     Some(BootDevice::JtagIndependent)
@@ -81,21 +72,17 @@ impl BootMode {
             0b110 => Some(BootDevice::SdCard),
             _ => None,
         };
-        let pll_config = if (raw_register >> 4) & 0b1 == 0 {
-            BootPllCfg::Enabled
-        } else {
-            BootPllCfg::Bypassed
-        };
         Self {
             boot_mode,
-            pll_config,
+            pll_config: boot_mode_reg.pll_config(),
         }
     }
-    pub fn boot_device(&self) -> Option<BootDevice> {
+
+    pub const fn boot_device(&self) -> Option<BootDevice> {
         self.boot_mode
     }
 
-    pub const fn pll_enable(&self) -> BootPllCfg {
+    pub const fn pll_config(&self) -> BootPllCfg {
         self.pll_config
     }
 }

@@ -254,7 +254,7 @@ async fn main(spawner: Spawner) -> ! {
         )
     };
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     let mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);

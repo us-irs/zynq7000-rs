@@ -8,7 +8,7 @@ members = [
   "examples/simple",
   "examples/embassy",
   "examples/zedboard",
-  "zynq-mmu",
+  "zynq-mmu", "fsbl",
 ]
 exclude = ["experiments"]
 

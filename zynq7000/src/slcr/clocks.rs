@@ -4,18 +4,12 @@
 use super::{CLOCK_CONTROL_OFFSET, SLCR_BASE_ADDR};
 use arbitrary_int::{u4, u6, u7, u10};
 
-#[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
-pub enum BypassForce {
-    EnabledOrSetByBootMode = 0b0,
-    Bypassed = 0b1,
-}
-
-#[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
-pub enum BypassQual {
-    BypassForceBit = 0b0,
-    BootModeFourthBit = 0b1,
+pub enum Bypass {
+    NotBypassed = 0b00,
+    /// This is the default reset value.
+    PinStrapSettings = 0b01,
+    Bypassed = 0b10,
+    BypassedRegardlessOfPinStrapping = 0b11,
 }
 
 #[bitbybit::bitfield(u32)]
@@ -29,16 +23,50 @@ pub struct PllCtrl {
     fdiv: u7,
     /// Select source for the ARM PLL bypass control
     #[bit(4, rw)]
-    bypass_force: BypassForce,
+    bypass_force: bool,
     /// Select source for the ARM PLL bypass control
     #[bit(3, rw)]
-    bypass_qual: BypassQual,
+    bypass_qual: bool,
     // Power-down control
     #[bit(1, rw)]
     pwrdwn: bool,
     /// Reset control
     #[bit(0, rw)]
     reset: bool,
+}
+
+impl PllCtrl {
+    #[inline]
+    pub fn set_bypass(&mut self, bypass: Bypass) {
+        match bypass {
+            Bypass::NotBypassed => {
+                self.set_bypass_force(false);
+                self.set_bypass_qual(false);
+            }
+            Bypass::PinStrapSettings => {
+                self.set_bypass_force(false);
+                self.set_bypass_qual(true);
+            }
+            Bypass::Bypassed => {
+                self.set_bypass_force(true);
+                self.set_bypass_qual(false);
+            }
+            Bypass::BypassedRegardlessOfPinStrapping => {
+                self.set_bypass_force(true);
+                self.set_bypass_qual(true);
+            }
+        }
+    }
+
+    #[inline]
+    pub fn bypass(&self) -> Bypass {
+        match (self.bypass_force(), self.bypass_qual()) {
+            (false, false) => Bypass::NotBypassed,
+            (false, true) => Bypass::PinStrapSettings,
+            (true, false) => Bypass::Bypassed,
+            (true, true) => Bypass::BypassedRegardlessOfPinStrapping,
+        }
+    }
 }
 
 #[bitbybit::bitfield(u32)]
@@ -48,26 +76,26 @@ pub struct PllCfg {
     lock_count: u10,
     /// Charge Pump control
     #[bits(8..=11, rw)]
-    pll_cp: u4,
+    charge_pump: u4,
     /// Loop resistor control
     #[bits(4..=7, rw)]
-    pll_res: u4,
+    loop_resistor: u4,
 }
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
 pub struct PllStatus {
-    #[bit(5)]
+    #[bit(5, r)]
     io_pll_stable: bool,
-    #[bit(4)]
+    #[bit(4, r)]
     ddr_pll_stable: bool,
-    #[bit(3)]
+    #[bit(3, r)]
     arm_pll_stable: bool,
-    #[bit(2)]
+    #[bit(2, r)]
     io_pll_lock: bool,
-    #[bit(1)]
+    #[bit(1, r)]
     drr_pll_lock: bool,
-    #[bit(0)]
+    #[bit(0, r)]
     arm_pll_lock: bool,
 }
 
@@ -141,7 +169,7 @@ pub struct DdrClkCtrl {
     ddr_3x_clk_act: bool,
 }
 
-#[bitbybit::bitfield(u32)]
+#[bitbybit::bitfield(u32, default = 0x0)]
 pub struct DciClkCtrl {
     /// Second cascade divider. Reset value: 0x1E
     #[bits(20..=25, rw)]
@@ -341,9 +369,9 @@ pub struct AperClkCtrl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct ClockControl {
-    arm_pll: PllCtrl,
-    ddr_pll: PllCtrl,
-    io_pll: PllCtrl,
+    arm_pll_ctrl: PllCtrl,
+    ddr_pll_ctrl: PllCtrl,
+    io_pll_ctrl: PllCtrl,
     pll_status: PllStatus,
     arm_pll_cfg: PllCfg,
     ddr_pll_cfg: PllCfg,

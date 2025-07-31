@@ -12,43 +12,9 @@ const GPIOB_OFFSET: usize = 0xB00;
 const DDRIOB_OFFSET: usize = 0xB40;
 
 pub mod clocks;
+pub mod ddriob;
 pub mod mio;
 pub mod reset;
-
-#[derive(derive_mmio::Mmio)]
-#[repr(C)]
-pub struct DdrIoB {
-    ddriob_addr0: u32,
-    ddriob_addr1: u32,
-    ddriob_data0: u32,
-    ddriob_data1: u32,
-    ddriob_diff0: u32,
-    ddriob_diff1: u32,
-    ddriob_clock: u32,
-    ddriob_drive_slew_addr: u32,
-    ddriob_drive_slew_data: u32,
-    ddriob_drive_slew_diff: u32,
-    ddriob_drive_slew_clock: u32,
-    ddriob_ddr_ctrl: u32,
-    ddriob_dci_ctrl: u32,
-    ddriob_dci_status: u32,
-}
-
-impl DdrIoB {
-    /// Create a new handle to this peripheral.
-    ///
-    /// Writing to this register requires unlocking the SLCR registers first.
-    ///
-    /// # Safety
-    ///
-    /// If you create multiple instances of this handle at the same time, you are responsible for
-    /// ensuring that there are no read-modify-write races on any of the registers.
-    pub unsafe fn new_mmio_fixed() -> MmioDdrIoB<'static> {
-        unsafe { Self::new_mmio_at(SLCR_BASE_ADDR + DDRIOB_OFFSET) }
-    }
-}
-
-static_assertions::const_assert_eq!(core::mem::size_of::<DdrIoB>(), 0x38);
 
 #[bitbybit::bitenum(u3, exhaustive = false)]
 pub enum VrefSel {
@@ -93,11 +59,19 @@ impl GpiobRegisters {
     }
 }
 
+#[bitbybit::bitenum(u1, exhaustive = true)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum BootPllCfg {
+    Enabled = 0,
+    /// Disabled and bypassed.
+    Bypassed = 1,
+}
+
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
 pub struct BootModeReg {
     #[bit(4, r)]
-    pll_bypass: bool,
+    pll_config: BootPllCfg,
     #[bits(0..=3, r)]
     boot_mode: u4,
 }
@@ -205,7 +179,7 @@ pub struct Slcr {
     gpiob: GpiobRegisters,
 
     #[mmio(Inner)]
-    ddriob: DdrIoB,
+    ddriob: ddriob::DdrIoB,
 }
 
 static_assertions::const_assert_eq!(core::mem::size_of::<Slcr>(), 0xB78);

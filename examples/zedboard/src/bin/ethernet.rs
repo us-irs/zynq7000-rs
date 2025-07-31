@@ -250,7 +250,7 @@ async fn main(spawner: Spawner) -> ! {
     // Safety: We are not multi-threaded yet.
     unsafe { zynq7000_hal::log::uart_blocking::init_unsafe_single_core(uart, LOG_LEVEL, false) };
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     static ETH_RX_BUFS: static_cell::ConstStaticCell<[AlignedBuffer; NUM_RX_SLOTS]> =

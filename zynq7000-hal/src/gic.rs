@@ -10,7 +10,8 @@ use arbitrary_int::Number;
 
 use cortex_ar::interrupt;
 use zynq7000::gic::{
-    Dcr, GicCpuInterface, GicDistributor, InterfaceCtrl, InterruptSignalRegister, MmioGicCpuInterface, MmioGicDistributor, PriorityReg,
+    Dcr, GicCpuInterface, GicDistributor, InterfaceCtrl, InterruptSignalRegister,
+    MmioGicCpuInterface, MmioGicDistributor, PriorityReg,
 };
 
 const SPURIOUS_INTERRUPT_ID: u32 = 1023;
@@ -231,7 +232,10 @@ impl GicConfigurator {
     /// Create a new GIC controller instance and calls [Self::initialize] to perform
     /// strongly recommended initialization routines for the GIC.
     #[inline]
-    pub fn new_with_init(gicc: MmioGicCpuInterface<'static>, gicd: MmioGicDistributor<'static>) -> Self {
+    pub fn new_with_init(
+        gicc: MmioGicCpuInterface<'static>,
+        gicd: MmioGicDistributor<'static>,
+    ) -> Self {
         let mut gic = GicConfigurator { gicc, gicd };
         gic.initialize();
         gic

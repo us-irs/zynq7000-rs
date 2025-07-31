@@ -96,7 +96,7 @@ async fn main(spawner: Spawner) -> ! {
         .unwrap();
     zynq7000_hal::log::rb::init(log::LevelFilter::Trace);
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     if DEBUG_SPI_CLK_CONFIG {

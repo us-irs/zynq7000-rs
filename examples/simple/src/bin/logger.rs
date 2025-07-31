@@ -79,7 +79,7 @@ pub fn main() -> ! {
         )
     };
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {boot_mode:?}");
 
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);

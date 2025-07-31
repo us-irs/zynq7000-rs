@@ -137,7 +137,7 @@ async fn main(_spawner: Spawner) -> ! {
         info!("Flex Pin 0 state (should be low): {}", flex_pin_0.is_high());
     }
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     let mut ticker = Ticker::every(Duration::from_millis(1000));

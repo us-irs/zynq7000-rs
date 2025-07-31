@@ -21,8 +21,8 @@ pub use embedded_hal::spi::Mode;
 use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, SpiBus as _};
 use zynq7000::slcr::reset::DualRefAndClkRst;
 use zynq7000::spi::{
-    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
-    MmioSpi, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
+    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus, MmioSpi,
+    SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
 pub const FIFO_DEPTH: usize = 128;
@@ -1141,8 +1141,8 @@ pub fn reset(id: SpiId) {
 /// [configure_spi_ref_clk] can be used to configure the SPI reference clock with the calculated
 /// value.
 pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6> {
-    let mut slcr = unsafe { Slcr::steal() };
-    let spi_clk_ctrl = slcr.regs().clk_ctrl().read_spi_clk_ctrl();
+    let slcr = unsafe { Slcr::steal() };
+    let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     let div = match spi_clk_ctrl.srcsel() {
         zynq7000::slcr::clocks::SrcSelIo::IoPll | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
             clks.io_clocks().ref_clk() / clks.arm_clocks().cpu_1x_clk()
@@ -1163,7 +1163,7 @@ pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6
 
 pub fn configure_spi_ref_clk(clks: &mut Clocks, divisor: u6) {
     let mut slcr = unsafe { Slcr::steal() };
-    let spi_clk_ctrl = slcr.regs().clk_ctrl().read_spi_clk_ctrl();
+    let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     slcr.modify(|regs| {
         regs.clk_ctrl().modify_spi_clk_ctrl(|mut val| {
             val.set_divisor(divisor);

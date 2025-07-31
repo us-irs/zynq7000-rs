@@ -675,6 +675,18 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xlslice_0_Dout1 [get_bd_pins UART_MUX/Dout] [get_bd_pins uart_mux_0/sel]
   connect_bd_net -net xlslice_1_Dout [get_bd_pins EMIO_O_0/Dout] [get_bd_pins LEDS/Din] [get_bd_pins EMIO_I/In0] [get_bd_pins UART_MUX/Din]
 
+  # Set DDR properties specified in the datasheet.
+  set_property -dict [list \
+    CONFIG.PCW_UIPARAM_DDR_BOARD_DELAY0 {0.410} \
+    CONFIG.PCW_UIPARAM_DDR_BOARD_DELAY1 {0.411} \
+    CONFIG.PCW_UIPARAM_DDR_BOARD_DELAY2 {0.341} \
+    CONFIG.PCW_UIPARAM_DDR_BOARD_DELAY3 {0.358} \
+    CONFIG.PCW_UIPARAM_DDR_DQS_TO_CLK_DELAY_0 {0.025} \
+    CONFIG.PCW_UIPARAM_DDR_DQS_TO_CLK_DELAY_1 {0.028} \
+    CONFIG.PCW_UIPARAM_DDR_DQS_TO_CLK_DELAY_2 {-0.009} \
+    CONFIG.PCW_UIPARAM_DDR_DQS_TO_CLK_DELAY_3 {-0.061} \
+  ] [get_bd_cells processing_system7_0]
+
   # Create address segments
   assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_uart16550_0/S_AXI/Reg] -force
   assign_bd_address -offset 0x42C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_uartlite_0/S_AXI/Reg] -force

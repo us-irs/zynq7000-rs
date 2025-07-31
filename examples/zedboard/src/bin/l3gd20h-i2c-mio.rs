@@ -93,7 +93,7 @@ async fn main(_spawner: Spawner) -> ! {
         )
     };
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     let pin_sel = match I2C_ADDR_SEL {

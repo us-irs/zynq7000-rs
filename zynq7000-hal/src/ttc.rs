@@ -186,10 +186,7 @@ pub enum TtcConstructionError {
     FrequencyIsZero(#[from] FrequencyIsZeroError),
 }
 
-pub fn calc_prescaler_reg_and_interval_ticks(
-    mut ref_clk: Hertz,
-    freq: Hertz,
-) -> (Option<u4>, u16) {
+pub fn calc_prescaler_reg_and_interval_ticks(mut ref_clk: Hertz, freq: Hertz) -> (Option<u4>, u16) {
     // TODO: Can this be optimized?
     let mut prescaler_reg: Option<u4> = None;
     let mut tick_val = ref_clk / freq;
@@ -261,8 +258,7 @@ impl Pwm {
             return Err(FrequencyIsZeroError);
         }
         let id = self.channel.id() as usize;
-        let (prescaler_reg, tick_val) =
-            calc_prescaler_reg_and_interval_ticks(self.ref_clk, freq);
+        let (prescaler_reg, tick_val) = calc_prescaler_reg_and_interval_ticks(self.ref_clk, freq);
         self.set_up_and_configure_pwm(id, prescaler_reg, tick_val);
         Ok(())
     }

@@ -75,7 +75,7 @@ async fn main(spawner: Spawner) -> ! {
 
     zynq7000_hal::log::rb::init(log::LevelFilter::Trace);
 
-    let boot_mode = BootMode::new();
+    let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     let led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
