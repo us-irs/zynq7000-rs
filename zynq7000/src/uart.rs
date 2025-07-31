@@ -20,7 +20,7 @@ pub enum Parity {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
-pub enum Chrl {
+pub enum CharLen {
     SixBits = 0b11,
     SevenBits = 0b10,
     #[default]
@@ -30,7 +30,7 @@ pub enum Chrl {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
-pub enum ClkSel {
+pub enum ClockSelect {
     #[default]
     UartRefClk = 0b0,
     UartRefClkDiv8 = 0b1,
@@ -57,7 +57,7 @@ pub enum ChMode {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct Ctrl {
+pub struct Control {
     /// Stop transmitter break.
     #[bit(8, rw)]
     stopbrk: bool,
@@ -98,9 +98,9 @@ pub struct Mode {
     par: Parity,
     /// Char length.
     #[bits(1..=2, rw)]
-    chrl: Chrl,
+    chrl: CharLen,
     #[bit(0, rw)]
-    clksel: ClkSel,
+    clksel: ClockSelect,
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
@@ -287,7 +287,7 @@ impl InterruptStatus {
 #[repr(C)]
 pub struct Uart {
     /// Control Register
-    cr: Ctrl,
+    cr: Control,
     /// Mode register
     mr: Mode,
     /// Interrupt enable register

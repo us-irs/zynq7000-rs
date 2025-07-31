@@ -3,7 +3,7 @@
 pub const GTC_BASE_ADDR: usize = super::mpcore::MPCORE_BASE_ADDR + 0x0000_0200;
 
 #[bitbybit::bitfield(u32)]
-pub struct GtcCtrl {
+pub struct GtcControl {
     #[bits(8..=15, rw)]
     prescaler: u8,
     #[bit(3, rw)]
@@ -31,7 +31,7 @@ pub struct GlobalTimerCounter {
     /// Count register 1, upper 32 bits
     count_upper: u32,
     /// Control register
-    ctrl: GtcCtrl,
+    ctrl: GtcControl,
     /// Interrupt status register
     #[mmio(PureRead, Write)]
     isr: InterruptStatus,

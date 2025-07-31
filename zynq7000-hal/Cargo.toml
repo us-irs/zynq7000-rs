@@ -35,7 +35,7 @@ libm = "0.2"
 log = "0.4"
 embassy-sync = "0.7"
 embassy-net-driver = "0.2"
-smoltcp = { version = "0.12", default-features = false }
+smoltcp = { version = "0.12", default-features = false, features = ["proto-ipv4", "medium-ethernet", "socket-raw"] }
 vcell = "0.1"
 raw-slicee = "0.1"
 embedded-io-async = "0.6"

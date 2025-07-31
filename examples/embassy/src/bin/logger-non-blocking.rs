@@ -18,7 +18,7 @@ use zynq7000_hal::{
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClkConfigRaw, TxAsync, Uart, UartConfig, on_interrupt_tx},
+    uart::{ClockConfigRaw, TxAsync, Uart, UartConfig, on_interrupt_tx},
 };
 
 use zynq7000_rt as _;
@@ -58,7 +58,7 @@ async fn main(spawner: Spawner) -> ! {
     let mio_pins = mio::Pins::new(dp.gpio);
 
     // Set up the UART, we are logging with it.
-    let uart_clk_config = ClkConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
+    let uart_clk_config = ClockConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
     let mut uart = Uart::new_with_mio(

@@ -10,7 +10,7 @@ pub struct MaskedOutput {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct BankCtrl {
+pub struct BankControl {
     /// Direction mode
     dirm: u32,
     /// Output enable
@@ -84,22 +84,22 @@ pub struct Gpio {
     _reserved_2: [u32; 101],
 
     #[mmio(Inner)]
-    bank_0: BankCtrl,
+    bank_0: BankControl,
 
     _reserved_3: [u32; 7],
 
     #[mmio(Inner)]
-    bank_1: BankCtrl,
+    bank_1: BankControl,
 
     _reserved_4: [u32; 7],
 
     #[mmio(Inner)]
-    bank_2: BankCtrl,
+    bank_2: BankControl,
 
     _reserved_5: [u32; 7],
 
     #[mmio(Inner)]
-    bank_3: BankCtrl,
+    bank_3: BankControl,
 }
 
 static_assertions::const_assert_eq!(core::mem::size_of::<Gpio>(), 0x2E8);

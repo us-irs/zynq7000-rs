@@ -15,7 +15,7 @@ use zynq7000_hal::{
     l2_cache,
     prelude::*,
     time::Hertz,
-    uart::{ClkConfigRaw, Uart, UartConfig},
+    uart::{ClockConfigRaw, Uart, UartConfig},
 };
 
 use zynq7000_rt as _;
@@ -49,7 +49,7 @@ pub fn main() -> ! {
     // Enable interrupt exception.
     unsafe { gic.enable_interrupts() };
     // Set up the UART, we are logging with it.
-    let uart_clk_config = ClkConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
+    let uart_clk_config = ClockConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
     let mut gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());

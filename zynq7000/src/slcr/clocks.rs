@@ -20,7 +20,7 @@ pub enum BypassQual {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct PllCtrl {
+pub struct PllControl {
     /// Feedback divisor for the PLL.
     ///
     /// NOTE: Before changing this value, the PLL must first be bypassed and then put into
@@ -43,7 +43,7 @@ pub struct PllCtrl {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct PllCfg {
+pub struct PllConfig {
     #[bits(12..=21, rw)]
     lock_count: u10,
     /// Charge Pump control
@@ -73,7 +73,7 @@ pub struct PllStatus {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct FpgaClkCtrl {
+pub struct FpgaClockControl {
     // Reset value 0x1
     #[bits(20..=25, rw)]
     divisor_1: u6,
@@ -86,14 +86,14 @@ pub struct FpgaClkCtrl {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct FpgaClkCtrlBlock {
-    ctrl: FpgaClkCtrl,
+pub struct FpgaClockControlBlock {
+    ctrl: FpgaClockControl,
     thr_ctrl: u32,
     thr_cnt: u32,
     thr_status: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClkCtrlBlock>(), 0x10);
+static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClockControlBlock>(), 0x10);
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug)]
@@ -105,7 +105,7 @@ pub enum SrcSelArm {
 }
 
 #[bitbybit::bitfield(u32)]
-pub struct ArmClkCtrl {
+pub struct ArmClockControl {
     #[bit(28, rw)]
     cpu_peri_clk_act: bool,
     #[bit(27, rw)]
@@ -126,7 +126,7 @@ pub struct ArmClkCtrl {
 }
 
 #[bitbybit::bitfield(u32)]
-pub struct DdrClkCtrl {
+pub struct DdrClockControl {
     /// Divisor for DDR 2x clock. Reset value: 0x6
     #[bits(26..=31, rw)]
     div_2x_clk: u6,
@@ -142,7 +142,7 @@ pub struct DdrClkCtrl {
 }
 
 #[bitbybit::bitfield(u32)]
-pub struct DciClkCtrl {
+pub struct DciClockControl {
     /// Second cascade divider. Reset value: 0x1E
     #[bits(20..=25, rw)]
     divisor_1: u6,
@@ -156,15 +156,15 @@ pub struct DciClkCtrl {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct ClkRatioSelectReg {
+pub struct ClockRatioSelectReg {
     /// Reset value: 0x1 (6:2:1 clock)
     #[bit(0, rw)]
-    sel: ClkRatioSelect,
+    sel: ClockkRatioSelect,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug)]
-pub enum ClkRatioSelect {
+pub enum ClockkRatioSelect {
     /// 4:2:1 clock ratio, which is an abbreviation for 4:2:2:1.
     FourToTwoToOne = 0b0,
     /// 6:2:1 clock ratio, which is an abbreviation for 6:3:2:1.
@@ -201,7 +201,7 @@ impl PartialEq for SrcSelIo {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct GigEthClkCtrl {
+pub struct GigEthClockControl {
     #[bits(20..=25, rw)]
     divisor_1: u6,
     #[bits(8..=13, rw)]
@@ -223,7 +223,7 @@ pub enum SrcSelGigEthRclk {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct GigEthRclkCtrl {
+pub struct GigEthRclkControl {
     #[bit(4, rw)]
     srcsel: SrcSelGigEthRclk,
     // Enable the ethernet controller RX clock.
@@ -233,7 +233,7 @@ pub struct GigEthRclkCtrl {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct CanClkCtrl {
+pub struct CanClockControl {
     #[bits(20..=25, rw)]
     divisor_1: u6,
     #[bits(8..=13, rw)]
@@ -247,7 +247,7 @@ pub struct CanClkCtrl {
 }
 
 #[bitbybit::bitfield(u32)]
-pub struct SingleCommonPeriphIoClkCtrl {
+pub struct SingleCommonPeriphIoClockControl {
     #[bits(8..=13, rw)]
     divisor: u6,
     #[bits(4..=5, rw)]
@@ -258,7 +258,7 @@ pub struct SingleCommonPeriphIoClkCtrl {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct DualCommonPeriphIoClkCtrl {
+pub struct DualCommonPeriphIoClockControl {
     #[bits(8..=13, rw)]
     divisor: u6,
     #[bits(4..=5, rw)]
@@ -283,7 +283,7 @@ pub enum SrcSelTpiu {
 }
 
 #[bitbybit::bitfield(u32)]
-pub struct TracePortClkCtrl {
+pub struct TracePortClockControl {
     #[bits(8..=13, rw)]
     divisor: u6,
     #[bits(4..=6, rw)]
@@ -299,7 +299,7 @@ pub struct TracePortClkCtrl {
 /// These clocks must be enabled if you want to read from the peripheral register space.
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct AperClkCtrl {
+pub struct AperClockControl {
     #[bit(24, rw)]
     smc_1x_clk_act: bool,
     #[bit(23, rw)]
@@ -341,46 +341,46 @@ pub struct AperClkCtrl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct ClockControl {
-    arm_pll: PllCtrl,
-    ddr_pll: PllCtrl,
-    io_pll: PllCtrl,
+    arm_pll: PllControl,
+    ddr_pll: PllControl,
+    io_pll: PllControl,
     pll_status: PllStatus,
-    arm_pll_cfg: PllCfg,
-    ddr_pll_cfg: PllCfg,
-    io_pll_cfg: PllCfg,
+    arm_pll_cfg: PllConfig,
+    ddr_pll_cfg: PllConfig,
+    io_pll_cfg: PllConfig,
     _gap0: u32,
-    arm_clk_ctrl: ArmClkCtrl,
-    ddr_clk_ctrl: DdrClkCtrl,
-    dci_clk_ctrl: DciClkCtrl,
+    arm_clk_ctrl: ArmClockControl,
+    ddr_clk_ctrl: DdrClockControl,
+    dci_clk_ctrl: DciClockControl,
     /// AMBA peripheral clock control
-    aper_clk_ctrl: AperClkCtrl,
+    aper_clk_ctrl: AperClockControl,
     usb_0_clk_ctrl: u32,
     usb_1_clk_ctrl: u32,
-    gem_0_rclk_ctrl: GigEthRclkCtrl,
-    gem_1_rclk_ctrl: GigEthRclkCtrl,
-    gem_0_clk_ctrl: GigEthClkCtrl,
-    gem_1_clk_ctrl: GigEthClkCtrl,
-    smc_clk_ctrl: SingleCommonPeriphIoClkCtrl,
-    lqspi_clk_ctrl: SingleCommonPeriphIoClkCtrl,
-    sdio_clk_ctrl: DualCommonPeriphIoClkCtrl,
-    uart_clk_ctrl: DualCommonPeriphIoClkCtrl,
-    spi_clk_ctrl: DualCommonPeriphIoClkCtrl,
-    can_clk_ctrl: CanClkCtrl,
+    gem_0_rclk_ctrl: GigEthRclkControl,
+    gem_1_rclk_ctrl: GigEthRclkControl,
+    gem_0_clk_ctrl: GigEthClockControl,
+    gem_1_clk_ctrl: GigEthClockControl,
+    smc_clk_ctrl: SingleCommonPeriphIoClockControl,
+    lqspi_clk_ctrl: SingleCommonPeriphIoClockControl,
+    sdio_clk_ctrl: DualCommonPeriphIoClockControl,
+    uart_clk_ctrl: DualCommonPeriphIoClockControl,
+    spi_clk_ctrl: DualCommonPeriphIoClockControl,
+    can_clk_ctrl: CanClockControl,
     can_mioclk_ctrl: u32,
     /// Debug or Trace Port clock control.
-    dbg_clk_ctrl: TracePortClkCtrl,
-    pcap_clk_ctrl: SingleCommonPeriphIoClkCtrl,
+    dbg_clk_ctrl: TracePortClockControl,
+    pcap_clk_ctrl: SingleCommonPeriphIoClockControl,
     topsw_clk_ctrl: u32,
     #[mmio(Inner)]
-    fpga_0_clk_ctrl: FpgaClkCtrlBlock,
+    fpga_0_clk_ctrl: FpgaClockControlBlock,
     #[mmio(Inner)]
-    fpga_1_clk_ctrl: FpgaClkCtrlBlock,
+    fpga_1_clk_ctrl: FpgaClockControlBlock,
     #[mmio(Inner)]
-    fpga_2_clk_ctrl: FpgaClkCtrlBlock,
+    fpga_2_clk_ctrl: FpgaClockControlBlock,
     #[mmio(Inner)]
-    fpga_3_clk_ctrl: FpgaClkCtrlBlock,
+    fpga_3_clk_ctrl: FpgaClockControlBlock,
     _gap1: [u32; 5],
-    clk_621_true: ClkRatioSelectReg,
+    clk_621_true: ClockRatioSelectReg,
 }
 
 impl ClockControl {

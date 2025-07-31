@@ -1,7 +1,7 @@
 use arbitrary_int::{Number, u6};
 use zynq7000::{
-    eth::{InterruptCtrl, NetworkCtrl, RxStatus, TxStatus},
-    slcr::reset::EthernetRst,
+    eth::{InterruptControl, NetworkControl, RxStatus, TxStatus},
+    slcr::reset::EthernetReset,
 };
 
 use crate::{clocks::IoClocks, enable_amba_periph_clk, slcr::Slcr, time::Hertz};
@@ -37,12 +37,12 @@ pub enum Duplex {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ClkDivisors {
+pub struct ClockDivisors {
     pub divisor_0: u6,
     pub divisor_1: u6,
 }
 
-impl ClkDivisors {
+impl ClockDivisors {
     pub const fn new(divisor_0: u6, divisor_1: u6) -> Self {
         Self {
             divisor_0,
@@ -90,16 +90,16 @@ impl ClkDivisors {
 
 /// Full clock configuration for the ethernet peripheral.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct ClkConfig {
+pub struct ClockConfig {
     pub src_sel: zynq7000::slcr::clocks::SrcSelIo,
     pub use_emio_tx_clk: bool,
-    pub divs: ClkDivisors,
+    pub divs: ClockDivisors,
     /// Enable the clock.
     pub enable: bool,
 }
 
-impl ClkConfig {
-    pub const fn new(divs: ClkDivisors) -> Self {
+impl ClockConfig {
+    pub const fn new(divs: ClockDivisors) -> Self {
         Self {
             src_sel: zynq7000::slcr::clocks::SrcSelIo::IoPll,
             use_emio_tx_clk: false,
@@ -109,23 +109,23 @@ impl ClkConfig {
     }
 }
 
-/// This is a collection of clock configuration for all relevant speed settings.
+/// This is a set of clock configuration for all relevant speed settings.
 ///
 /// Generally, the clock need to be re-configured each time the speed settings change, for example
 /// after a completed auto-negotiation process. The necessary clock configurations for each speed
 /// setting can be pre-calculated and stored using this data structure.
 #[derive(Debug, Clone, Copy)]
-pub struct ClkDivCollection {
-    pub cfg_10_mbps: ClkDivisors,
-    pub cfg_100_mbps: ClkDivisors,
-    pub cfg_1000_mbps: ClkDivisors,
+pub struct ClockDivSet {
+    pub cfg_10_mbps: ClockDivisors,
+    pub cfg_100_mbps: ClockDivisors,
+    pub cfg_1000_mbps: ClockDivisors,
 }
 
-impl ClkDivCollection {
+impl ClockDivSet {
     pub const fn new(
-        cfg_10_mbps: ClkDivisors,
-        cfg_100_mbps: ClkDivisors,
-        cfg_1000_mbps: ClkDivisors,
+        cfg_10_mbps: ClockDivisors,
+        cfg_100_mbps: ClockDivisors,
+        cfg_1000_mbps: ClockDivisors,
     ) -> Self {
         Self {
             cfg_10_mbps,
@@ -135,7 +135,7 @@ impl ClkDivCollection {
     }
 
     #[inline]
-    pub fn clk_divs_for_speed(&self, speed: Speed) -> &ClkDivisors {
+    pub fn clk_divs_for_speed(&self, speed: Speed) -> &ClockDivisors {
         match speed {
             Speed::Mbps10 => &self.cfg_10_mbps,
             Speed::Mbps100 => &self.cfg_100_mbps,
@@ -158,11 +158,12 @@ impl ClkDivCollection {
     /// and the second entry is the difference between calculated clock speed for the divisors
     /// and the target speed. Ideally, this difference should be 0.
     pub fn calculate_for_rgmii(ref_clk: Hertz) -> (Self, [u32; 3]) {
-        let (cfg_10_mbps, error_10_mbps) = ClkDivisors::calculate_for_rgmii(ref_clk, Speed::Mbps10);
+        let (cfg_10_mbps, error_10_mbps) =
+            ClockDivisors::calculate_for_rgmii(ref_clk, Speed::Mbps10);
         let (cfg_100_mbps, error_100_mbps) =
-            ClkDivisors::calculate_for_rgmii(ref_clk, Speed::Mbps100);
+            ClockDivisors::calculate_for_rgmii(ref_clk, Speed::Mbps100);
         let (cfg_1000_mbps, error_1000_mbps) =
-            ClkDivisors::calculate_for_rgmii(ref_clk, Speed::Mbps1000);
+            ClockDivisors::calculate_for_rgmii(ref_clk, Speed::Mbps1000);
         (
             Self::new(cfg_10_mbps, cfg_100_mbps, cfg_1000_mbps),
             [error_10_mbps, error_100_mbps, error_1000_mbps],
@@ -204,7 +205,7 @@ impl EthernetLowLevel {
 
     pub fn reset(&mut self, cycles: usize) {
         let assert_reset = match self.id {
-            EthernetId::Eth0 => EthernetRst::builder()
+            EthernetId::Eth0 => EthernetReset::builder()
                 .with_gem1_ref_rst(false)
                 .with_gem0_ref_rst(true)
                 .with_gem1_rx_rst(false)
@@ -212,7 +213,7 @@ impl EthernetLowLevel {
                 .with_gem1_cpu1x_rst(false)
                 .with_gem0_cpu1x_rst(true)
                 .build(),
-            EthernetId::Eth1 => EthernetRst::builder()
+            EthernetId::Eth1 => EthernetReset::builder()
                 .with_gem1_ref_rst(true)
                 .with_gem0_ref_rst(false)
                 .with_gem1_rx_rst(true)
@@ -227,7 +228,7 @@ impl EthernetLowLevel {
                 for _ in 0..cycles {
                     cortex_ar::asm::nop();
                 }
-                regs.reset_ctrl().write_eth(EthernetRst::DEFAULT);
+                regs.reset_ctrl().write_eth(EthernetReset::DEFAULT);
             });
         }
     }
@@ -241,10 +242,10 @@ impl EthernetLowLevel {
         enable_amba_periph_clk(periph_sel);
     }
 
-    /// Completely configures the clock based on the provided [ClkConfig].
+    /// Completely configures the clock based on the provided [ClockConfig].
     ///
     /// This should be called once when initializing the peripheral.
-    pub fn configure_clock(&mut self, cfg: ClkConfig, enable_rx_clock: bool) {
+    pub fn configure_clock(&mut self, cfg: ClockConfig, enable_rx_clock: bool) {
         unsafe {
             Slcr::with(|regs| {
                 let (ptr_gig_eth_clk_ctrl, ptr_gig_eth_rclk_ctrl) = self.id().clk_config_regs(regs);
@@ -268,7 +269,7 @@ impl EthernetLowLevel {
     /// Re-configures the clock divisors for the Ethernet peripheral.
     ///
     /// This might be necessary after auto-negotiation of speed settings.
-    pub fn configure_clock_divs(&mut self, cfg: ClkDivisors) {
+    pub fn configure_clock_divs(&mut self, cfg: ClockDivisors) {
         unsafe {
             Slcr::with(|regs| {
                 let (ptr_gig_eth_clk_ctrl, _ptr_gig_eth_rclk_ctrl) =
@@ -290,13 +291,13 @@ impl EthernetLowLevel {
         &mut self,
         speed: Speed,
         duplex: Duplex,
-        clk_collection: &ClkDivCollection,
+        clk_collection: &ClockDivSet,
     ) {
         self.configure_clock_for_speed(speed, clk_collection);
         self.set_speed_and_duplex(speed, duplex);
     }
 
-    pub fn configure_clock_for_speed(&mut self, speed: Speed, clk_collection: &ClkDivCollection) {
+    pub fn configure_clock_for_speed(&mut self, speed: Speed, clk_collection: &ClockDivSet) {
         match speed {
             Speed::Mbps10 => self.configure_clock_divs(clk_collection.cfg_10_mbps),
             Speed::Mbps100 => self.configure_clock_divs(clk_collection.cfg_100_mbps),
@@ -362,7 +363,7 @@ impl EthernetLowLevel {
     ///
     /// These steps do not include any resets or clock configuration.
     pub fn initialize(&mut self, reset_rx_tx_queue_base_addr: bool) {
-        let mut ctrl_val = NetworkCtrl::new_with_raw_value(0);
+        let mut ctrl_val = NetworkControl::new_with_raw_value(0);
         self.regs.write_net_ctrl(ctrl_val);
         // Now clear statistics.
         ctrl_val.set_clear_statistics(true);
@@ -370,7 +371,7 @@ impl EthernetLowLevel {
         self.regs.write_tx_status(TxStatus::new_clear_all());
         self.regs.write_rx_status(RxStatus::new_clear_all());
         self.regs
-            .write_interrupt_disable(InterruptCtrl::new_clear_all());
+            .write_interrupt_disable(InterruptControl::new_clear_all());
         if reset_rx_tx_queue_base_addr {
             self.regs.write_rx_buf_queue_base_addr(0);
             self.regs.write_tx_buf_queue_base_addr(0);

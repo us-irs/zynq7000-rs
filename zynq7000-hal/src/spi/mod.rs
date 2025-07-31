@@ -6,7 +6,7 @@ use crate::enable_amba_periph_clk;
 use crate::gpio::IoPeriphPin;
 use crate::gpio::mio::{
     Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34,
-    Mio35, Mio36, Mio37, Mio38, Mio39, MioPinMarker, MuxCfg, Pin,
+    Mio35, Mio36, Mio37, Mio38, Mio39, MioPinMarker, MuxConfig, Pin,
 };
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 use crate::gpio::mio::{
@@ -19,10 +19,10 @@ use arbitrary_int::{Number, u3, u4, u6};
 use embedded_hal::delay::DelayNs;
 pub use embedded_hal::spi::Mode;
 use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, SpiBus as _};
-use zynq7000::slcr::reset::DualRefAndClkRst;
+use zynq7000::slcr::reset::DualRefAndClockReset;
 use zynq7000::spi::{
-    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
-    MmioSpi, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
+    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus, MmioSpi,
+    SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
 pub const FIFO_DEPTH: usize = 128;
@@ -81,7 +81,7 @@ pub trait SsPin: MioPinMarker {
     const GROUP: usize;
 }
 
-pub const SPI_MUX_CONF: MuxCfg = MuxCfg::new_with_l3(u3::new(0b101));
+pub const SPI_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b101));
 
 // SPI0, choice 1
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
@@ -493,7 +493,7 @@ impl SpiLowLevel {
         };
 
         self.regs.write_cr(
-            zynq7000::spi::Cfg::builder()
+            zynq7000::spi::Config::builder()
                 .with_modefail_gen_en(false)
                 .with_manual_start(false)
                 .with_manual_start_enable(man_start)
@@ -1106,13 +1106,13 @@ impl<Delay: DelayNs> embedded_hal::spi::SpiDevice for SpiWithHwCs<Delay> {
 #[inline]
 pub fn reset(id: SpiId) {
     let assert_reset = match id {
-        SpiId::Spi0 => DualRefAndClkRst::builder()
+        SpiId::Spi0 => DualRefAndClockReset::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        SpiId::Spi1 => DualRefAndClkRst::builder()
+        SpiId::Spi1 => DualRefAndClockReset::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -1127,7 +1127,7 @@ pub fn reset(id: SpiId) {
             for _ in 0..3 {
                 cortex_ar::asm::nop();
             }
-            regs.reset_ctrl().write_spi(DualRefAndClkRst::DEFAULT);
+            regs.reset_ctrl().write_spi(DualRefAndClockReset::DEFAULT);
         });
     }
 }

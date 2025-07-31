@@ -18,7 +18,7 @@ pub struct CacheSync {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct DebugCtrl {
+pub struct DebugControl {
     #[bit(2, rw)]
     spniden: bool,
     #[bit(1, rw)]
@@ -41,9 +41,9 @@ pub struct CacheId {
 }
 
 #[repr(transparent)]
-pub struct Ctrl(u32);
+pub struct Control(u32);
 
-impl Ctrl {
+impl Control {
     pub fn new_enabled() -> Self {
         Self(0x1)
     }
@@ -87,7 +87,7 @@ pub enum Associativity {
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct AuxCtrl {
+pub struct AuxControl {
     #[bit(30, rw)]
     early_bresp_enable: bool,
     #[bit(29, rw)]
@@ -127,7 +127,7 @@ pub struct AuxCtrl {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug, PartialEq, Eq)]
-pub struct LatencyCfg {
+pub struct LatencyConfig {
     /// Latency is the numerical value + 1 cycles.
     #[bits(8..=10, rw)]
     write_access_latency: u3,
@@ -165,7 +165,7 @@ pub struct InterruptStatus {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct InterruptCtrl {
+pub struct InterruptControl {
     #[bit(8, w)]
     dec_error_l3: bool,
     #[bit(7, w)]
@@ -197,10 +197,10 @@ pub struct L2Cache {
 
     _reserved: [u32; 0x3E],
 
-    control: Ctrl,
-    aux_control: AuxCtrl,
-    tag_ram_latency: LatencyCfg,
-    data_ram_latency: LatencyCfg,
+    control: Control,
+    aux_control: AuxControl,
+    tag_ram_latency: LatencyConfig,
+    data_ram_latency: LatencyConfig,
 
     _reserved2: [u32; 0x3C],
 
@@ -215,7 +215,7 @@ pub struct L2Cache {
     #[mmio(PureRead)]
     interrupt_raw_status: InterruptStatus,
     #[mmio(Write)]
-    interrupt_clear: InterruptCtrl,
+    interrupt_clear: InterruptControl,
 
     _reserved3: [u32; 0x143],
 
@@ -264,7 +264,7 @@ pub struct L2Cache {
 
     _reserved13: [u32; 0xCE],
 
-    debug_control: DebugCtrl,
+    debug_control: DebugControl,
 
     _reserved14: [u32; 0x7],
 
@@ -278,7 +278,7 @@ pub struct L2Cache {
 static_assertions::const_assert_eq!(core::mem::size_of::<L2Cache>(), 0xF84);
 
 impl L2Cache {
-    /// Create a new L2C MMIO instance for for L2 Cache at address [I2C_0_BASE_ADDR].
+    /// Create a new L2C MMIO instance for for L2 Cache at address [L2C_BASE_ADDR].
     ///
     /// # Safety
     ///

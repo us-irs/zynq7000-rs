@@ -7,14 +7,14 @@ use arbitrary_int::{u2, u3};
 use zynq7000::gpio::MmioGpio;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
-pub struct MuxCfg {
+pub struct MuxConfig {
     l3: u3,
     l2: u2,
     l1: bool,
     l0: bool,
 }
 
-impl From<zynq7000::slcr::mio::Config> for MuxCfg {
+impl From<zynq7000::slcr::mio::Config> for MuxConfig {
     fn from(value: zynq7000::slcr::mio::Config) -> Self {
         Self::new(
             value.l0_sel(),
@@ -25,7 +25,7 @@ impl From<zynq7000::slcr::mio::Config> for MuxCfg {
     }
 }
 
-impl MuxCfg {
+impl MuxConfig {
     #[inline]
     pub const fn new(l0: bool, l1: bool, l2: u2, l3: u3) -> Self {
         Self { l3, l2, l1, l0 }
@@ -193,7 +193,7 @@ impl<I: PinId> Pin<I> {
 
     /// Steal a typed MIO pin.
     ///
-    /// Usually, you can just use the MIO pin members of the [MioPins] structure.
+    /// Usually, you can just use the MIO pin members of the [Pins] structure.
     /// However, if you pass the pins into a consuming peripheral driver which performs
     /// immediate type erasure, and you require the pins for/after a re-configuration
     /// of the system, you can unsafely steal the pin. This function will NOT perform any

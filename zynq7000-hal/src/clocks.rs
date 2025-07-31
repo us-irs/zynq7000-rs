@@ -4,8 +4,8 @@ use arbitrary_int::Number;
 use zynq7000::slcr::{
     ClockControl,
     clocks::{
-        ClkRatioSelect, DualCommonPeriphIoClkCtrl, FpgaClkCtrl, GigEthClkCtrl,
-        SingleCommonPeriphIoClkCtrl,
+        ClockkRatioSelect, DualCommonPeriphIoClockControl, FpgaClockControl, GigEthClockControl,
+        SingleCommonPeriphIoClockControl,
     },
 };
 
@@ -228,14 +228,14 @@ impl Clocks {
         }
         let arm_clk_divided = arm_base_clk / arm_clk_ctrl.divisor().as_u32();
         let arm_clks = match clk_sel.sel() {
-            ClkRatioSelect::FourToTwoToOne => ArmClocks {
+            ClockkRatioSelect::FourToTwoToOne => ArmClocks {
                 ref_clk: arm_pll_out,
                 cpu_1x_clk: arm_clk_divided / 4,
                 cpu_2x_clk: arm_clk_divided / 2,
                 cpu_3x2x_clk: arm_clk_divided / 2,
                 cpu_6x4x_clk: arm_clk_divided,
             },
-            ClkRatioSelect::SixToTwoToOne => ArmClocks {
+            ClockkRatioSelect::SixToTwoToOne => ArmClocks {
                 ref_clk: arm_pll_out,
                 cpu_1x_clk: arm_clk_divided / 6,
                 cpu_2x_clk: arm_clk_divided / 3,
@@ -254,7 +254,7 @@ impl Clocks {
             ddr_2x_clk: ddr_pll_out / ddr_clk_ctrl.div_2x_clk().as_u32(),
         };
 
-        let handle_common_single_clock_config = |single_block: SingleCommonPeriphIoClkCtrl,
+        let handle_common_single_clock_config = |single_block: SingleCommonPeriphIoClockControl,
                                                  id: ClockModuleId|
          -> Result<Hertz, ClockReadError> {
             if single_block.divisor().as_u32() == 0 {
@@ -273,7 +273,7 @@ impl Clocks {
                 }
             })
         };
-        let handle_common_dual_clock_config = |dual_block: DualCommonPeriphIoClkCtrl,
+        let handle_common_dual_clock_config = |dual_block: DualCommonPeriphIoClockControl,
                                                id: ClockModuleId|
          -> Result<Hertz, ClockReadError> {
             if dual_block.divisor().as_u32() == 0 {
@@ -340,31 +340,34 @@ impl Clocks {
             | zynq7000::slcr::clocks::SrcSelTpiu::EmioTraceClkAlt1
             | zynq7000::slcr::clocks::SrcSelTpiu::EmioTraceClkAlt2 => None,
         };
-        let calculate_fpga_clk = |fpga_clk_ctrl: FpgaClkCtrl| -> Result<Hertz, ClockReadError> {
-            if fpga_clk_ctrl.divisor_0().as_u32() == 0 || fpga_clk_ctrl.divisor_1().as_u32() == 0 {
-                return Err(ClockReadError::DivisorZero(DivisorZero(
-                    ClockModuleId::Fpga,
-                )));
-            }
-            Ok(match fpga_clk_ctrl.srcsel() {
-                zynq7000::slcr::clocks::SrcSelIo::IoPll
-                | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
-                    io_pll_out
-                        / fpga_clk_ctrl.divisor_0().as_u32()
-                        / fpga_clk_ctrl.divisor_1().as_u32()
+        let calculate_fpga_clk =
+            |fpga_clk_ctrl: FpgaClockControl| -> Result<Hertz, ClockReadError> {
+                if fpga_clk_ctrl.divisor_0().as_u32() == 0
+                    || fpga_clk_ctrl.divisor_1().as_u32() == 0
+                {
+                    return Err(ClockReadError::DivisorZero(DivisorZero(
+                        ClockModuleId::Fpga,
+                    )));
                 }
-                zynq7000::slcr::clocks::SrcSelIo::ArmPll => {
-                    arm_pll_out
-                        / fpga_clk_ctrl.divisor_0().as_u32()
-                        / fpga_clk_ctrl.divisor_1().as_u32()
-                }
-                zynq7000::slcr::clocks::SrcSelIo::DdrPll => {
-                    ddr_pll_out
-                        / fpga_clk_ctrl.divisor_0().as_u32()
-                        / fpga_clk_ctrl.divisor_1().as_u32()
-                }
-            })
-        };
+                Ok(match fpga_clk_ctrl.srcsel() {
+                    zynq7000::slcr::clocks::SrcSelIo::IoPll
+                    | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
+                        io_pll_out
+                            / fpga_clk_ctrl.divisor_0().as_u32()
+                            / fpga_clk_ctrl.divisor_1().as_u32()
+                    }
+                    zynq7000::slcr::clocks::SrcSelIo::ArmPll => {
+                        arm_pll_out
+                            / fpga_clk_ctrl.divisor_0().as_u32()
+                            / fpga_clk_ctrl.divisor_1().as_u32()
+                    }
+                    zynq7000::slcr::clocks::SrcSelIo::DdrPll => {
+                        ddr_pll_out
+                            / fpga_clk_ctrl.divisor_0().as_u32()
+                            / fpga_clk_ctrl.divisor_1().as_u32()
+                    }
+                })
+            };
 
         Ok(Self {
             ps_clk: ps_clk_freq,
@@ -418,7 +421,7 @@ impl Clocks {
 
     fn calculate_gem_ref_clock(
         &self,
-        reg: GigEthClkCtrl,
+        reg: GigEthClockControl,
         module: ClockModuleId,
     ) -> Result<Hertz, DivisorZero> {
         let source_clk = match reg.srcsel() {

@@ -8,6 +8,19 @@ pub struct EmioPin {
 }
 
 impl EmioPin {
+    /// Steal an EMIO peripheral instance pin.
+    ///
+    /// It is recommended to retrieve EMIO pins safely by using the [Pins::new] and [Pins::take]
+    /// API instead
+    ///
+    /// # Safety
+    ///
+    /// This allows to create multiple instances of the same pin, which can lead to
+    /// data races on concurrent access.
+    pub unsafe fn steal(offset: usize) -> Self {
+        Self { offset }
+    }
+
     /// This offset ranges from 0 to 64.
     pub fn offset(&self) -> usize {
         self.offset

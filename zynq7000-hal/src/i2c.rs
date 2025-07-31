@@ -1,8 +1,8 @@
 use arbitrary_int::{u2, u3, u6};
 use embedded_hal::i2c::NoAcknowledgeSource;
 use zynq7000::{
-    i2c::{Ctrl, I2C_0_BASE_ADDR, I2C_1_BASE_ADDR, InterruptStatus, MmioI2c, TransferSize},
-    slcr::reset::DualClkRst,
+    i2c::{Control, I2C_0_BASE_ADDR, I2C_1_BASE_ADDR, InterruptStatus, MmioI2c, TransferSize},
+    slcr::reset::DualClockReset,
 };
 
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
@@ -17,14 +17,14 @@ use crate::{
         mio::{
             Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31, Mio32, Mio33,
             Mio34, Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, Mio52, Mio53, MioPinMarker,
-            MuxCfg, Pin,
+            MuxConfig, Pin,
         },
     },
     slcr::Slcr,
     time::Hertz,
 };
 
-pub const I2C_MUX_CONF: MuxCfg = MuxCfg::new_with_l3(u3::new(0b010));
+pub const I2C_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b010));
 pub const FIFO_DEPTH: usize = 16;
 /// Maximum read size in one read operation.
 pub const MAX_READ_SIZE: usize = 255;
@@ -351,7 +351,7 @@ impl I2c {
         enable_amba_periph_clk(periph_sel);
         //reset(id);
         regs.write_cr(
-            Ctrl::builder()
+            Control::builder()
                 .with_div_a(u2::new(clk_cfg.div_a()))
                 .with_div_b(u6::new(clk_cfg.div_b()))
                 .with_clear_fifo(true)
@@ -360,7 +360,7 @@ impl I2c {
                 .with_acken(false)
                 .with_addressing(true)
                 .with_mode(zynq7000::i2c::Mode::Master)
-                .with_dir(zynq7000::i2c::Dir::Transmitter)
+                .with_dir(zynq7000::i2c::Direction::Transmitter)
                 .build(),
         );
         Self { regs }
@@ -370,7 +370,7 @@ impl I2c {
     #[inline]
     fn start_transfer(&mut self, address: u8) {
         self.regs
-            .write_addr(zynq7000::i2c::Addr::new_with_raw_value(address as u32));
+            .write_addr(zynq7000::i2c::Address::new_with_raw_value(address as u32));
     }
 
     #[inline]
@@ -399,7 +399,7 @@ impl I2c {
             cr.set_acken(true);
             cr.set_mode(zynq7000::i2c::Mode::Master);
             cr.set_clear_fifo(true);
-            cr.set_dir(zynq7000::i2c::Dir::Transmitter);
+            cr.set_dir(zynq7000::i2c::Direction::Transmitter);
             if !generate_stop {
                 cr.set_hold_bus(true);
             }
@@ -498,7 +498,7 @@ impl I2c {
             cr.set_acken(true);
             cr.set_mode(zynq7000::i2c::Mode::Master);
             cr.set_clear_fifo(true);
-            cr.set_dir(zynq7000::i2c::Dir::Receiver);
+            cr.set_dir(zynq7000::i2c::Direction::Receiver);
             if data.len() > FIFO_DEPTH {
                 cr.set_hold_bus(true);
             }
@@ -640,11 +640,11 @@ impl embedded_hal::i2c::I2c for I2c {
 #[inline]
 pub fn reset(id: I2cId) {
     let assert_reset = match id {
-        I2cId::I2c0 => DualClkRst::builder()
+        I2cId::I2c0 => DualClockReset::builder()
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        I2cId::I2c1 => DualClkRst::builder()
+        I2cId::I2c1 => DualClockReset::builder()
             .with_periph1_cpu1x_rst(true)
             .with_periph0_cpu1x_rst(false)
             .build(),
@@ -657,7 +657,7 @@ pub fn reset(id: I2cId) {
             for _ in 0..3 {
                 cortex_ar::asm::nop();
             }
-            regs.reset_ctrl().write_i2c(DualClkRst::DEFAULT);
+            regs.reset_ctrl().write_i2c(DualClockReset::DEFAULT);
         });
     }
 }

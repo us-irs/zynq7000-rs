@@ -23,7 +23,7 @@ use zynq7000_hal::{
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClkConfigRaw, Uart, UartConfig},
+    uart::{ClockConfigRaw, Uart, UartConfig},
 };
 
 use zynq7000::PsPeripherals;
@@ -71,7 +71,7 @@ async fn main(_spawner: Spawner) -> ! {
     pwm.set_duty_cycle_percent(50).unwrap();
 
     // Set up the UART, we are logging with it.
-    let uart_clk_config = ClkConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
+    let uart_clk_config = ClockConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
     let mut uart = Uart::new_with_mio(

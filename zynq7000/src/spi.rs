@@ -33,7 +33,7 @@ impl BaudDivSel {
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct Cfg {
+pub struct Config {
     #[bit(17, rw)]
     modefail_gen_en: bool,
     #[bit(16, w)]
@@ -182,7 +182,7 @@ pub struct DelayControl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Spi {
-    cr: Cfg,
+    cr: Config,
     #[mmio(PureRead, Write)]
     isr: InterruptStatus,
     /// Interrupt Enable Register.
