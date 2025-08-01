@@ -1,0 +1,6 @@
+all:
+{
+    [bootloader] fsbl.elf
+    fpga.bit
+    application.elf
+}

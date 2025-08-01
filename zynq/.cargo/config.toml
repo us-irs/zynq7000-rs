@@ -1,0 +1,20 @@
+[target.armv7a-none-eabihf]
+runner = "just run"
+
+rustflags = [
+  "-Ctarget-cpu=cortex-a9",
+  "-Ctarget-feature=+vfp3",
+  "-Ctarget-feature=+neon",
+  "-Clink-arg=-Tlink.x",
+  # If this is not enabled, debugging / stepping can become problematic.
+  "-Cforce-frame-pointers=yes",
+  # Can be useful for debugging.
+  # "-Clink-args=-Map=app.map"
+]
+
+# Tier 3 target, so no pre-compiled artifacts included.
+[unstable]
+build-std = ["core", "alloc"]
+
+[build]
+target = "armv7a-none-eabihf"

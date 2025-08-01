@@ -1,0 +1,12 @@
+[package]
+name = "zedboard-bsp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+zynq7000 = { path = "../zynq7000" }
+zynq7000-hal = { path = "../zynq7000-hal" }
+bitbybit = "1.4"
+arbitrary-int = "2"
+num_enum = { version = "0.7", default-features = false }
+thiserror = { version = "2", default-features = false }

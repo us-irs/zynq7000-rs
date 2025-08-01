@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 # Define the default values
-TCL_SCRIPT_NAME = "xsct-init.tcl"
+TCL_SCRIPT_NAME = "xsct-flasher.tcl"
 SCRIPTS_DIR = "scripts"
 DEFAULT_IP_ADDRESS_HW_SERVER = "localhost"
 
@@ -55,7 +55,7 @@ def main():
         default=os.getenv("TCL_INIT_SCRIPT"),
         help="Path to the ps7 initialization TCL file to prepare the processing system.\n"
         "You can also set the TCL_INIT_SCRIPT env variable to set this.\n"
-        "It is also set implicitely when specifying the SDT folder with --sdt"
+        "It is also set implicitely when specifying the SDT folder with --sdt",
     )
     parser.add_argument(
         "-b",
@@ -63,7 +63,7 @@ def main():
         dest="bit",
         default=os.getenv("ZYNQ_BITSTREAM"),
         help="Optional path to the bitstream which will also be programed to the device. It is"
-        " also searched automatically if the --sdt option is used.\n"
+        " also searched automatically if the --sdt option is used.\n",
     )
 
     args = parser.parse_args()
@@ -91,9 +91,6 @@ def main():
         print(f"The app '{args.app}' does not exist")
         sys.exit(1)
 
-    # Export environment variables
-    if args.app:
-        os.environ["APP"] = args.app
     os.environ["IP_ADDRESS_HW_SERVER"] = args.ip
     init_tcl = None
     bitstream = None
@@ -124,7 +121,9 @@ def main():
             bitstream = args.bit
         init_tcl = args.init_tcl
 
-    xsct_script = Path(TCL_SCRIPT_NAME)
+    # Get the script's directory
+    script_dir = Path(__file__).resolve().parent
+    xsct_script = script_dir / TCL_SCRIPT_NAME
 
     if not xsct_script.exists():
         xsct_script = Path(os.path.join(SCRIPTS_DIR, TCL_SCRIPT_NAME))
@@ -136,7 +135,11 @@ def main():
     # Prepare tcl_args as a list to avoid manual string concatenation issues
     cmd_list = ["xsct", str(xsct_script), init_tcl]
     if bitstream:
+        cmd_list.append("--bit")
         cmd_list.append(bitstream)
+    if args.app:
+        cmd_list.append("--app")
+        cmd_list.append(args.app)
 
     # Join safely for shell execution
     xsct_cmd = shlex.join(cmd_list)
