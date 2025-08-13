@@ -5,7 +5,7 @@ use static_assertions::const_assert_eq;
 
 /// Distributor Control Register
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct Dcr {
+pub struct DistributorControlRegister {
     #[bit(1, rw)]
     enable_non_secure: bool,
     #[bit(0, rw)]
@@ -14,7 +14,7 @@ pub struct Dcr {
 
 /// Read only bit. This register only returns fixed constants.
 #[bitbybit::bitfield(u32)]
-pub struct TypeReg {
+pub struct TypeRegister {
     #[bits(11..=15, r)]
     lspi: u5,
     #[bit(10, r)]
@@ -25,7 +25,7 @@ pub struct TypeReg {
     it_lines_number: u5,
 }
 
-impl TypeReg {
+impl TypeRegister {
     pub const SECURITY_EXTNS_BIT: bool = true;
     /// 31 LSPIs.
     pub const NUM_LSPI: usize = 0x1f;
@@ -38,14 +38,14 @@ impl TypeReg {
     pub const NUM_OF_INTERRUPTS: usize = 96;
 }
 
-pub type Typer = TypeReg;
+pub type Typer = TypeRegister;
 
 /// GIC Distributor registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
 pub struct GicDistributor {
     /// Distributor Control Register
-    pub dcr: Dcr,
+    pub dcr: DistributorControlRegister,
     /// Interrupt Controller Type Register
     #[mmio(PureRead)]
     pub ictr: Typer,
@@ -128,7 +128,7 @@ impl GicDistributor {
 
 /// CPU interface control register.
 #[bitbybit::bitfield(u32, default = 0x0)]
-pub struct InterfaceCtrl {
+pub struct InterfaceControl {
     #[bit(4, rw)]
     sbpr: bool,
     #[bit(3, rw)]
@@ -143,7 +143,7 @@ pub struct InterfaceCtrl {
 
 /// Priority Mask Register
 #[bitbybit::bitfield(u32)]
-pub struct PriorityReg {
+pub struct PriorityRegister {
     #[bits(0..=7, rw)]
     priority: u8,
 }
@@ -163,9 +163,9 @@ pub struct InterruptSignalRegister {
 #[repr(C, align(8))]
 pub struct GicCpuInterface {
     /// CPU Interface Control Register (ICR).
-    pub icr: InterfaceCtrl,
+    pub icr: InterfaceControl,
     /// Interrupt Priority Mask Register.
-    pub pmr: PriorityReg,
+    pub pmr: PriorityRegister,
     /// Binary Point Register.
     pub bpr: u32,
     /// Interrupt Acknowledge Register.
@@ -173,7 +173,7 @@ pub struct GicCpuInterface {
     /// End of Interrupt Register.
     pub eoir: InterruptSignalRegister,
     /// Running Priority Register.
-    pub rpr: PriorityReg,
+    pub rpr: PriorityRegister,
     /// Highest Pending Interrupt Register.
     pub hpir: InterruptSignalRegister,
     /// Aliased Binary Point Register

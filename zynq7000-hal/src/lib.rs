@@ -9,8 +9,11 @@
 //! various drivers in the embedded rust ecosystem.
 #![no_std]
 
+#[cfg(feature = "alloc")]
+extern crate alloc;
+
 use slcr::Slcr;
-use zynq7000::slcr::LevelShifterReg;
+use zynq7000::slcr::LevelShifterRegister;
 
 pub mod cache;
 pub mod clocks;
@@ -40,7 +43,7 @@ pub enum BootDevice {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub enum BootPllCfg {
+pub enum BootPllConfig {
     Enabled,
     Bypassed,
 }
@@ -48,7 +51,7 @@ pub enum BootPllCfg {
 #[derive(Debug)]
 pub struct BootMode {
     boot_mode: Option<BootDevice>,
-    pll_config: BootPllCfg,
+    pll_config: BootPllConfig,
 }
 
 impl BootMode {
@@ -82,9 +85,9 @@ impl BootMode {
             _ => None,
         };
         let pll_config = if (raw_register >> 4) & 0b1 == 0 {
-            BootPllCfg::Enabled
+            BootPllConfig::Enabled
         } else {
-            BootPllCfg::Bypassed
+            BootPllConfig::Bypassed
         };
         Self {
             boot_mode,
@@ -95,7 +98,7 @@ impl BootMode {
         self.boot_mode
     }
 
-    pub const fn pll_enable(&self) -> BootPllCfg {
+    pub const fn pll_enable(&self) -> BootPllConfig {
         self.pll_config
     }
 }
@@ -104,11 +107,12 @@ impl BootMode {
 /// system (PS).
 ///
 /// The Zynq-7000 TRM p.32 specifies more information about this register and how to use it.
-pub fn configure_level_shifter(config: zynq7000::slcr::LevelShifterCfg) {
+pub fn configure_level_shifter(config: zynq7000::slcr::LevelShifterConfig) {
     // Safety: We only manipulate the level shift registers.
     unsafe {
         Slcr::with(|slcr_unlocked| {
-            slcr_unlocked.write_lvl_shftr_en(LevelShifterReg::new_with_raw_value(config as u32));
+            slcr_unlocked
+                .write_lvl_shftr_en(LevelShifterRegister::new_with_raw_value(config as u32));
         });
     }
 }

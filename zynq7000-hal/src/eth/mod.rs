@@ -1,11 +1,11 @@
 use arbitrary_int::{u2, u3};
-pub use zynq7000::eth::MdcClkDiv;
+pub use zynq7000::eth::MdcClockDivisor;
 use zynq7000::eth::{
-    BurstLength, DmaRxBufSize, GEM_0_BASE_ADDR, GEM_1_BASE_ADDR, InterruptCtrl, InterruptStatus,
+    BurstLength, DmaRxBufSize, GEM_0_BASE_ADDR, GEM_1_BASE_ADDR, InterruptControl, InterruptStatus,
     MmioEthernet, RxStatus, TxStatus,
 };
 
-pub use ll::{ClkConfig, ClkDivCollection, Duplex, EthernetLowLevel, Speed};
+pub use ll::{ClockConfig, ClockDivSet, Duplex, EthernetLowLevel, Speed};
 
 pub mod embassy_net;
 pub mod ll;
@@ -27,19 +27,19 @@ use crate::gpio::mio::{
 };
 use crate::{
     clocks::ArmClocks,
-    eth::ll::ClkDivisors,
+    eth::ll::ClockDivisors,
     gpio::{
         IoPeriphPin,
         mio::{
             Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34, Mio35, Mio36, Mio37, Mio38, Mio39,
-            Mio52, Mio53, MioPinMarker, MuxCfg, Pin,
+            Mio52, Mio53, MioPinMarker, MuxConfig, Pin,
         },
     },
     time::Hertz,
 };
 
-pub const MUX_CONF_PHY: MuxCfg = MuxCfg::new_with_l0();
-pub const MUX_CONF_MDIO: MuxCfg = MuxCfg::new_with_l3(u3::new(0b100));
+pub const MUX_CONF_PHY: MuxConfig = MuxConfig::new_with_l0();
+pub const MUX_CONF_MDIO: MuxConfig = MuxConfig::new_with_l3(u3::new(0b100));
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EthernetId {
@@ -66,8 +66,8 @@ impl EthernetId {
         &self,
         slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
     ) -> (
-        *mut zynq7000::slcr::clocks::GigEthClkCtrl,
-        *mut zynq7000::slcr::clocks::GigEthRclkCtrl,
+        *mut zynq7000::slcr::clocks::GigEthClockControl,
+        *mut zynq7000::slcr::clocks::GigEthRclkControl,
     ) {
         match self {
             EthernetId::Eth0 => (
@@ -236,17 +236,17 @@ impl RxData3 for Pin<Mio38> {
 
 /// Calculate the CPU 1x clock divisor required to achieve a clock speed which is below
 /// 2.5 MHz, as specified by the 802.3 standard.
-pub fn calculate_mdc_clk_div(arm_clks: &ArmClocks) -> Option<MdcClkDiv> {
+pub fn calculate_mdc_clk_div(arm_clks: &ArmClocks) -> Option<MdcClockDivisor> {
     let div = arm_clks.cpu_1x_clk().raw().div_ceil(MAX_MDC_SPEED.raw());
     match div {
-        0..8 => Some(MdcClkDiv::Div8),
-        8..16 => Some(MdcClkDiv::Div16),
-        16..32 => Some(MdcClkDiv::Div32),
-        32..48 => Some(MdcClkDiv::Div48),
-        48..64 => Some(MdcClkDiv::Div64),
-        64..96 => Some(MdcClkDiv::Div96),
-        96..128 => Some(MdcClkDiv::Div128),
-        128..224 => Some(MdcClkDiv::Div224),
+        0..8 => Some(MdcClockDivisor::Div8),
+        8..16 => Some(MdcClockDivisor::Div16),
+        16..32 => Some(MdcClockDivisor::Div32),
+        32..48 => Some(MdcClockDivisor::Div48),
+        48..64 => Some(MdcClockDivisor::Div64),
+        64..96 => Some(MdcClockDivisor::Div96),
+        96..128 => Some(MdcClockDivisor::Div128),
+        128..224 => Some(MdcClockDivisor::Div224),
         // MDC clock divisor is too high for the maximum speed.
         // This is not a valid configuration.
         _ => None,
@@ -255,16 +255,16 @@ pub fn calculate_mdc_clk_div(arm_clks: &ArmClocks) -> Option<MdcClkDiv> {
 
 #[derive(Debug, Clone, Copy)]
 pub struct EthernetConfig {
-    pub clk_config_1000_mbps: ClkConfig,
-    pub mdc_clk_div: MdcClkDiv,
+    pub clk_config_1000_mbps: ClockConfig,
+    pub mdc_clk_div: MdcClockDivisor,
     pub mac_address: [u8; 6],
 }
 
 impl EthernetConfig {
     /// Creates a new Ethernet configuration.
     pub fn new(
-        clk_config_1000_mbps: ClkConfig,
-        mdc_clk_div: MdcClkDiv,
+        clk_config_1000_mbps: ClockConfig,
+        mdc_clk_div: MdcClockDivisor,
         mac_address: [u8; 6],
     ) -> Self {
         Self {
@@ -281,10 +281,10 @@ pub struct Ethernet {
     mdio: mdio::Mdio,
     current_speed: Speed,
     current_duplex: Duplex,
-    current_clk_divs: ClkDivisors,
+    current_clk_divs: ClockDivisors,
 }
 
-const IRQ_CONTROL: InterruptCtrl = InterruptCtrl::builder()
+const IRQ_CONTROL: InterruptControl = InterruptControl::builder()
     .with_tsu_sec_incr(false)
     .with_partner_pg_rx(false)
     .with_auto_negotiation_complete(false)
@@ -618,7 +618,7 @@ impl Ethernet {
         &mut self,
         speed: Speed,
         duplex: Duplex,
-        clk_collection: &ClkDivCollection,
+        clk_collection: &ClockDivSet,
     ) {
         if speed == self.current_speed
             && duplex == self.current_duplex
@@ -721,7 +721,7 @@ pub(crate) fn on_interrupt(
     let mut clear = InterruptStatus::new_with_raw_value(0);
     let mut tx_status_clear = TxStatus::new_with_raw_value(0);
     let mut rx_status_clear = RxStatus::new_with_raw_value(0);
-    let mut disable = InterruptCtrl::new_with_raw_value(0);
+    let mut disable = InterruptControl::new_with_raw_value(0);
     let mut result = InterruptResult::default();
 
     if status.frame_sent() {

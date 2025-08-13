@@ -29,7 +29,7 @@ use zynq7000_hal::{
     uart,
 };
 
-use zynq7000::{PsPeripherals, slcr::LevelShifterCfg};
+use zynq7000::{PsPeripherals, slcr::LevelShifterConfig};
 use zynq7000_rt as _;
 
 // Define the clock frequency as a constant
@@ -52,7 +52,7 @@ async fn main(_spawner: Spawner) -> ! {
     l2_cache::init_with_defaults(&mut dp.l2c);
 
     // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterCfg::EnableAll);
+    configure_level_shifter(LevelShifterConfig::EnableAll);
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
@@ -73,7 +73,7 @@ async fn main(_spawner: Spawner) -> ! {
     zynq7000_embassy::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
-    let uart_clk_config = uart::ClkConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
+    let uart_clk_config = uart::ClockConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
     let mut uart = uart::Uart::new_with_mio(

@@ -15,7 +15,7 @@ pub const GICD_BASE_ADDR: usize = MPCORE_BASE_ADDR + 0x1000;
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Scu {
+pub struct SnoopControlUnit {
     ctrl: u32,
     config: u32,
     cpu_power_status: u32,
@@ -28,7 +28,7 @@ pub struct Scu {
     non_secure_access_ctrl: u32,
 }
 
-impl Scu {
+impl SnoopControlUnit {
     /// Create a new Snoop Control Unit interface at the fixed base address.
     ///
     /// # Safety
@@ -37,18 +37,18 @@ impl Scu {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioScu<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioSnoopControlUnit<'static> {
         unsafe { Self::new_mmio_at(SCU_BASE_ADDR) }
     }
 }
 
-const_assert_eq!(core::mem::size_of::<Scu>(), 0x58);
+const_assert_eq!(core::mem::size_of::<SnoopControlUnit>(), 0x58);
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Mpcore {
+pub struct MpCore {
     #[mmio(Inner)]
-    scu: Scu,
+    scu: SnoopControlUnit,
 
     _reserved_0: [u32; 0x2A],
 
@@ -80,9 +80,9 @@ pub struct Mpcore {
     gicd: GicDistributor,
 }
 
-const_assert_eq!(core::mem::size_of::<Mpcore>(), 0x2000);
+const_assert_eq!(core::mem::size_of::<MpCore>(), 0x2000);
 
-impl Mpcore {
+impl MpCore {
     /// Create a MP core peripheral interface at the fixed base address.
     ///
     /// # Safety
@@ -91,7 +91,7 @@ impl Mpcore {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioMpcore<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioMpCore<'static> {
         unsafe { Self::new_mmio_at(MPCORE_BASE_ADDR) }
     }
 }

@@ -6,7 +6,7 @@ pub const GEM_1_BASE_ADDR: usize = 0xE000_C000;
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct NetworkCtrl {
+pub struct NetworkControl {
     #[bit(18, w)]
     flush_next_rx_dpram_pkt: bool,
     #[bit(17, w)]
@@ -56,7 +56,7 @@ pub enum PcsSelect {
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
-pub enum MdcClkDiv {
+pub enum MdcClockDivisor {
     Div8 = 0,
     Div16 = 1,
     Div32 = 2,
@@ -67,24 +67,24 @@ pub enum MdcClkDiv {
     Div224 = 7,
 }
 
-impl MdcClkDiv {
+impl MdcClockDivisor {
     pub fn divisor(&self) -> usize {
         match self {
-            MdcClkDiv::Div8 => 8,
-            MdcClkDiv::Div16 => 16,
-            MdcClkDiv::Div32 => 32,
-            MdcClkDiv::Div48 => 48,
-            MdcClkDiv::Div64 => 64,
-            MdcClkDiv::Div96 => 96,
-            MdcClkDiv::Div128 => 128,
-            MdcClkDiv::Div224 => 224,
+            MdcClockDivisor::Div8 => 8,
+            MdcClockDivisor::Div16 => 16,
+            MdcClockDivisor::Div32 => 32,
+            MdcClockDivisor::Div48 => 48,
+            MdcClockDivisor::Div64 => 64,
+            MdcClockDivisor::Div96 => 96,
+            MdcClockDivisor::Div128 => 128,
+            MdcClockDivisor::Div224 => 224,
         }
     }
 }
 
 #[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
-pub struct NetworkCfg {
+pub struct NetworkConfig {
     #[bit(30, rw)]
     ignore_ipg_rx_error: bool,
     #[bit(29, rw)]
@@ -105,7 +105,7 @@ pub struct NetworkCfg {
     #[bits(21..=22, r)]
     dbus_width: u2,
     #[bits(18..=20, rw)]
-    mdc_clk_div: MdcClkDiv,
+    mdc_clk_div: MdcClockDivisor,
     #[bit(17, rw)]
     fcs_removal: bool,
     #[bit(16, rw)]
@@ -217,7 +217,7 @@ impl DmaRxBufSize {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
-pub struct DmaCfg {
+pub struct DmaConfig {
     #[bit(24, rw)]
     discard_when_ahb_full: bool,
     /// DMA receive buffer size in AHB system memory.
@@ -340,7 +340,7 @@ pub struct InterruptStatus {
 
 #[bitbybit::bitfield(u32, default = 0x00)]
 #[derive(Debug)]
-pub struct InterruptCtrl {
+pub struct InterruptControl {
     #[bit(26, w)]
     tsu_sec_incr: bool,
     /// Marked N/A in datasheet. Probably because external PHYs are used.
@@ -380,7 +380,7 @@ pub struct InterruptCtrl {
     mgmt_frame_sent: bool,
 }
 
-impl InterruptCtrl {
+impl InterruptControl {
     pub fn new_clear_all() -> Self {
         Self::new_with_raw_value(0xFFFF_FFFF)
     }
@@ -430,19 +430,19 @@ pub struct MatchRegister {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Ethernet {
-    net_ctrl: NetworkCtrl,
-    net_cfg: NetworkCfg,
+    net_ctrl: NetworkControl,
+    net_cfg: NetworkConfig,
     #[mmio(PureRead)]
     net_status: NetworkStatus,
     _reserved0: u32,
-    dma_cfg: DmaCfg,
+    dma_cfg: DmaConfig,
     tx_status: TxStatus,
     rx_buf_queue_base_addr: u32,
     tx_buf_queue_base_addr: u32,
     rx_status: RxStatus,
     interrupt_status: InterruptStatus,
-    interrupt_enable: InterruptCtrl,
-    interrupt_disable: InterruptCtrl,
+    interrupt_enable: InterruptControl,
+    interrupt_disable: InterruptControl,
     interrupt_mask: InterruptStatus,
     phy_maintenance: PhyMaintenance,
     #[mmio(PureRead)]

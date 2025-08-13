@@ -4,7 +4,7 @@ use zynq7000::gpio::{Gpio, MaskedOutput, MmioGpio};
 
 use crate::slcr::Slcr;
 
-use super::{PinIsOutputOnly, mio::MuxCfg};
+use super::{PinIsOutputOnly, mio::MuxConfig};
 
 #[derive(Debug, Clone, Copy)]
 pub enum PinOffset {
@@ -68,7 +68,7 @@ impl LowLevelGpio {
         let (offset, dirm, outen) = self.get_dirm_outen_regs_and_local_offset();
         if self.offset.is_mio() {
             // Tri-state bit must be 0 for the output driver to work.
-            self.reconfigure_slcr_mio_cfg(false, None, Some(MuxCfg::new_for_gpio()));
+            self.reconfigure_slcr_mio_cfg(false, None, Some(MuxConfig::new_for_gpio()));
         }
         let mut curr_dirm = unsafe { core::ptr::read_volatile(dirm) };
         curr_dirm |= 1 << offset;
@@ -100,7 +100,7 @@ impl LowLevelGpio {
             self.reconfigure_slcr_mio_cfg(
                 false,
                 Some(with_internal_pullup),
-                Some(MuxCfg::new_for_gpio()),
+                Some(MuxConfig::new_for_gpio()),
             );
         }
         let mut curr_dirm = unsafe { core::ptr::read_volatile(dirm) };
@@ -124,7 +124,7 @@ impl LowLevelGpio {
             if offset_raw == 7 || offset_raw == 8 {
                 return Err(PinIsOutputOnly);
             }
-            self.reconfigure_slcr_mio_cfg(true, Some(false), Some(MuxCfg::new_for_gpio()));
+            self.reconfigure_slcr_mio_cfg(true, Some(false), Some(MuxConfig::new_for_gpio()));
         }
         self.configure_input_pin();
         Ok(())
@@ -137,14 +137,14 @@ impl LowLevelGpio {
             if offset_raw == 7 || offset_raw == 8 {
                 return Err(PinIsOutputOnly);
             }
-            self.reconfigure_slcr_mio_cfg(true, Some(true), Some(MuxCfg::new_for_gpio()));
+            self.reconfigure_slcr_mio_cfg(true, Some(true), Some(MuxConfig::new_for_gpio()));
         }
         self.configure_input_pin();
         Ok(())
     }
 
     /// Convert the pin into an IO peripheral pin.
-    pub fn configure_as_io_periph_pin(&mut self, mux_conf: MuxCfg, pullup: Option<bool>) {
+    pub fn configure_as_io_periph_pin(&mut self, mux_conf: MuxConfig, pullup: Option<bool>) {
         self.reconfigure_slcr_mio_cfg(false, pullup, Some(mux_conf));
     }
 
@@ -233,7 +233,7 @@ impl LowLevelGpio {
         &mut self,
         tristate: bool,
         pullup: Option<bool>,
-        mux_conf: Option<MuxCfg>,
+        mux_conf: Option<MuxConfig>,
     ) {
         let raw_offset = self.offset.offset();
         // Safety: We only modify the MIO config of the pin.
@@ -243,7 +243,7 @@ impl LowLevelGpio {
         // re-configuration which might also be potentially unsafe at run-time.
         let mio_cfg = slcr_wrapper.regs().read_mio_pins(raw_offset).unwrap();
         if (pullup.is_some() && mio_cfg.pullup() != pullup.unwrap())
-            || (mux_conf.is_some() && MuxCfg::from(mio_cfg) != mux_conf.unwrap())
+            || (mux_conf.is_some() && MuxConfig::from(mio_cfg) != mux_conf.unwrap())
             || tristate != mio_cfg.tri_enable()
         {
             slcr_wrapper.modify(|mut_slcr| {

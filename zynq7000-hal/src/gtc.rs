@@ -38,7 +38,7 @@ impl GlobalTimerCounter {
     /// # Safety
     ///
     /// This function allows creating an arbitrary amount of memory-mapped peripheral drivers.
-    /// See the [zynq7000::gtc::Gtc::new_mmio] docs for more safety information.
+    /// See the [zynq7000::gtc::GlobalTimerCounter::new_mmio] docs for more safety information.
     #[inline]
     pub const unsafe fn steal_fixed(cpu_3x2x_clk: Option<Hertz>) -> Self {
         Self {

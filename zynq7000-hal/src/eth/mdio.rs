@@ -1,5 +1,5 @@
 use arbitrary_int::{u2, u5};
-use zynq7000::eth::{MdcClkDiv, PhyMaintenance};
+use zynq7000::eth::{MdcClockDivisor, PhyMaintenance};
 
 use super::{EthernetId, ll::EthernetLowLevel};
 
@@ -39,7 +39,7 @@ impl Mdio {
     }
 
     #[inline]
-    pub fn configure_clock_div(&mut self, clk_div: MdcClkDiv) {
+    pub fn configure_clock_div(&mut self, clk_div: MdcClockDivisor) {
         self.regs.modify_net_cfg(|mut val| {
             val.set_mdc_clk_div(clk_div);
             val

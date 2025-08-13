@@ -10,7 +10,8 @@ use arbitrary_int::Number;
 
 use cortex_ar::interrupt;
 use zynq7000::gic::{
-    Dcr, GicCpuInterface, GicDistributor, InterfaceCtrl, InterruptSignalRegister, MmioGicCpuInterface, MmioGicDistributor, PriorityReg,
+    DistributorControlRegister, GicCpuInterface, GicDistributor, InterfaceControl,
+    InterruptSignalRegister, MmioGicCpuInterface, MmioGicDistributor, PriorityRegister,
 };
 
 const SPURIOUS_INTERRUPT_ID: u32 = 1023;
@@ -191,7 +192,7 @@ pub struct InvalidSgiInterruptId(pub usize);
 /// The flow of using this controller is as follows:
 ///
 /// 1. Create the controller using [Self::new_with_init]. You can use the [zynq7000::PsPeripherals]
-///    structure or the [zynq7000::gic::Gicc::new_mmio] and [zynq7000::gic::Gicd::new_mmio]
+///    structure or the [zynq7000::gic::GicCpuInterface::new_mmio] and [zynq7000::gic::GicDistributor::new_mmio]
 ///    functions  to create the MMIO instances. The constructor configures all PL interrupts
 ///    sensivities to high-level sensitivity and configures all sensitivities which are expected
 ///    to have a certain value. It also sets the priority mask to 0xff by calling
@@ -231,7 +232,10 @@ impl GicConfigurator {
     /// Create a new GIC controller instance and calls [Self::initialize] to perform
     /// strongly recommended initialization routines for the GIC.
     #[inline]
-    pub fn new_with_init(gicc: MmioGicCpuInterface<'static>, gicd: MmioGicDistributor<'static>) -> Self {
+    pub fn new_with_init(
+        gicc: MmioGicCpuInterface<'static>,
+        gicd: MmioGicDistributor<'static>,
+    ) -> Self {
         let mut gic = GicConfigurator { gicc, gicd };
         gic.initialize();
         gic
@@ -280,7 +284,7 @@ impl GicConfigurator {
     /// 8-bit bitfield. See p.83 of the ARM GICv1 architecture specification.
     pub fn set_priority_mask(&mut self, mask: u8) {
         self.gicc
-            .write_pmr(PriorityReg::new_with_raw_value(mask as u32));
+            .write_pmr(PriorityRegister::new_with_raw_value(mask as u32));
     }
 
     /// Set the sensitivity of a the Programmable Logic SPI interrupts.
@@ -442,14 +446,14 @@ impl GicConfigurator {
     /// to call [Self::enable_interrupts] for interrupts to work.
     pub fn enable(&mut self) {
         self.update_ctrl_regs(
-            InterfaceCtrl::builder()
+            InterfaceControl::builder()
                 .with_sbpr(false)
                 .with_fiq_en(false)
                 .with_ack_ctrl(false)
                 .with_enable_non_secure(true)
                 .with_enable_secure(true)
                 .build(),
-            Dcr::builder()
+            DistributorControlRegister::builder()
                 .with_enable_non_secure(true)
                 .with_enable_secure(true)
                 .build(),
@@ -476,7 +480,7 @@ impl GicConfigurator {
 
     /// Update the control registers which control the safety configuration and which also enable
     /// the GIC.
-    pub fn update_ctrl_regs(&mut self, icr: InterfaceCtrl, dcr: Dcr) {
+    pub fn update_ctrl_regs(&mut self, icr: InterfaceControl, dcr: DistributorControlRegister) {
         self.gicc.write_icr(icr);
         self.gicd.write_dcr(dcr);
     }

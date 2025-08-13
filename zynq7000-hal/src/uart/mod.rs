@@ -6,9 +6,9 @@ use core::convert::Infallible;
 use arbitrary_int::u3;
 use libm::round;
 use zynq7000::{
-    slcr::reset::DualRefAndClkRst,
+    slcr::reset::DualRefAndClockReset,
     uart::{
-        BaudRateDiv, Baudgen, ChMode, ClkSel, FifoTrigger, InterruptControl, MmioUart, Mode,
+        BaudRateDiv, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl, MmioUart, Mode,
         UART_0_BASE, UART_1_BASE,
     },
 };
@@ -20,7 +20,7 @@ use crate::{
         mio::{
             Mio8, Mio9, Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31,
             Mio32, Mio33, Mio34, Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, Mio52, Mio53,
-            MioPinMarker, MuxCfg, Pin,
+            MioPinMarker, MuxConfig, Pin,
         },
     },
     slcr::Slcr,
@@ -45,7 +45,7 @@ pub use rx::*;
 
 pub const FIFO_DEPTH: usize = 64;
 pub const DEFAULT_RX_TRIGGER_LEVEL: u8 = 32;
-pub const UART_MUX_CONF: MuxCfg = MuxCfg::new_with_l3(u3::new(0b111));
+pub const UART_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b111));
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum UartId {
@@ -120,31 +120,6 @@ macro_rules! pin_pairs {
     };
 }
 
-/*
-macro_rules! impl_into_uart {
-    (($($Mio:ident),+)) => {
-        $(
-            impl From<Pin<$Mio>> for IoPeriphPin {
-                fn from(pin: Pin<$Mio>) -> Self {
-                    IoPeriphPin::new(pin, UART_MUX_CONF, None)
-                }
-            }
-        )+
-    };
-}
-
-impl_into_uart!((
-    Mio10, Mio11, Mio15, Mio14, Mio31, Mio30, Mio35, Mio34, Mio39, Mio38, Mio8, Mio9, Mio12, Mio13,
-    Mio28, Mio29, Mio32, Mio33, Mio36, Mio37, Mio48, Mio49, Mio52, Mio53
-));
-
-#[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl_into_uart!((
-    Mio19, Mio18, Mio23, Mio22, Mio43, Mio42, Mio47, Mio46, Mio51, Mio50, Mio16, Mio17, Mio20,
-    Mio21, Mio24, Mio25, Mio40, Mio41, Mio44, Mio45
-));
-*/
-
 pin_pairs!(
     UartId::Uart0,
     (
@@ -185,6 +160,8 @@ pub const MAX_BAUD_RATE: u32 = 6240000;
 /// Based on values provided by the vendor library.
 pub const MIN_BAUD_RATE: u32 = 110;
 
+pub const MAX_BAUDERROR_RATE: f32 = 0.005;
+
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Parity {
     Even,
@@ -210,7 +187,7 @@ pub enum CharLen {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct ClkConfigRaw {
+pub struct ClockConfigRaw {
     cd: u16,
     bdiv: u8,
 }
@@ -218,14 +195,14 @@ pub struct ClkConfigRaw {
 #[cfg(feature = "alloc")]
 pub fn calculate_viable_configs(
     mut uart_clk: Hertz,
-    clk_sel: ClkSel,
+    clk_sel: ClockSelect,
     target_baud: u32,
-) -> alloc::vec::Vec<(ClkConfigRaw, f64)> {
+) -> alloc::vec::Vec<(ClockConfigRaw, f64)> {
     let mut viable_cfgs = alloc::vec::Vec::new();
-    if clk_sel == ClkSel::UartRefClkDiv8 {
+    if clk_sel == ClockSelect::UartRefClkDiv8 {
         uart_clk /= 8;
     }
-    let mut current_clk_config = ClkConfigRaw::new(0, 0);
+    let mut current_clk_config = ClockConfigRaw::default();
     for bdiv in 4..u8::MAX {
         let cd =
             round(uart_clk.raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64)) as u64;
@@ -250,17 +227,17 @@ pub fn calculate_viable_configs(
 /// You can also use [calculate_viable_configs] to get a list of all viable configurations.
 pub fn calculate_raw_baud_cfg_smallest_error(
     mut uart_clk: Hertz,
-    clk_sel: ClkSel,
+    clk_sel: ClockSelect,
     target_baud: u32,
-) -> Result<(ClkConfigRaw, f64), DivisorZero> {
+) -> Result<(ClockConfigRaw, f64), DivisorZero> {
     if target_baud == 0 {
         return Err(DivisorZero);
     }
-    if clk_sel == ClkSel::UartRefClkDiv8 {
+    if clk_sel == ClockSelect::UartRefClkDiv8 {
         uart_clk /= 8;
     }
-    let mut current_clk_config = ClkConfigRaw::default();
-    let mut best_clk_config = ClkConfigRaw::default();
+    let mut current_clk_config = ClockConfigRaw::default();
+    let mut best_clk_config = ClockConfigRaw::default();
     let mut smallest_error: f64 = 100.0;
     for bdiv in 4..u8::MAX {
         let cd =
@@ -281,30 +258,30 @@ pub fn calculate_raw_baud_cfg_smallest_error(
     Ok((best_clk_config, smallest_error))
 }
 
-impl ClkConfigRaw {
+impl ClockConfigRaw {
     #[inline]
     pub const fn new(cd: u16, bdiv: u8) -> Result<Self, DivisorZero> {
         if cd == 0 {
             return Err(DivisorZero);
         }
-        Ok(ClkConfigRaw { cd, bdiv })
+        Ok(ClockConfigRaw { cd, bdiv })
     }
 
     /// Auto-calculates the best clock configuration settings for the target baudrate.
     ///
-    /// This function assumes [ClkSel::UartRefClk] as the clock source. It returns a tuple
+    /// This function assumes [ClockSelect::UartRefClk] as the clock source. It returns a tuple
     /// where the first entry is the clock configuration while the second entry is the associated
     /// baud error from 0.0 to 1.0. It is recommended to keep this error below 2-3 %.
     pub fn new_autocalc_with_error(
         io_clks: &IoClocks,
         target_baud: u32,
     ) -> Result<(Self, f64), DivisorZero> {
-        Self::new_autocalc_generic(io_clks, ClkSel::UartRefClk, target_baud)
+        Self::new_autocalc_generic(io_clks, ClockSelect::UartRefClk, target_baud)
     }
 
     pub fn new_autocalc_generic(
         io_clks: &IoClocks,
-        clk_sel: ClkSel,
+        clk_sel: ClockSelect,
         target_baud: u32,
     ) -> Result<(Self, f64), DivisorZero> {
         Self::new_autocalc_with_raw_clk(io_clks.uart_clk(), clk_sel, target_baud)
@@ -312,7 +289,7 @@ impl ClkConfigRaw {
 
     pub fn new_autocalc_with_raw_clk(
         uart_clk: Hertz,
-        clk_sel: ClkSel,
+        clk_sel: ClockSelect,
         target_baud: u32,
     ) -> Result<(Self, f64), DivisorZero> {
         calculate_raw_baud_cfg_smallest_error(uart_clk, clk_sel, target_baud)
@@ -339,43 +316,43 @@ impl ClkConfigRaw {
     }
 }
 
-impl Default for ClkConfigRaw {
+impl Default for ClockConfigRaw {
     #[inline]
     fn default() -> Self {
-        ClkConfigRaw::new(1, 0).unwrap()
+        ClockConfigRaw::new(1, 0).unwrap()
     }
 }
 
 #[derive(Debug)]
 pub struct UartConfig {
-    clk_config: ClkConfigRaw,
+    clk_config: ClockConfigRaw,
     chmode: ChMode,
     parity: Parity,
     stopbits: Stopbits,
     chrl: CharLen,
-    clk_sel: ClkSel,
+    clk_sel: ClockSelect,
 }
 
 impl UartConfig {
-    pub fn new_with_clk_config(clk_config: ClkConfigRaw) -> Self {
+    pub fn new_with_clk_config(clk_config: ClockConfigRaw) -> Self {
         Self::new(
             clk_config,
             ChMode::default(),
             Parity::default(),
             Stopbits::default(),
             CharLen::default(),
-            ClkSel::default(),
+            ClockSelect::default(),
         )
     }
 
     #[inline]
     pub const fn new(
-        clk_config: ClkConfigRaw,
+        clk_config: ClockConfigRaw,
         chmode: ChMode,
         parity: Parity,
         stopbits: Stopbits,
         chrl: CharLen,
-        clk_sel: ClkSel,
+        clk_sel: ClockSelect,
     ) -> Self {
         UartConfig {
             clk_config,
@@ -388,7 +365,7 @@ impl UartConfig {
     }
 
     #[inline]
-    pub const fn raw_clk_config(&self) -> ClkConfigRaw {
+    pub const fn raw_clk_config(&self) -> ClockConfigRaw {
         self.clk_config
     }
 
@@ -413,7 +390,7 @@ impl UartConfig {
     }
 
     #[inline]
-    pub const fn clksel(&self) -> ClkSel {
+    pub const fn clksel(&self) -> ClockSelect {
         self.clk_sel
     }
 }
@@ -436,7 +413,7 @@ pub enum UartConstructionError {
     #[error("missmatch between pins index and passed index")]
     IdxMissmatch,
     #[error("invalid pin mux conf for UART")]
-    InvalidMuxConf(MuxCfg),
+    InvalidMuxConf(MuxConfig),
 }
 
 impl Uart {
@@ -516,9 +493,9 @@ impl Uart {
                 Parity::None => zynq7000::uart::Parity::NoParity,
             })
             .with_chrl(match cfg.chrl {
-                CharLen::SixBits => zynq7000::uart::Chrl::SixBits,
-                CharLen::SevenBits => zynq7000::uart::Chrl::SevenBits,
-                CharLen::EightBits => zynq7000::uart::Chrl::EightBits,
+                CharLen::SixBits => zynq7000::uart::CharLen::SixBits,
+                CharLen::SevenBits => zynq7000::uart::CharLen::SevenBits,
+                CharLen::EightBits => zynq7000::uart::CharLen::EightBits,
             })
             .with_clksel(cfg.clk_sel)
             .build();
@@ -644,13 +621,13 @@ impl embedded_io::Read for Uart {
 #[inline]
 pub fn reset(id: UartId) {
     let assert_reset = match id {
-        UartId::Uart0 => DualRefAndClkRst::builder()
+        UartId::Uart0 => DualRefAndClockReset::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        UartId::Uart1 => DualRefAndClkRst::builder()
+        UartId::Uart1 => DualRefAndClockReset::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -662,7 +639,7 @@ pub fn reset(id: UartId) {
             regs.reset_ctrl().write_uart(assert_reset);
             // Keep it in reset for one cycle.. not sure if this is necessary.
             cortex_ar::asm::nop();
-            regs.reset_ctrl().write_uart(DualRefAndClkRst::DEFAULT);
+            regs.reset_ctrl().write_uart(DualRefAndClockReset::DEFAULT);
         });
     }
 }
@@ -672,7 +649,7 @@ mod tests {
     use super::*;
     use approx::abs_diff_eq;
     use fugit::HertzU32;
-    use zynq7000::uart::ClkSel;
+    use zynq7000::uart::ClockSelect;
 
     const REF_UART_CLK: HertzU32 = HertzU32::from_raw(50_000_000);
     const REF_UART_CLK_DIV_8: HertzU32 = HertzU32::from_raw(6_250_000);
@@ -680,7 +657,7 @@ mod tests {
     #[test]
     fn test_error_calc_0() {
         // Baud 600
-        let cfg_0 = ClkConfigRaw::new(10417, 7).unwrap();
+        let cfg_0 = ClockConfigRaw::new(10417, 7).unwrap();
         let actual_baud_0 = cfg_0.actual_baud(REF_UART_CLK);
         assert!(abs_diff_eq!(actual_baud_0, 599.980, epsilon = 0.01));
     }
@@ -688,7 +665,7 @@ mod tests {
     #[test]
     fn test_error_calc_1() {
         // Baud 9600
-        let cfg = ClkConfigRaw::new(81, 7).unwrap();
+        let cfg = ClockConfigRaw::new(81, 7).unwrap();
         let actual_baud = cfg.actual_baud(REF_UART_CLK_DIV_8);
         assert!(abs_diff_eq!(actual_baud, 9645.061, epsilon = 0.01));
     }
@@ -696,7 +673,7 @@ mod tests {
     #[test]
     fn test_error_calc_2() {
         // Baud 9600
-        let cfg = ClkConfigRaw::new(651, 7).unwrap();
+        let cfg = ClockConfigRaw::new(651, 7).unwrap();
         let actual_baud = cfg.actual_baud(REF_UART_CLK);
         assert!(abs_diff_eq!(actual_baud, 9600.614, epsilon = 0.01));
     }
@@ -704,7 +681,7 @@ mod tests {
     #[test]
     fn test_error_calc_3() {
         // Baud 28800
-        let cfg = ClkConfigRaw::new(347, 4).unwrap();
+        let cfg = ClockConfigRaw::new(347, 4).unwrap();
         let actual_baud = cfg.actual_baud(REF_UART_CLK);
         assert!(abs_diff_eq!(actual_baud, 28818.44, epsilon = 0.01));
     }
@@ -712,14 +689,15 @@ mod tests {
     #[test]
     fn test_error_calc_4() {
         // Baud 921600
-        let cfg = ClkConfigRaw::new(9, 5).unwrap();
+        let cfg = ClockConfigRaw::new(9, 5).unwrap();
         let actual_baud = cfg.actual_baud(REF_UART_CLK);
         assert!(abs_diff_eq!(actual_baud, 925925.92, epsilon = 0.01));
     }
 
     #[test]
     fn test_best_calc_0() {
-        let result = ClkConfigRaw::new_autocalc_with_raw_clk(REF_UART_CLK, ClkSel::UartRefClk, 600);
+        let result =
+            ClockConfigRaw::new_autocalc_with_raw_clk(REF_UART_CLK, ClockSelect::UartRefClk, 600);
         assert!(result.is_ok());
         let (cfg, _error) = result.unwrap();
         assert_eq!(cfg.cd(), 499);
@@ -729,7 +707,7 @@ mod tests {
     #[test]
     #[cfg(feature = "alloc")]
     fn test_viable_config_calculation() {
-        let cfgs = calculate_viable_configs(REF_UART_CLK, ClkSel::UartRefClk, 115200);
+        let cfgs = calculate_viable_configs(REF_UART_CLK, ClockSelect::UartRefClk, 115200);
         assert!(
             cfgs.iter()
                 .find(|(cfg, _error)| { cfg.cd() == 62 && cfg.bdiv() == 6 })

@@ -42,17 +42,16 @@ use zynq7000_hal::{
     clocks::Clocks,
     configure_level_shifter,
     eth::{
-        AlignedBuffer, ClkDivCollection, EthernetConfig, EthernetLowLevel,
-        embassy_net::InterruptResult,
+        AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, embassy_net::InterruptResult,
     },
     gic::{GicConfigurator, GicInterruptHelper, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
-    uart::{ClkConfigRaw, Uart, UartConfig},
+    uart::{ClockConfigRaw, Uart, UartConfig},
 };
 
-use zynq7000::{PsPeripherals, slcr::LevelShifterCfg};
+use zynq7000::{PsPeripherals, slcr::LevelShifterConfig};
 use zynq7000_rt::{self as _, mmu::section_attrs::SHAREABLE_DEVICE, mmu_l1_table_mut};
 
 const USE_DHCP: bool = true;
@@ -213,7 +212,7 @@ async fn main(spawner: Spawner) -> ! {
     l2_cache::init_with_defaults(&mut dp.l2c);
 
     // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterCfg::EnableAll);
+    configure_level_shifter(LevelShifterConfig::EnableAll);
 
     // Configure the uncached memory region using the MMU.
     mmu_l1_table_mut()
@@ -237,7 +236,7 @@ async fn main(spawner: Spawner) -> ! {
     zynq7000_embassy::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
-    let uart_clk_config = ClkConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
+    let uart_clk_config = ClockConfigRaw::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
     let mut uart = Uart::new_with_mio(
@@ -280,15 +279,14 @@ async fn main(spawner: Spawner) -> ! {
     info!("Ethernet Module ID: {mod_id:?}");
     assert_eq!(mod_id, 0x20118);
 
-    let (clk_divs, clk_errors) =
-        ClkDivCollection::calculate_for_rgmii_and_io_clock(clocks.io_clocks());
+    let (clk_divs, clk_errors) = ClockDivSet::calculate_for_rgmii_and_io_clock(clocks.io_clocks());
     debug!(
         "Calculated RGMII clock configuration: {:?}, errors (missmatch from ideal rate in hertz): {:?}",
         clk_divs, clk_errors
     );
     // Unwrap okay, we use a standard clock config, and the clock config should never fail.
     let eth_cfg = EthernetConfig::new(
-        zynq7000_hal::eth::ClkConfig::new(clk_divs.cfg_1000_mbps),
+        zynq7000_hal::eth::ClockConfig::new(clk_divs.cfg_1000_mbps),
         zynq7000_hal::eth::calculate_mdc_clk_div(clocks.arm_clocks()).unwrap(),
         MAC_ADDRESS,
     );
