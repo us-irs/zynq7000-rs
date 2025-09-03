@@ -16,7 +16,7 @@ use crate::{
         IoPeriphPin,
         mio::{
             Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31, Mio32, Mio33,
-            Mio34, Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, Mio52, Mio53, MioPinMarker,
+            Mio34, Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, Mio52, Mio53, MioPin,
             MuxConfig, Pin,
         },
     },
@@ -58,11 +58,11 @@ impl PsI2c for MmioI2c<'static> {
     }
 }
 
-pub trait SdaPin: MioPinMarker {
+pub trait SdaPin: MioPin {
     const ID: I2cId;
 }
 
-pub trait SckPin: MioPinMarker {
+pub trait SckPin: MioPin {
     const ID: I2cId;
 }
 

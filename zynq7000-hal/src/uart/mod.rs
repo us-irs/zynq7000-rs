@@ -20,7 +20,7 @@ use crate::{
         mio::{
             Mio8, Mio9, Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31,
             Mio32, Mio33, Mio34, Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, Mio52, Mio53,
-            MioPinMarker, MuxConfig, Pin,
+            MioPin, MuxConfig, Pin,
         },
     },
     slcr::Slcr,
@@ -89,10 +89,10 @@ impl UartId {
     }
 }
 
-pub trait RxPin: MioPinMarker {
+pub trait RxPin: MioPin {
     const UART_IDX: UartId;
 }
-pub trait TxPin: MioPinMarker {
+pub trait TxPin: MioPin {
     const UART_IDX: UartId;
 }
 

@@ -6,7 +6,7 @@ use crate::enable_amba_periph_clk;
 use crate::gpio::IoPeriphPin;
 use crate::gpio::mio::{
     Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34,
-    Mio35, Mio36, Mio37, Mio38, Mio39, MioPinMarker, MuxConfig, Pin,
+    Mio35, Mio36, Mio37, Mio38, Mio39, MioPin, MuxConfig, Pin,
 };
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 use crate::gpio::mio::{
@@ -60,22 +60,22 @@ impl PsSpi for MmioSpi<'static> {
     }
 }
 
-pub trait SckPin: MioPinMarker {
+pub trait SckPin: MioPin {
     const SPI: SpiId;
     const GROUP: usize;
 }
 
-pub trait MosiPin: MioPinMarker {
+pub trait MosiPin: MioPin {
     const SPI: SpiId;
     const GROUP: usize;
 }
 
-pub trait MisoPin: MioPinMarker {
+pub trait MisoPin: MioPin {
     const SPI: SpiId;
     const GROUP: usize;
 }
 
-pub trait SsPin: MioPinMarker {
+pub trait SsPin: MioPin {
     const IDX: usize;
     const SPI: SpiId;
     const GROUP: usize;

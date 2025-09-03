@@ -32,7 +32,7 @@ use crate::{
         IoPeriphPin,
         mio::{
             Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34, Mio35, Mio36, Mio37, Mio38, Mio39,
-            Mio52, Mio53, MioPinMarker, MuxConfig, Pin,
+            Mio52, Mio53, MioPin, MuxConfig, Pin,
         },
     },
     time::Hertz,
@@ -105,45 +105,45 @@ impl PsEthernet for MmioEthernet<'static> {
     }
 }
 
-pub trait TxClk: MioPinMarker {
+pub trait TxClk: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait TxCtrl: MioPinMarker {
+pub trait TxCtrl: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait TxData0: MioPinMarker {
+pub trait TxData0: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait TxData1: MioPinMarker {
+pub trait TxData1: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait TxData2: MioPinMarker {
+pub trait TxData2: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait TxData3: MioPinMarker {
+pub trait TxData3: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait RxClk: MioPinMarker {
+pub trait RxClk: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait RxCtrl: MioPinMarker {
+pub trait RxCtrl: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait RxData0: MioPinMarker {
+pub trait RxData0: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait RxData1: MioPinMarker {
+pub trait RxData1: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait RxData2: MioPinMarker {
+pub trait RxData2: MioPin {
     const ETH_ID: EthernetId;
 }
-pub trait RxData3: MioPinMarker {
+pub trait RxData3: MioPin {
     const ETH_ID: EthernetId;
 }
 
-pub trait MdClk: MioPinMarker {}
-pub trait MdIo: MioPinMarker {}
+pub trait MdClk: MioPin {}
+pub trait MdIo: MioPin {}
 
 impl MdClk for Pin<Mio52> {}
 impl MdIo for Pin<Mio53> {}

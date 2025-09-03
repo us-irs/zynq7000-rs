@@ -14,7 +14,7 @@ pub mod mio;
 
 use core::convert::Infallible;
 use ll::PinOffset;
-use mio::{MioPinMarker, MuxConfig};
+use mio::{MioPin, MuxConfig};
 
 use crate::gpio::ll::LowLevelGpio;
 use crate::{enable_amba_periph_clk, slcr::Slcr};
@@ -386,7 +386,7 @@ pub struct IoPeriphPin {
 impl IoPeriphPin {
     /// Constructor for IO peripheral pins where only the multiplexer and pullup configuration
     /// need to be changed.
-    pub fn new(pin: impl MioPinMarker, mux_conf: MuxConfig, pullup: Option<bool>) -> Self {
+    pub fn new(pin: impl MioPin, mux_conf: MuxConfig, pullup: Option<bool>) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
         low_level.configure_as_io_periph_pin(mux_conf, pullup);
         Self {
@@ -396,10 +396,7 @@ impl IoPeriphPin {
     }
 
     /// Constructor to fully configure an IO peripheral pin with a specific MIO pin configuration.
-    pub fn new_with_full_config(
-        pin: impl MioPinMarker,
-        config: zynq7000::slcr::mio::Config,
-    ) -> Self {
+    pub fn new_with_full_config(pin: impl MioPin, config: zynq7000::slcr::mio::Config) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
         low_level.set_mio_pin_config(config);
         Self {
@@ -415,7 +412,7 @@ impl IoPeriphPin {
 
     /// Constructor to fully configure an IO peripheral pin with a specific MIO pin configuration.
     pub fn new_with_full_config_and_unlocked_slcr(
-        pin: impl MioPinMarker,
+        pin: impl MioPin,
         slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
         config: zynq7000::slcr::mio::Config,
     ) -> Self {
