@@ -30,7 +30,7 @@ embassy-executor = { git = "https://github.com/us-irs/embassy.git", branch = "co
   "executor-thread",
 ]}
 # TODO: Remove generic-queue-16 feature as soon as upstream executor is used again.
-embassy-time = { version = "0.4", features = ["tick-hz-1_000_000", "generic-queue-16"] }
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000", "generic-queue-16"] }
 
 [profile.release]
 codegen-units = 1

@@ -174,7 +174,7 @@ pin_id!(Mio51, 51);
 pin_id!(Mio52, 52);
 pin_id!(Mio53, 53);
 
-pub trait MioPinMarker {
+pub trait MioPin {
     fn offset(&self) -> usize;
 }
 
@@ -374,7 +374,7 @@ impl Pins {
     }
 }
 
-impl<I: PinId> MioPinMarker for Pin<I> {
+impl<I: PinId> MioPin for Pin<I> {
     fn offset(&self) -> usize {
         I::OFFSET
     }

@@ -18,4 +18,4 @@ zynq7000-hal = { path = "../zynq7000-hal" }
 # embassy-time-driver = { git = "https://github.com/embassy-rs/embassy.git", branch = "main", version = "0.2" }
 # embassy-time-queue-utils = { git = "https://github.com/embassy-rs/embassy.git", branch = "main", version = "0.1" }
 embassy-time-driver = "0.2"
-embassy-time-queue-utils = "0.1"
+embassy-time-queue-utils = "0.3"

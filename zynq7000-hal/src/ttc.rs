@@ -13,7 +13,7 @@ use crate::{
     clocks::ArmClocks,
     gpio::{
         IoPeriphPin,
-        mio::{Mio28, Mio29, Mio30, Mio31, MioPinMarker, MuxConfig, Pin},
+        mio::{Mio28, Mio29, Mio30, Mio31, MioPin, MuxConfig, Pin},
     },
     time::Hertz,
 };
@@ -57,11 +57,11 @@ impl PsTtc for MmioTtc<'static> {
 
 pub const TTC_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b110));
 
-pub trait ClockInPin: MioPinMarker {
+pub trait ClockInPin: MioPin {
     const ID: TtcId;
 }
 
-pub trait WaveOutPin: MioPinMarker {
+pub trait WaveOutPin: MioPin {
     const ID: TtcId;
 }
 
