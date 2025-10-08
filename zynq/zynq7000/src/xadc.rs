@@ -1,5 +1,6 @@
 pub const XADC_BASE_ADDR: usize = 0xF8007100;
 
+/// XADC register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct XAdc {

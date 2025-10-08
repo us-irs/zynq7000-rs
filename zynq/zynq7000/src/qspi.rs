@@ -220,6 +220,7 @@ pub struct LinearQspiStatus {
     axi_write_command_received: bool,
 }
 
+/// QSPI register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Qspi {

@@ -44,6 +44,7 @@ impl SnoopControlUnit {
 
 const_assert_eq!(core::mem::size_of::<SnoopControlUnit>(), 0x58);
 
+/// MP Core register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct MpCore {

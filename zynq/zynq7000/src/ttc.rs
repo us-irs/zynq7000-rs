@@ -142,7 +142,7 @@ pub struct EventCount {
     count: u16,
 }
 
-/// Triple-timer counter
+/// Triple-timer counter register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Ttc {

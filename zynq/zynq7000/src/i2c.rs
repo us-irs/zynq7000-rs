@@ -156,6 +156,7 @@ pub struct TransferSize {
     size: u8,
 }
 
+/// I2C register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct I2c {

@@ -278,6 +278,7 @@ impl InterruptStatus {
     }
 }
 
+/// UART register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Uart {

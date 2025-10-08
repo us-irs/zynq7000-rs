@@ -725,6 +725,7 @@ pub mod regs {
 
 use regs::*;
 
+/// DDR controller register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct DdrController {

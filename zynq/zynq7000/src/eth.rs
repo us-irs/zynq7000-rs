@@ -418,7 +418,7 @@ pub struct MatchRegister {
     type_id: u16,
 }
 
-/// Gigabit Ethernet Controller (GEM) registers for Zynq-7000
+/// Gigabit Ethernet Controller (GEM) register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Ethernet {
@@ -477,7 +477,7 @@ pub struct Ethernet {
 
 static_assertions::const_assert_eq!(core::mem::size_of::<Ethernet>(), 0x294);
 
-/// GEM statistics registers
+/// Ethernet statistics registers
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Statistics {

@@ -257,6 +257,7 @@ pub struct Status {
     efuse_jtag_disabled: bool,
 }
 
+/// Device configuration register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct DevCfg {

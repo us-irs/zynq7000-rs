@@ -91,7 +91,7 @@ pub struct LevelShifterRegister {
     user_lvl_shftr_en: Option<LevelShifterConfig>,
 }
 
-/// System Level Control Registers
+/// System Level Control Registers access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Slcr {
