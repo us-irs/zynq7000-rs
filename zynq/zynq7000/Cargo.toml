@@ -1,6 +1,6 @@
 [package]
 name = "zynq7000"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Peripheral Access Crate (PAC) for the Zynq7000 family of SoCs"
