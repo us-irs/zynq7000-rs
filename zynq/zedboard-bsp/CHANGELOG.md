@@ -13,4 +13,4 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 Initial release
 
 [unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zedboard-bsp-v0.1.0...HEAD
-[v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tags/zedboard-bsp-v0.1.0
+[v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zedboard-bsp-v0.1.0

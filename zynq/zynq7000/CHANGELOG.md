@@ -18,4 +18,4 @@ Initial release
 
 [unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.1...HEAD
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.0...zynq7000-0.1.1
-[v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tags/zynq7000-v0.1.0
+[v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/tag/zynq7000-v0.1.0
