@@ -1,7 +1,7 @@
 target
+xsct-output.log
+app.map
 
-/app.map
-/xsct-output.log
 /.vscode
 /Cargo.lock
 /.cargo/config.toml

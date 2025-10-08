@@ -7,7 +7,7 @@
 
 use core::cell::UnsafeCell;
 use cortex_ar::mmu::L1Section;
-#[cfg(not(feature = "tools"))]
+#[cfg(all(not(feature = "tools"), arm_profile = "a"))]
 use cortex_ar::{
     asm::{dsb, isb},
     cache::clean_and_invalidate_l1_data_cache,
@@ -39,7 +39,7 @@ impl L1TableRaw {
         self.0.as_mut_ptr() as *mut _
     }
 
-    #[cfg(not(feature = "tools"))]
+    #[cfg(all(not(feature = "tools"), arm_profile = "a"))]
     pub fn update(
         &mut self,
         addr: u32,
@@ -92,7 +92,7 @@ impl<'a> L1TableWrapper<'a> {
 }
 
 impl L1TableWrapper<'_> {
-    #[cfg(not(feature = "tools"))]
+    #[cfg(all(not(feature = "tools"), arm_profile = "a"))]
     pub fn update(
         &mut self,
         addr: u32,

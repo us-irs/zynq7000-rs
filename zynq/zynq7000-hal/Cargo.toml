@@ -1,6 +1,6 @@
 [package]
 name = "zynq7000-hal"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Hardware Abstraction Layer (HAL) for the Zynq7000 family of SoCs"
@@ -52,4 +52,6 @@ approx = "0.5"
 
 [package.metadata.docs.rs]
 features = ["alloc"]
+targets = ["armv7a-none-eabihf"]
+cargo-args = ["-Z", "build-std=core"]
 rustdoc-args = ["--generate-link-to-definition"]

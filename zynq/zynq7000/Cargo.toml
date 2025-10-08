@@ -23,4 +23,6 @@ once_cell = { version = "1", default-features = false, features = ["critical-sec
 approx = "0.5"
 
 [package.metadata.docs.rs]
+targets = ["armv7a-none-eabihf"]
+cargo-args = ["-Z", "build-std=core"]
 rustdoc-args = ["--generate-link-to-definition"]
