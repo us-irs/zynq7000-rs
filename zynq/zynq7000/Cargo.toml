@@ -3,11 +3,11 @@ name = "zynq7000"
 version = "0.1.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
-description = "PAC for the Zynq7000 family of SoCs"
+description = "Peripheral Access Crate (PAC) for the Zynq7000 family of SoCs"
 homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 license = "MIT OR Apache-2.0"
-keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
+keywords = ["no-std", "pac", "bare-metal", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
@@ -23,5 +23,4 @@ once_cell = { version = "1", default-features = false, features = ["critical-sec
 approx = "0.5"
 
 [package.metadata.docs.rs]
-all-features = true
 rustdoc-args = ["--generate-link-to-definition"]

@@ -1,3 +1,7 @@
+[![Crates.io](https://img.shields.io/crates/v/zynq7000-rt)](https://crates.io/crates/zynq7000-rt)
+[![docs.rs](https://img.shields.io/docsrs/zynq7000-rt)](https://docs.rs/zynq7000-rt)
+[![ci](https://github.com/us-irs/zynq7000-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/us-irs/zynq7000-rs/actions/workflows/ci.yml)
+
 Zynq7000 Rust Run-Time Support
 ========
 
@@ -21,10 +25,5 @@ crate to provide ARM vectors and the linker script.
 ## Re-Generating the MMU table
 
 The MMU table is a static flat map of 4096 entries for each 1 MB in the memory map.
-It was generated using the `table-gen` binary tool.
-
-You can re-run the tool using
-
-```sh
-cargo +stable --target <hostTarget> run --bin table-gen --no-default-features --features tools
-```
+It was generated using the [`mmu-table-gen`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/tools/mmu-table-gen)
+tool.

@@ -8,6 +8,7 @@
 //! [embedded-hal](https://github.com/rust-embedded/embedded-hal) project, making it compatible with
 //! various drivers in the embedded rust ecosystem.
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "alloc")]
 extern crate alloc;

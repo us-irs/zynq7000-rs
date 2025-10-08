@@ -9,6 +9,7 @@
 //! [The Zynq7000 HAL library](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000-hal)
 //! contains such a HAL which builds on this PAC.
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use core::sync::atomic::{AtomicBool, Ordering};
 

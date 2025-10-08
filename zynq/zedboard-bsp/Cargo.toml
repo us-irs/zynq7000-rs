@@ -2,10 +2,16 @@
 name = "zedboard-bsp"
 version = "0.1.0"
 edition = "2024"
+description = "Board Support Package (BSP) for the Zedboard"
+homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+license = "MIT OR Apache-2.0"
+keywords = ["no-std", "zedboard", "bare-metal", "amd", "zynq7000"]
+categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-zynq7000 = { path = "../zynq7000" }
-zynq7000-hal = { path = "../zynq7000-hal" }
+zynq7000 = { path = "../zynq7000", version = "0.1" }
+zynq7000-hal = { path = "../zynq7000-hal", version = "0.1" }
 bitbybit = "1.4"
 arbitrary-int = "2"
 num_enum = { version = "0.7", default-features = false }

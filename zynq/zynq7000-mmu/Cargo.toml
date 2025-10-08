@@ -3,6 +3,11 @@ name = "zynq7000-mmu"
 description = "Zynq7000 MMU structures"
 version = "0.1.0"
 edition = "2024"
+license = "MIT OR Apache-2.0"
+homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+keywords = ["no-std", "mmu", "bare-metal", "amd", "zynq7000"]
+categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 thiserror = { version = "2", default-features = false }
