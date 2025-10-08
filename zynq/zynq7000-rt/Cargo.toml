@@ -7,15 +7,18 @@ description = "Run-time support for the Zynq7000 family of SoCs for running bare
 homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 license = "MIT OR Apache-2.0"
-keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
+keywords = ["no-std", "rt", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 cortex-a-rt = { version = "0.1", optional = true, features = ["vfp-dp"] }
 cortex-ar = { version = "0.3" }
 arbitrary-int = "2"
-zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1.0" }
+zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
 
 [features]
 default = ["rt"]
 rt = ["dep:cortex-a-rt"]
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--generate-link-to-definition"]

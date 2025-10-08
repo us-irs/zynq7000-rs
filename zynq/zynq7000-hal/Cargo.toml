@@ -3,17 +3,17 @@ name = "zynq7000-hal"
 version = "0.1.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
-description = "HAL for the Zynq7000 family of SoCs"
+description = "Hardware Abstraction Layer (HAL) for the Zynq7000 family of SoCs"
 homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 license = "MIT OR Apache-2.0"
-keywords = ["no-std", "hal", "amd", "zynq7000", "xilinx", "bare-metal"]
+keywords = ["no-std", "hal", "amd", "zynq7000", "bare-metal"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 cortex-ar = { version = "0.3" }
-zynq7000 = { path = "../zynq7000" }
-zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1.0" }
+zynq7000 = { path = "../zynq7000", version = "0.1" }
+zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
 
 static_assertions = "1.1"
 bitbybit = "1.4"
@@ -49,3 +49,7 @@ alloc = []
 
 [dev-dependencies]
 approx = "0.5"
+
+[package.metadata.docs.rs]
+features = ["alloc"]
+rustdoc-args = ["--generate-link-to-definition"]

@@ -8,6 +8,7 @@
 //! - MMU table is specified as Rust code.
 //! - Modification to the stack setup code, because a different linker script is used.
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(feature = "rt")]
 pub use cortex_a_rt::*;
 

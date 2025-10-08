@@ -1,6 +1,9 @@
-//! The MMU structures live inside a dedicated shared crate so it can be used by both the Zynq
-//! runtime crate and the HAL crate.
+//! # Zynq7000 Memory Management Unit (MMU) 
+//!
+//! Dedicated shared crate for Zynq7000 MMU abstractions which can be used by Zynq
+//! runtime crates, PACs and HALs.
 #![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
 
 use core::cell::UnsafeCell;
 use cortex_ar::mmu::L1Section;
