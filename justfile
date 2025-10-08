@@ -24,12 +24,21 @@ fmt target:
 clippy target:
   cd {{target}} && cargo clippy -- -D warnings
 
-[working-directory: 'zynq']
-docs-zynq:
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc
+docs-zynq: docs-pac docs-hal
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-mmu
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt
+[working-directory: 'zynq']
+docs-pac:
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000
+[working-directory: 'zynq']
+docs-pac-html:
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 --open
+[working-directory: 'zynq']
+docs-hal:
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc
+[working-directory: 'zynq']
+docs-hal-html:
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --open
 
 [working-directory: 'zynq-boot-image/staging']
 bootgen:
