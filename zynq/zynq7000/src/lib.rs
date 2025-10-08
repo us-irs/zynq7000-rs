@@ -6,7 +6,7 @@
 //!
 //! This crate is purposely kept low-level to allow building higher level abstractions like HALs
 //! on top of it.
-//! [The Zynq7000 HAL library](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000-hal)
+//! [The Zynq7000 HAL library](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zynq7000-hal)
 //! contains such a HAL which builds on this PAC.
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -37,9 +37,9 @@ pub mod xadc;
 
 static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
 
-/// This is a collection of all the processing peripherals.
+/// This is a collection of processing system peripherals.
 ///
-/// It is a singleton which exposes all peripherals supported by this crate.
+/// It is a singleton which exposes peripherals supported by this crate.
 /// The [`svd2rust` documentation](https://docs.rs/svd2rust/latest/svd2rust/#peripheral-api)
 /// provides some more information about this.
 pub struct Peripherals {

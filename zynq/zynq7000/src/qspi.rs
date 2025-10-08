@@ -2,7 +2,7 @@ use arbitrary_int::{u2, u3};
 
 pub use crate::{SpiClockPhase, SpiClockPolarity};
 
-const QSPI_BASE_ADDR: usize = 0xE000D000;
+pub const QSPI_BASE_ADDR: usize = 0xE000D000;
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
