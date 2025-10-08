@@ -1,0 +1,12 @@
+[env]
+# The following two env variables need to be set for the supplied runner.sh script to work.
+
+# Absolute path to the Vitis install directory.
+# AMD_TOOLS = "/tools/Xilinx/Vitis/2024.1"
+# Absolute path to the PS7 initialization TCL script.
+# TCL_INIT_SCRIPT = "/home/$user/$project/$sdt_dir/ps7_init.tcl"
+
+# Absolute path to the Zynq bitstream file, which will be flashed to the target before
+# running the application. You only need to do this once for unchanged bitstream as long as you
+# do not reset the whole board.
+# ZYNQ_BITSTREAM = "/home/$user/$project/$sdt_dir/bitstream.bit"

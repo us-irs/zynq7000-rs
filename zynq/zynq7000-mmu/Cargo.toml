@@ -1,0 +1,12 @@
+[package]
+name = "zynq7000-mmu"
+description = "Zynq7000 MMU structures"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = { version = "2", default-features = false }
+cortex-ar = { version = "0.3" }
+
+[features]
+tools = []

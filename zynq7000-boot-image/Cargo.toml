@@ -1,0 +1,9 @@
+[package]
+name = "zynq7000-boot-image"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = { version = "2", default-features = false }
+arbitrary-int = "2"
+bitbybit = "1.4"

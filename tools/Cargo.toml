@@ -1,0 +1,7 @@
+[workspace]
+resolver = "3"
+members = [
+  "boot-image-test",
+  "mmu-table-gen",
+  "zynq7000-ps7init-extract",
+]

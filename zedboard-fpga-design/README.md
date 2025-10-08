@@ -38,3 +38,25 @@ vivado zedboard-rust.xpr
 
 You can perform all the steps specified in the Vivado GUI as well using `Execute TCL script` and
 `Load Project`.
+
+# Generating the SDT folder from a hardware description
+
+You can generate a hardware description by building the block design by using `Generate Bitstream`
+inside the Vivado GUI and then exporting the hardware description via
+`File -> Export -> Export Hardware`. This allows to generate a `*.xsa` file which describes the
+hardware.
+
+After that, you can generate the SDT output folder which contains various useful files like
+the `ps7_init.tcl` script. The provided ` sdtgen.tcl` and `stdgen.py` script simplify this process.
+
+For example, the following command generates the SDT output folder inside a folder
+named `sdt_out` for a hardware description files `zedboard-rust/zedboard-rust.xsa`,
+assuming that the Vitis tool suite is installed at `/tools/Xilinx/Vitis/2024.1`:
+
+```sh
+export AMD_TOOLS="/tools/Xilinx/Vitis/2024.1"
+./sdtgen.py -x ./zedboard-rust/zedboard-rust.xsa
+```
+
+Run `stdgen.py -h` for more information and configuration options. The `stdgen.py` is a helper
+script which will invoke `sdtgen.tcl` to generate the SDT.
