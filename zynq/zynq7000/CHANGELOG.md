@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [v0.1.1] 2025-10-09
 
-Documenation fix
+Documentation fix
 
 # [v0.1.0] 2025-10-08
 
