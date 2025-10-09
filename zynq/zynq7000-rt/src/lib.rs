@@ -9,20 +9,20 @@
 //! - Modification to the stack setup code, because a different linker script is used.
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
-#[cfg(feature = "rt")]
+#[cfg(all(feature = "rt", arm_profile = "a"))]
 pub use cortex_a_rt::*;
 
 #[cfg(feature = "rt")]
 use zynq7000_mmu::L1TableWrapper;
 
 pub mod mmu;
-#[cfg(feature = "rt")]
+#[cfg(all(feature = "rt", arm_profile = "a"))]
 mod mmu_table;
-#[cfg(feature = "rt")]
+#[cfg(all(feature = "rt", arm_profile = "a"))]
 pub mod rt;
 
 /// Retrieves a mutable reference to the MMU L1 page table.
-#[cfg(feature = "rt")]
+#[cfg(all(feature = "rt", arm_profile = "a"))]
 pub fn mmu_l1_table_mut() -> L1TableWrapper<'static> {
     let mmu_table = mmu_table::MMU_L1_PAGE_TABLE.0.get();
     // Safety: We retrieve a reference to the MMU page table singleton.
