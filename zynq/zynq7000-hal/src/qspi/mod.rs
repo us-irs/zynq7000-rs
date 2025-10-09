@@ -1,3 +1,8 @@
+//! # QSPI module
+//!
+//! ## Examples
+//!
+//! - [Zedboard QSPI](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/qspi.rs)
 use core::ops::{Deref, DerefMut};
 
 use arbitrary_int::{prelude::*, u2, u3, u6};

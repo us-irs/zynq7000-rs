@@ -1,3 +1,8 @@
+//! # DDR module
+//!
+//! ## Examples
+//!
+//! - [Zedboard FSBL](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zedboard-fsbl)
 use arbitrary_int::u6;
 use zynq7000::ddrc::MmioDdrController;
 

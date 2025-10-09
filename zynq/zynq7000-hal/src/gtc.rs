@@ -1,9 +1,9 @@
-//! Global timer counter driver module.
+//! # Global timer counter driver module
 //!
-//! # Examples
+//! ## Examples
 //!
-//! - [GTC ticks example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/examples/simple/src/bin/gtc-ticks.rs)
-//! - [Embassy Timer Driver](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000-embassy/src/lib.rs)
+//! - [GTC ticks example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/gtc-ticks.rs)
+//! - [Embassy Timer Driver](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zynq7000-embassy/src/lib.rs)
 use zynq7000::gtc::MmioGlobalTimerCounter;
 
 use crate::{clocks::ArmClocks, time::Hertz};

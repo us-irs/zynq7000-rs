@@ -1,3 +1,4 @@
+//! # I2C module
 use arbitrary_int::{u2, u3, u6};
 use embedded_hal::i2c::NoAcknowledgeSource;
 use zynq7000::{

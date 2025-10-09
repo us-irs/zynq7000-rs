@@ -1,4 +1,8 @@
-//! Clock module.
+//! # Clock module
+//!
+//! ## Examples
+//!
+//! - PLL initialization in [Zedboard FSBL](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zedboard-fsbl)
 use arbitrary_int::{prelude::*, u6};
 
 pub mod pll;

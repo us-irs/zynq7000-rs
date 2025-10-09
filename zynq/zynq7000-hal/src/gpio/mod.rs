@@ -1,12 +1,12 @@
-//! GPIO support module for the Zynq7000 SoC.
+//! # GPIO module
 //!
 //! This module contains a MIO and EMIO pin resource managements singleton as well as abstractions
 //! to use these pins as GPIOs.
 //!
 //! # Examples
 //!
-//! - [Blinky](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/examples/simple/src/main.rs)
-//! - [Logger example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/examples/simple/src/bin/logger.rs)
+//! - [Blinky](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/main.rs)
+//! - [Logger example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/logger.rs)
 //!   which uses MIO pins for the UART.
 pub mod emio;
 pub mod ll;

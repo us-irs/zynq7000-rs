@@ -1,3 +1,8 @@
+//! # Ethernet module
+//!
+//! ## Examples
+//!
+//! - [Zedboard Ethernet](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/ethernet.rs)
 use arbitrary_int::{u2, u3};
 pub use zynq7000::eth::MdcClockDivisor;
 use zynq7000::eth::{

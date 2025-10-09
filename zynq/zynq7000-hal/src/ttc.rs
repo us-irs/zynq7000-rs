@@ -1,6 +1,10 @@
-//! Triple-timer counter (TTC) high-level driver.
+//! # Triple-timer counter (TTC) high-level driver
 //!
 //! This module also contains support for PWM and output waveform generation.
+//!
+//! ## Examples
+//!
+//! - [PWM](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/embassy/src/bin/pwm.rs)
 
 use core::convert::Infallible;
 
