@@ -1,4 +1,4 @@
-//! Global Interrupt Controller (GIC) module.
+//! # Global Interrupt Controller (GIC) module
 //!
 //! The primary interface to configure and allow handling the interrupts are the
 //! [GicConfigurator] and the [GicInterruptHelper] structures.
@@ -191,9 +191,9 @@ pub struct InvalidSgiInterruptId(pub usize);
 ///
 /// The flow of using this controller is as follows:
 ///
-/// 1. Create the controller using [Self::new_with_init]. You can use the [zynq7000::PsPeripherals]
+/// 1. Create the controller using [Self::new_with_init]. You can use the [zynq7000::Peripherals]
 ///    structure or the [zynq7000::gic::GicCpuInterface::new_mmio] and [zynq7000::gic::GicDistributor::new_mmio]
-///    functions  to create the MMIO instances. The constructor configures all PL interrupts
+///    functions to retrieve the MMIO instances. The constructor configures all PL interrupts
 ///    sensivities to high-level sensitivity and configures all sensitivities which are expected
 ///    to have a certain value. It also sets the priority mask to 0xff by calling
 ///    [Self::set_priority_mask] to prevent masking of the interrupts.

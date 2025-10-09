@@ -1,3 +1,8 @@
+//! # CPU private timer module
+//!
+//! ## Examples
+//!
+//! - Private timer as delay provider in [blinky](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/blinky.rs)
 use core::{marker::PhantomData, sync::atomic::AtomicBool};
 
 use zynq7000::priv_tim::InterruptStatus;

@@ -1,4 +1,9 @@
-//! # Simple logging providers.
+//! # Simple logging providers
+//!
+//! ## Examples
+//!
+//! - [Logger example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/logger.rs)
+//!   which uses MIO pins for the UART.
 
 use core::sync::atomic::{AtomicBool, AtomicU8};
 

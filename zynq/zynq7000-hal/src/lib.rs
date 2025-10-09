@@ -7,6 +7,11 @@
 //! raw PAC. This crate also implements traits specified by the
 //! [embedded-hal](https://github.com/rust-embedded/embedded-hal) project, making it compatible with
 //! various drivers in the embedded rust ecosystem.
+//!
+//! ## Examples
+//!
+//! All exaples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples)
+//! of the project
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

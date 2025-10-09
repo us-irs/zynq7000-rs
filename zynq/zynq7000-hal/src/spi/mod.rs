@@ -1,4 +1,8 @@
-//! PS SPI HAL driver.
+//! SPI module
+//!
+//! ## Examples
+//!
+//! - [L3GD20H SPI sensor](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/l3gd20h-spi-mio.rs)
 use core::convert::Infallible;
 
 use crate::clocks::Clocks;

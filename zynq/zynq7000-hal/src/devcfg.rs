@@ -1,3 +1,4 @@
+//! # Device Configuration Module
 #[derive(Debug, thiserror::Error)]
 #[error("unaligned address: {0}")]
 pub struct UnalignedAddrError(usize);

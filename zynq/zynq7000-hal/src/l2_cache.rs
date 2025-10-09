@@ -1,3 +1,4 @@
+//! # L2 cache module
 use core::sync::atomic::compiler_fence;
 
 use arbitrary_int::{u2, u3};

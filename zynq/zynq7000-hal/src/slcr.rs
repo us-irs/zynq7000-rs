@@ -1,4 +1,4 @@
-//! # System Level Control Register (SLCR) module.
+//! # System Level Control Register (SLCR) module
 use zynq7000::slcr::MmioSlcr;
 
 pub const LOCK_KEY: u32 = 0x767B;

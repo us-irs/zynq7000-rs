@@ -1,3 +1,7 @@
+//! # Cache management module
+//!
+//! A lot of cache maintenance operations for this SoC have to be performed on both the L1 and the
+//! L2 cache in the correct order. This module provides commonly required operations.
 use core::sync::atomic::compiler_fence;
 
 use cortex_ar::{
