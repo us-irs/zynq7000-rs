@@ -53,5 +53,5 @@ approx = "0.5"
 [package.metadata.docs.rs]
 features = ["alloc"]
 targets = ["armv7a-none-eabihf"]
-cargo-args = ["-Z", "build-std=core"]
+cargo-args = ["-Z", "build-std=core,alloc"]
 rustdoc-args = ["--generate-link-to-definition"]
