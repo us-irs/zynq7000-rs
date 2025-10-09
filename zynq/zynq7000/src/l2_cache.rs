@@ -184,6 +184,7 @@ pub struct InterruptControl {
     event_counter_overflow_increment: bool,
 }
 
+/// L2 Cache register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct L2Cache {

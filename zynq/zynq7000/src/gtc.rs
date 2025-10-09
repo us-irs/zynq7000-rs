@@ -22,7 +22,7 @@ pub struct InterruptStatus {
     event_flag: bool,
 }
 
-/// Global timer counter.
+/// Global timer counter register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct GlobalTimerCounter {

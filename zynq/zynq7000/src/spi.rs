@@ -178,7 +178,7 @@ pub struct DelayControl {
     cs_to_first_bit: u8,
 }
 
-/// Register block specification for both PS SPIs.
+/// SPI register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Spi {

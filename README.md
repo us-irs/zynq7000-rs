@@ -111,7 +111,8 @@ target = "armv7a-none-eabihf"
 You can build the blinky example app using
 
 ```sh
-cargo build --example simple
+cd zynq
+cargo build --bin blinky
 ```
 
 

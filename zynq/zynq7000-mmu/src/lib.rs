@@ -1,4 +1,4 @@
-//! # Zynq7000 Memory Management Unit (MMU) 
+//! # Zynq7000 Memory Management Unit (MMU)
 //!
 //! Dedicated shared crate for Zynq7000 MMU abstractions which can be used by Zynq
 //! runtime crates, PACs and HALs.

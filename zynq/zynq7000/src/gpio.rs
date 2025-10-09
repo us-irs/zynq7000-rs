@@ -35,6 +35,7 @@ pub struct BankControl {
     int_any: u32,
 }
 
+/// GPIO register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Gpio {

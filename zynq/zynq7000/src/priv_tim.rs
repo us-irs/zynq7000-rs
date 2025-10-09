@@ -21,6 +21,7 @@ pub struct InterruptStatus {
     event_flag: bool,
 }
 
+/// CPU private timer register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct CpuPrivateTimer {
