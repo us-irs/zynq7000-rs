@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Updated IPTR registers in the GIC module to use a custom register type instead of a raw u32.
 - Added SDIO registers.
 - Fixed wrong position in QSPI reset register in SLCR Module
+- Added some missing reset register definitions.
 
 # [v0.1.1] 2025-10-09
 

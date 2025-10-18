@@ -35,6 +35,7 @@ rand = { version = "0.10", default-features = false }
 embassy-executor = { version = "0.10", features = ["platform-cortex-ar", "executor-thread"] }
 embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
 embassy-net = { version = "0.9", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp"] }
+embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
 embassy-sync = { version = "0.8" }
 heapless = "0.9"
 axi-uartlite = { version = "0.1" }

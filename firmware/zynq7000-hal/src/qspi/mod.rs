@@ -8,7 +8,7 @@ use zynq7000::{
         BaudRateDivisor, Config, InstructionCode, InterruptStatus, LoopbackMasterClockDelay,
         SpiEnable,
     },
-    slcr::{clocks::SingleCommonPeriphIoClockControl, mio::Speed, reset::QspiResetControl},
+    slcr::{clocks::SingleCommonPeriphIoClockControl, mio::Speed, reset::ResetControlQspiSmc},
 };
 
 pub use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, Mode};
@@ -675,8 +675,8 @@ pub fn reset() {
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_lqspi(
-                QspiResetControl::builder()
-                    .with_qspi_ref_reset(true)
+                ResetControlQspiSmc::builder()
+                    .with_ref_reset(true)
                     .with_cpu_1x_reset(true)
                     .build(),
             );
@@ -684,7 +684,7 @@ pub fn reset() {
             for _ in 0..3 {
                 aarch32_cpu::asm::nop();
             }
-            regs.reset_ctrl().write_lqspi(QspiResetControl::DEFAULT);
+            regs.reset_ctrl().write_lqspi(ResetControlQspiSmc::DEFAULT);
         });
     }
 }
