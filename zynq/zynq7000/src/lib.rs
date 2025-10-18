@@ -33,6 +33,7 @@ pub mod slcr;
 pub mod spi;
 pub mod ttc;
 pub mod uart;
+pub mod sdio;
 pub mod xadc;
 
 static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
