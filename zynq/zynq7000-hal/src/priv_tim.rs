@@ -14,7 +14,7 @@ static CORE_1_TIM_TAKEN: AtomicBool = AtomicBool::new(false);
 
 /// High-level CPU private timer driver.
 pub struct CpuPrivateTimer {
-    regs: zynq7000::priv_tim::MmioCpuPrivateTimer<'static>,
+    regs: zynq7000::priv_tim::MmioRegisters<'static>,
     cpu_3x2x_clock: Hertz,
     // Add this marker to explicitely opt-out of Send and Sync.
     //
@@ -49,7 +49,7 @@ impl CpuPrivateTimer {
     /// It also does not check the current core ID.
     pub fn steal(clocks: &ArmClocks) -> Self {
         Self {
-            regs: unsafe { zynq7000::priv_tim::CpuPrivateTimer::new_mmio_fixed() },
+            regs: unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() },
             cpu_3x2x_clock: clocks.cpu_3x2x_clk(),
             _not_send: PhantomData,
         }

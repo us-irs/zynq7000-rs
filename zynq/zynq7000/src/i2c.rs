@@ -159,7 +159,7 @@ pub struct TransferSize {
 /// I2C register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct I2c {
+pub struct Registers {
     cr: Control,
     #[mmio(PureRead)]
     sr: Status,
@@ -179,9 +179,9 @@ pub struct I2c {
     idr: InterruptControl,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<I2c>(), 0x2C);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x2C);
 
-impl I2c {
+impl Registers {
     /// Create a new I2C MMIO instance for I2C0 at address [I2C_0_BASE_ADDR].
     ///
     /// # Safety
@@ -189,7 +189,7 @@ impl I2c {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_0() -> MmioI2c<'static> {
+    pub const unsafe fn new_mmio_fixed_0() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(I2C_0_BASE_ADDR) }
     }
 
@@ -200,7 +200,7 @@ impl I2c {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_1() -> MmioI2c<'static> {
+    pub const unsafe fn new_mmio_fixed_1() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(I2C_1_BASE_ADDR) }
     }
 }

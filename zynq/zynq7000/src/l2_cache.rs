@@ -187,7 +187,7 @@ pub struct InterruptControl {
 /// L2 Cache register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct L2Cache {
+pub struct Registers {
     #[mmio(PureRead)]
     cache_id: CacheId,
     #[mmio(PureRead)]
@@ -273,9 +273,9 @@ pub struct L2Cache {
     power_control: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<L2Cache>(), 0xF84);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0xF84);
 
-impl L2Cache {
+impl Registers {
     /// Create a new L2C MMIO instance for for L2 Cache at address [L2C_BASE_ADDR].
     ///
     /// # Safety
@@ -283,7 +283,7 @@ impl L2Cache {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed() -> MmioL2Cache<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(L2C_BASE_ADDR) }
     }
 }

@@ -260,7 +260,7 @@ pub struct Status {
 /// Device configuration register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct DevCfg {
+pub struct Registers {
     control: Control,
     lock: Lock,
     config: Config,
@@ -284,12 +284,12 @@ pub struct DevCfg {
 
     // Included here but not exposed to avoid providing multiple references to the same peripheral.
     // Exposed in [crate::xadc].
-    _xadc: crate::xadc::XAdc,
+    _xadc: crate::xadc::Registers,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<DevCfg>(), 0x11C);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x11C);
 
-impl DevCfg {
+impl Registers {
     /// Create a new DevCfg MMIO instance for for device configuration peripheral at address
     /// [DEVCFG_BASE_ADDR].
     ///
@@ -298,7 +298,7 @@ impl DevCfg {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub unsafe fn new_mmio_fixed() -> MmioDevCfg<'static> {
+    pub unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(DEVCFG_BASE_ADDR) }
     }
 }

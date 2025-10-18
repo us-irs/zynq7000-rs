@@ -110,14 +110,14 @@ pub struct FpgaClockControl {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct FpgaClockControlBlock {
+pub struct FpgaClockControlRegisters {
     ctrl: FpgaClockControl,
     thr_ctrl: u32,
     thr_cnt: u32,
     thr_status: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClockControlBlock>(), 0x10);
+static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClockControlRegisters>(), 0x10);
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug)]
@@ -359,7 +359,7 @@ pub struct AperClockControl {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct ClockControl {
+pub struct ClockControlRegisters {
     arm_pll_ctrl: PllControl,
     ddr_pll_ctrl: PllControl,
     io_pll_ctrl: PllControl,
@@ -391,18 +391,18 @@ pub struct ClockControl {
     pcap_clk_ctrl: SingleCommonPeriphIoClockControl,
     topsw_clk_ctrl: u32,
     #[mmio(Inner)]
-    fpga_0_clk_ctrl: FpgaClockControlBlock,
+    fpga_0_clk_ctrl: FpgaClockControlRegisters,
     #[mmio(Inner)]
-    fpga_1_clk_ctrl: FpgaClockControlBlock,
+    fpga_1_clk_ctrl: FpgaClockControlRegisters,
     #[mmio(Inner)]
-    fpga_2_clk_ctrl: FpgaClockControlBlock,
+    fpga_2_clk_ctrl: FpgaClockControlRegisters,
     #[mmio(Inner)]
-    fpga_3_clk_ctrl: FpgaClockControlBlock,
+    fpga_3_clk_ctrl: FpgaClockControlRegisters,
     _gap1: [u32; 5],
     clk_621_true: ClockRatioSelectReg,
 }
 
-impl ClockControl {
+impl ClockControlRegisters {
     /// Create a new handle to this peripheral.
     ///
     /// Writing to this register requires unlocking the SLCR registers first.
@@ -411,9 +411,9 @@ impl ClockControl {
     ///
     /// If you create multiple instances of this handle at the same time, you are responsible for
     /// ensuring that there are no read-modify-write races on any of the registers.
-    pub unsafe fn new_mmio_fixed() -> MmioClockControl<'static> {
+    pub unsafe fn new_mmio_fixed() -> MmioClockControlRegisters<'static> {
         unsafe { Self::new_mmio_at(SLCR_BASE_ADDR + CLOCK_CONTROL_OFFSET) }
     }
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<ClockControl>(), 0xC8);
+static_assertions::const_assert_eq!(core::mem::size_of::<ClockControlRegisters>(), 0xC8);

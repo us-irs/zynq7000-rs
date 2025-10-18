@@ -4,7 +4,7 @@ use zynq7000::eth::{MdcClockDivisor, PhyMaintenance};
 use super::{EthernetId, ll::EthernetLowLevel};
 
 pub struct Mdio {
-    regs: zynq7000::eth::MmioEthernet<'static>,
+    regs: zynq7000::eth::MmioRegisters<'static>,
     clause22: bool,
 }
 

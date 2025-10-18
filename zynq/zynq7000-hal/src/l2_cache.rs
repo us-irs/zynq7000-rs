@@ -4,7 +4,7 @@ use core::sync::atomic::compiler_fence;
 use arbitrary_int::{u2, u3};
 pub use zynq7000::l2_cache::LatencyConfig;
 use zynq7000::l2_cache::{
-    Associativity, AuxControl, Control, InterruptControl, MmioL2Cache, ReplacementPolicy, WaySize,
+    Associativity, AuxControl, Control, InterruptControl, MmioRegisters, ReplacementPolicy, WaySize,
 };
 
 use crate::slcr::Slcr;
@@ -48,7 +48,7 @@ pub const DEFAULT_DATA_RAM_LATENCY: LatencyConfig = LatencyConfig::builder()
 pub const SLCR_L2C_CONFIG_MAGIC_VALUE: u32 = 0x00020202;
 
 /// Similar to [init], but uses Xilinx/AMD defaults for the latency configurations.
-pub fn init_with_defaults(l2c_mmio: &mut MmioL2Cache<'static>) {
+pub fn init_with_defaults(l2c_mmio: &mut MmioRegisters<'static>) {
     init(l2c_mmio, DEFAULT_TAG_RAM_LATENCY, DEFAULT_DATA_RAM_LATENCY);
 }
 
@@ -57,7 +57,7 @@ pub fn init_with_defaults(l2c_mmio: &mut MmioL2Cache<'static>) {
 /// This function is based on the initialization sequence specified in the TRM p.94 and on
 /// the runtime initialization provided by Xilinx/AMD.
 pub fn init(
-    l2c_mmio: &mut MmioL2Cache<'static>,
+    l2c_mmio: &mut MmioRegisters<'static>,
     tag_ram_latency: LatencyConfig,
     data_ram_latency: LatencyConfig,
 ) {

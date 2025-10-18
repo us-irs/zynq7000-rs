@@ -35,7 +35,6 @@ impl BaudDivSel {
 
 // TODO: Use bitbybit debug support as soon as it was added.
 #[bitbybit::bitfield(u32, default = 0x0)]
-#[derive(Debug)]
 pub struct Config {
     #[bit(17, rw)]
     modefail_gen_en: bool,
@@ -181,7 +180,7 @@ pub struct DelayControl {
 /// SPI register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Spi {
+pub struct Registers {
     cr: Config,
     #[mmio(PureRead, Write)]
     isr: InterruptStatus,
@@ -209,9 +208,9 @@ pub struct Spi {
     mod_id: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Spi>(), 0x100);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x100);
 
-impl Spi {
+impl Registers {
     /// Create a new SPI MMIO instance for SPI0 at address [SPI_0_BASE_ADDR].
     ///
     /// # Safety
@@ -219,7 +218,7 @@ impl Spi {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_0() -> MmioSpi<'static> {
+    pub const unsafe fn new_mmio_fixed_0() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(SPI_0_BASE_ADDR) }
     }
 
@@ -230,7 +229,7 @@ impl Spi {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_1() -> MmioSpi<'static> {
+    pub const unsafe fn new_mmio_fixed_1() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(SPI_1_BASE_ADDR) }
     }
 }

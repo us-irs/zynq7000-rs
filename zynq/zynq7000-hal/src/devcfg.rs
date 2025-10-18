@@ -16,7 +16,7 @@ pub fn configure_bitstream_non_secure(
     if bitstream.is_empty() {
         return Ok(());
     }
-    let mut devcfg = unsafe { zynq7000::devcfg::DevCfg::new_mmio_fixed() };
+    let mut devcfg = unsafe { zynq7000::devcfg::Registers::new_mmio_fixed() };
     devcfg.modify_control(|mut val| {
         val.set_config_access_select(zynq7000::devcfg::PlConfigAccess::ConfigAccessPort);
         val.set_access_port_select(zynq7000::devcfg::ConfigAccessPortSelect::Pcap);

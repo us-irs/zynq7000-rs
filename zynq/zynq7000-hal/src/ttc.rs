@@ -9,7 +9,7 @@
 use core::convert::Infallible;
 
 use arbitrary_int::{prelude::*, u3, u4};
-use zynq7000::ttc::{MmioTtc, TTC_0_BASE_ADDR, TTC_1_BASE_ADDR};
+use zynq7000::ttc::{MmioRegisters, TTC_0_BASE_ADDR, TTC_1_BASE_ADDR};
 
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 use crate::gpio::mio::{Mio16, Mio17, Mio18, Mio19, Mio40, Mio41, Mio42, Mio43};
@@ -37,13 +37,13 @@ pub enum ChannelId {
 }
 
 pub trait PsTtc {
-    fn reg_block(&self) -> MmioTtc<'static>;
+    fn reg_block(&self) -> MmioRegisters<'static>;
     fn id(&self) -> Option<TtcId>;
 }
 
-impl PsTtc for MmioTtc<'static> {
+impl PsTtc for MmioRegisters<'static> {
     #[inline]
-    fn reg_block(&self) -> MmioTtc<'static> {
+    fn reg_block(&self) -> MmioRegisters<'static> {
         unsafe { self.clone() }
     }
 
@@ -152,12 +152,12 @@ impl Ttc {
 }
 
 pub struct TtcChannel {
-    regs: MmioTtc<'static>,
+    regs: MmioRegisters<'static>,
     id: ChannelId,
 }
 
 impl TtcChannel {
-    pub fn regs_mut(&mut self) -> &mut MmioTtc<'static> {
+    pub fn regs_mut(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.regs
     }
 

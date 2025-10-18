@@ -19,7 +19,7 @@ use mio::{MioPin, MuxConfig};
 use crate::gpio::ll::LowLevelGpio;
 use crate::{enable_amba_peripheral_clock, slcr::Slcr};
 pub use embedded_hal::digital::PinState;
-use zynq7000::{gpio::MmioGpio, slcr::reset::GpioClockReset};
+use zynq7000::{gpio::MmioRegisters, slcr::reset::GpioClockReset};
 
 #[derive(Debug, thiserror::Error)]
 #[error("MIO pins 7 and 8 can only be output pins")]
@@ -32,7 +32,7 @@ pub struct GpioPins {
 }
 
 impl GpioPins {
-    pub fn new(gpio: MmioGpio) -> Self {
+    pub fn new(gpio: MmioRegisters) -> Self {
         enable_amba_peripheral_clock(crate::PeriphSelect::Gpio);
         Self {
             mio: mio::Pins::new(unsafe { gpio.clone() }),
@@ -413,7 +413,7 @@ impl IoPeriphPin {
     /// Constructor to fully configure an IO peripheral pin with a specific MIO pin configuration.
     pub fn new_with_full_config_and_unlocked_slcr(
         pin: impl MioPin,
-        slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
+        slcr: &mut zynq7000::slcr::MmioRegisters<'static>,
         config: zynq7000::slcr::mio::Config,
     ) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));

@@ -4,7 +4,7 @@
 //! also allows associating the pins, their modes and their IDs to the peripherals they are able to
 //! serve.
 use arbitrary_int::{u2, u3};
-use zynq7000::gpio::MmioGpio;
+use zynq7000::gpio::MmioRegisters;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct MuxConfig {
@@ -291,7 +291,7 @@ pub struct Pins {
 }
 
 impl Pins {
-    pub const fn new(_mmio: MmioGpio) -> Self {
+    pub const fn new(_mmio: MmioRegisters) -> Self {
         Self {
             mio0: unsafe { Pin::new() },
             mio1: unsafe { Pin::new() },

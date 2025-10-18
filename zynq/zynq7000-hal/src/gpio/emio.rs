@@ -1,5 +1,5 @@
 //! EMIO (Extended Multiplexed I/O) resource management module.
-use zynq7000::gpio::MmioGpio;
+use zynq7000::gpio::MmioRegisters;
 
 pub use crate::gpio::PinState;
 
@@ -37,7 +37,7 @@ impl Pins {
     /// This structure is supposed to be used as a singleton. It will configure all
     /// EMIO pins as inputs. If you want to retrieve individual pins without this structure,
     /// use [EmioPin::steal] instead.
-    pub fn new(mut mmio: MmioGpio) -> Self {
+    pub fn new(mut mmio: MmioRegisters) -> Self {
         let mut emios = [const { None }; 64];
         // Configure all EMIO pins as inputs.
         mmio.bank_2().write_dirm(0);

@@ -1,12 +1,12 @@
 use core::convert::Infallible;
 
 use arbitrary_int::prelude::*;
-use zynq7000::uart::{InterruptControl, InterruptStatus, MmioUart};
+use zynq7000::uart::{InterruptControl, InterruptStatus, MmioRegisters};
 
 use super::FIFO_DEPTH;
 
 pub struct Rx {
-    pub(crate) regs: MmioUart<'static>,
+    pub(crate) regs: MmioRegisters<'static>,
 }
 // TODO: Remove once this is impelemnted for MmioUart
 unsafe impl Send for Rx {}

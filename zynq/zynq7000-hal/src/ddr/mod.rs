@@ -4,7 +4,7 @@
 //!
 //! - [Zedboard FSBL](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zedboard-fsbl)
 use arbitrary_int::u6;
-use zynq7000::ddrc::MmioDdrController;
+use zynq7000::ddrc::MmioRegisters;
 
 use crate::{
     BootMode,
@@ -48,7 +48,7 @@ impl DdrClockSetupConfig {
 /// This function consumes the DDRC register block once and thus provides a safe interface for DDR
 /// initialization.
 pub fn configure_ddr_for_ddr3(
-    mut ddrc_regs: MmioDdrController<'static>,
+    mut ddrc_regs: MmioRegisters<'static>,
     boot_mode: BootMode,
     clk_setup_cfg: DdrClockSetupConfig,
     ddriob_cfg: &DdriobConfigSet,

@@ -10,7 +10,7 @@ pub struct MaskedOutput {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct BankControl {
+pub struct BankControlRegisters {
     /// Direction mode
     dirm: u32,
     /// Output enable
@@ -38,7 +38,7 @@ pub struct BankControl {
 /// GPIO register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Gpio {
+pub struct Registers {
     /// Maskable output data (GPIO bank 0, MIO, lower 16 bits)
     masked_out_0_lsw: MaskedOutput,
     /// Maskable output data (GPIO bank 0, MIO, upper 16 bits)
@@ -85,27 +85,27 @@ pub struct Gpio {
     _reserved_2: [u32; 101],
 
     #[mmio(Inner)]
-    bank_0: BankControl,
+    bank_0: BankControlRegisters,
 
     _reserved_3: [u32; 7],
 
     #[mmio(Inner)]
-    bank_1: BankControl,
+    bank_1: BankControlRegisters,
 
     _reserved_4: [u32; 7],
 
     #[mmio(Inner)]
-    bank_2: BankControl,
+    bank_2: BankControlRegisters,
 
     _reserved_5: [u32; 7],
 
     #[mmio(Inner)]
-    bank_3: BankControl,
+    bank_3: BankControlRegisters,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Gpio>(), 0x2E8);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x2E8);
 
-impl Gpio {
+impl Registers {
     /// Create a new XGPIOPS GPIO MMIO instance.
     ///
     /// # Safety
@@ -113,9 +113,9 @@ impl Gpio {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed() -> MmioGpio<'static> {
-        MmioGpio {
-            ptr: 0xE000A000 as *mut Gpio,
+    pub const unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
+        MmioRegisters {
+            ptr: 0xE000A000 as *mut Registers,
             phantom: core::marker::PhantomData,
         }
     }

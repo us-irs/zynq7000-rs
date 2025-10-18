@@ -4,7 +4,7 @@
 //!
 //! - [GTC ticks example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/gtc-ticks.rs)
 //! - [Embassy Timer Driver](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zynq7000-embassy/src/lib.rs)
-use zynq7000::gtc::MmioGlobalTimerCounter;
+use zynq7000::gtc::MmioRegisters;
 
 use crate::{clocks::ArmClocks, time::Hertz};
 
@@ -14,7 +14,7 @@ use crate::{clocks::ArmClocks, time::Hertz};
 /// [frequency_to_ticks] function and the [embedded_hal::delay::DelayNs] implementation
 /// to work.
 pub struct GlobalTimerCounter {
-    regs: MmioGlobalTimerCounter<'static>,
+    regs: MmioRegisters<'static>,
     cpu_3x2x_clock: Option<Hertz>,
 }
 
@@ -27,7 +27,7 @@ pub const fn frequency_to_ticks(clock: Hertz, frequency: Hertz) -> u32 {
 impl GlobalTimerCounter {
     /// Create a peripheral driver from a MMIO GTC block.
     #[inline]
-    pub const fn new(_regs: MmioGlobalTimerCounter<'static>, clocks: &ArmClocks) -> Self {
+    pub const fn new(_regs: MmioRegisters<'static>, clocks: &ArmClocks) -> Self {
         unsafe { Self::steal_fixed(Some(clocks.cpu_3x2x_clk())) }
     }
 
@@ -42,7 +42,7 @@ impl GlobalTimerCounter {
     #[inline]
     pub const unsafe fn steal_fixed(cpu_3x2x_clk: Option<Hertz>) -> Self {
         Self {
-            regs: unsafe { zynq7000::gtc::GlobalTimerCounter::new_mmio_fixed() },
+            regs: unsafe { zynq7000::gtc::Registers::new_mmio_fixed() },
             cpu_3x2x_clock: cpu_3x2x_clk,
         }
     }

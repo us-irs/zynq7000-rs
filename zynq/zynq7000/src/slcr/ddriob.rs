@@ -106,7 +106,7 @@ pub struct DdriobConfig {
 
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct DdrIoB {
+pub struct DdrIobRegisters {
     ddriob_addr0: DdriobConfig,
     ddriob_addr1: DdriobConfig,
     ddriob_data0: DdriobConfig,
@@ -123,7 +123,7 @@ pub struct DdrIoB {
     dci_status: DciStatus,
 }
 
-impl DdrIoB {
+impl DdrIobRegisters {
     /// Create a new handle to this peripheral.
     ///
     /// Writing to this register requires unlocking the SLCR registers first.
@@ -132,9 +132,9 @@ impl DdrIoB {
     ///
     /// If you create multiple instances of this handle at the same time, you are responsible for
     /// ensuring that there are no read-modify-write races on any of the registers.
-    pub unsafe fn new_mmio_fixed() -> MmioDdrIoB<'static> {
+    pub unsafe fn new_mmio_fixed() -> MmioDdrIobRegisters<'static> {
         unsafe { Self::new_mmio_at(super::SLCR_BASE_ADDR + super::DDRIOB_OFFSET) }
     }
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<DdrIoB>(), 0x38);
+static_assertions::const_assert_eq!(core::mem::size_of::<DdrIobRegisters>(), 0x38);

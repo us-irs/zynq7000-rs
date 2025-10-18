@@ -309,7 +309,7 @@ unsafe fn configure_pll_unchecked(
     boot_mode: BootMode,
     cfg: PllConfig,
     pll_type: PllType,
-    slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
+    slcr: &mut zynq7000::slcr::MmioRegisters<'static>,
     pll_ctrl_reg: *mut zynq7000::slcr::clocks::PllControl,
     pll_cfg_reg: *mut zynq7000::slcr::clocks::PllConfig,
 ) {

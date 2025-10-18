@@ -117,7 +117,7 @@ impl BootMode {
     /// fixed SLCR block.
     pub fn new_from_regs() -> Self {
         // Safety: Only read a read-only register here.
-        Self::new_with_reg(unsafe { zynq7000::slcr::Slcr::new_mmio_fixed() }.read_boot_mode())
+        Self::new_with_reg(unsafe { zynq7000::slcr::Registers::new_mmio_fixed() }.read_boot_mode())
     }
 
     fn new_with_reg(boot_mode_reg: BootModeRegister) -> Self {

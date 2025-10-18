@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+- Renamed all register blocks to `Registers` to subblocks to `<Subblock>Registers`
+- Added SDIO registers
+
 # [v0.1.1] 2025-10-09
 
 Documentation fix

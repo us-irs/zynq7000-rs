@@ -223,7 +223,7 @@ pub struct LinearQspiStatus {
 /// QSPI register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Qspi {
+pub struct Registers {
     config: Config,
     interrupt_status: InterruptStatus,
     #[mmio(Write)]
@@ -265,9 +265,9 @@ pub struct Qspi {
     module_id: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Qspi>(), 0x100);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x100);
 
-impl Qspi {
+impl Registers {
     /// Create a new QSPI MMIO instance for for QSPI controller at address [QSPI_BASE_ADDR].
     ///
     /// # Safety
@@ -275,7 +275,7 @@ impl Qspi {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed() -> MmioQspi<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(QSPI_BASE_ADDR) }
     }
 }
