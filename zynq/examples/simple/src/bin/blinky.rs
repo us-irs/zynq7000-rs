@@ -42,10 +42,10 @@ pub extern "C" fn boot_core(cpu_id: u32) -> ! {
 
 #[unsafe(export_name = "main")]
 pub fn main() -> ! {
-    l2_cache::init_with_defaults(&mut unsafe { zynq7000::l2_cache::L2Cache::new_mmio_fixed() });
+    l2_cache::init_with_defaults(&mut unsafe { zynq7000::l2_cache::Registers::new_mmio_fixed() });
     match LIB {
         Lib::Pac => {
-            let mut gpio = unsafe { zynq7000::gpio::Gpio::new_mmio_fixed() };
+            let mut gpio = unsafe { zynq7000::gpio::Registers::new_mmio_fixed() };
             gpio.bank_0().modify_dirm(|v| v | ZEDBOARD_LED_MASK);
             gpio.bank_0().modify_out_en(|v| v | ZEDBOARD_LED_MASK);
             loop {

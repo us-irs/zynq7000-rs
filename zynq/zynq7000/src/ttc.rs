@@ -145,7 +145,7 @@ pub struct EventCount {
 /// Triple-timer counter register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Ttc {
+pub struct Registers {
     clk_cntr: [ClockControl; 3],
     cnt_ctrl: [CounterControl; 3],
     #[mmio(PureRead)]
@@ -162,9 +162,9 @@ pub struct Ttc {
     event_reg: [EventCount; 3],
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Ttc>(), 0x84);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x84);
 
-impl Ttc {
+impl Registers {
     /// Create a new TTC MMIO instance for TTC0 at address [TTC_0_BASE_ADDR].
     ///
     /// # Safety
@@ -172,7 +172,7 @@ impl Ttc {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_0() -> MmioTtc<'static> {
+    pub const unsafe fn new_mmio_fixed_0() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(TTC_0_BASE_ADDR) }
     }
 
@@ -183,7 +183,7 @@ impl Ttc {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_1() -> MmioTtc<'static> {
+    pub const unsafe fn new_mmio_fixed_1() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(TTC_1_BASE_ADDR) }
     }
 }

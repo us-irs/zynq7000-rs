@@ -8,7 +8,7 @@ use arbitrary_int::{prelude::*, u6};
 pub mod pll;
 
 use zynq7000::slcr::{
-    ClockControl,
+    ClockControlRegisters,
     clocks::{
         ClockkRatioSelect, DualCommonPeriphIoClockControl, FpgaClockControl, GigEthClockControl,
         SingleCommonPeriphIoClockControl,
@@ -254,7 +254,7 @@ impl Clocks {
     /// It assumes that the clock already has been configured, for example by a first-stage
     /// bootloader, or the PS7 initialization script.
     pub fn new_from_regs(ps_clk_freq: Hertz) -> Result<Self, ClockReadError> {
-        let mut clk_regs = unsafe { ClockControl::new_mmio_fixed() };
+        let mut clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
 
         let arm_pll_cfg = clk_regs.read_arm_pll_ctrl();
         let io_pll_cfg = clk_regs.read_io_pll_ctrl();
@@ -505,7 +505,7 @@ impl Clocks {
     /// The reference clock will only be the RX clock in loopback mode. For the TX block,
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
     pub fn calculate_gem_0_ref_clock(&self) -> Result<Hertz, DivisorZero> {
-        let clk_regs = unsafe { ClockControl::new_mmio_fixed() };
+        let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
         self.calculate_gem_ref_clock(clk_regs.read_gem_0_clk_ctrl(), ClockModuleId::Gem0)
     }
 
@@ -518,7 +518,7 @@ impl Clocks {
     /// The reference clock will only be the RX clock in loopback mode. For the TX block,
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
     pub fn calculate_gem_1_ref_clock(&self) -> Result<Hertz, DivisorZero> {
-        let clk_regs = unsafe { ClockControl::new_mmio_fixed() };
+        let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
         self.calculate_gem_ref_clock(clk_regs.read_gem_0_clk_ctrl(), ClockModuleId::Gem1)
     }
 }

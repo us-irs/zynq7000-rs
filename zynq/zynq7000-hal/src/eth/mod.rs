@@ -7,7 +7,7 @@ use arbitrary_int::{u2, u3};
 pub use zynq7000::eth::MdcClockDivisor;
 use zynq7000::eth::{
     BurstLength, DmaRxBufSize, GEM_0_BASE_ADDR, GEM_1_BASE_ADDR, InterruptControl, InterruptStatus,
-    MmioEthernet, RxStatus, TxStatus,
+    MmioRegisters, RxStatus, TxStatus,
 };
 
 pub use ll::{ClockConfig, ClockDivSet, Duplex, EthernetLowLevel, Speed};
@@ -58,18 +58,18 @@ impl EthernetId {
     /// # Safety
     ///
     /// Circumvents ownership and safety guarantees of the HAL.
-    pub const unsafe fn steal_regs(&self) -> zynq7000::eth::MmioEthernet<'static> {
+    pub const unsafe fn steal_regs(&self) -> zynq7000::eth::MmioRegisters<'static> {
         unsafe {
             match self {
-                EthernetId::Eth0 => zynq7000::eth::Ethernet::new_mmio_fixed_0(),
-                EthernetId::Eth1 => zynq7000::eth::Ethernet::new_mmio_fixed_1(),
+                EthernetId::Eth0 => zynq7000::eth::Registers::new_mmio_fixed_0(),
+                EthernetId::Eth1 => zynq7000::eth::Registers::new_mmio_fixed_1(),
             }
         }
     }
 
     pub fn clk_config_regs(
         &self,
-        slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
+        slcr: &mut zynq7000::slcr::MmioRegisters<'static>,
     ) -> (
         *mut zynq7000::slcr::clocks::GigEthClockControl,
         *mut zynq7000::slcr::clocks::GigEthRclkControl,
@@ -88,13 +88,13 @@ impl EthernetId {
 }
 
 pub trait PsEthernet {
-    fn reg_block(&self) -> MmioEthernet<'static>;
+    fn reg_block(&self) -> MmioRegisters<'static>;
     fn id(&self) -> Option<EthernetId>;
 }
 
-impl PsEthernet for MmioEthernet<'static> {
+impl PsEthernet for MmioRegisters<'static> {
     #[inline]
-    fn reg_block(&self) -> MmioEthernet<'static> {
+    fn reg_block(&self) -> MmioRegisters<'static> {
         unsafe { self.clone() }
     }
 
@@ -599,7 +599,7 @@ impl Ethernet {
     }
 
     #[inline]
-    pub fn regs(&mut self) -> &MmioEthernet<'static> {
+    pub fn regs(&mut self) -> &MmioRegisters<'static> {
         &self.ll.regs
     }
 
@@ -613,7 +613,7 @@ impl Ethernet {
     }
 
     #[inline]
-    pub fn regs_mut(&mut self) -> &mut MmioEthernet<'static> {
+    pub fn regs_mut(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.ll.regs
     }
 

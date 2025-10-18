@@ -14,8 +14,8 @@ use libm::round;
 use zynq7000::{
     slcr::reset::DualRefAndClockReset,
     uart::{
-        BaudRateDivisor, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl, MmioUart,
-        Mode, UART_0_BASE, UART_1_BASE,
+        BaudRateDivisor, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl,
+        MmioRegisters, Mode, UART_0_BASE, UART_1_BASE,
     },
 };
 
@@ -60,13 +60,13 @@ pub enum UartId {
 }
 
 pub trait PsUart {
-    fn reg_block(&self) -> MmioUart<'static>;
+    fn reg_block(&self) -> MmioRegisters<'static>;
     fn uart_id(&self) -> Option<UartId>;
 }
 
-impl PsUart for MmioUart<'static> {
+impl PsUart for MmioRegisters<'static> {
     #[inline]
-    fn reg_block(&self) -> MmioUart<'static> {
+    fn reg_block(&self) -> MmioRegisters<'static> {
         unsafe { self.clone() }
     }
 
@@ -87,10 +87,10 @@ impl UartId {
     /// # Safety
     ///
     /// Circumvents ownership and safety guarantees by the HAL.
-    pub const unsafe fn regs(&self) -> MmioUart<'static> {
+    pub const unsafe fn regs(&self) -> MmioRegisters<'static> {
         match self {
-            UartId::Uart0 => unsafe { zynq7000::uart::Uart::new_mmio_fixed_0() },
-            UartId::Uart1 => unsafe { zynq7000::uart::Uart::new_mmio_fixed_1() },
+            UartId::Uart0 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_0() },
+            UartId::Uart1 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_1() },
         }
     }
 }
@@ -469,7 +469,7 @@ impl Uart {
     /// It does not do any pin checks and resource control. It is recommended to use the other
     /// constructors instead.
     pub fn new_generic_unchecked(
-        mut reg_block: MmioUart<'static>,
+        mut reg_block: MmioRegisters<'static>,
         uart_id: UartId,
         cfg: Config,
     ) -> Uart {
@@ -558,7 +558,7 @@ impl Uart {
     }
 
     #[inline]
-    pub const fn regs(&mut self) -> &mut MmioUart<'static> {
+    pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.rx.regs
     }
 

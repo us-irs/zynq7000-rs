@@ -744,7 +744,7 @@ checksum = "d6bbff5f0aada427a1e5a6da5f1f98158182f26556f345ac9e04d36d0ebed650"
 
 [[package]]
 name = "zynq7000"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arbitrary-int 2.0.0",
  "bitbybit",
@@ -766,8 +766,9 @@ dependencies = [
 
 [[package]]
 name = "zynq7000-mmu"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
+ "arm-targets",
  "cortex-ar",
  "thiserror",
 ]
@@ -788,9 +789,10 @@ dependencies = [
 
 [[package]]
 name = "zynq7000-rt"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "arbitrary-int 2.0.0",
+ "arm-targets",
  "cortex-ar",
  "zynq7000-mmu",
 ]

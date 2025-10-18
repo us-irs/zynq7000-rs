@@ -2,7 +2,9 @@
 use arbitrary_int::{u2, u3, u6};
 use embedded_hal::i2c::NoAcknowledgeSource;
 use zynq7000::{
-    i2c::{Control, I2C_0_BASE_ADDR, I2C_1_BASE_ADDR, InterruptStatus, MmioI2c, TransferSize},
+    i2c::{
+        Control, I2C_0_BASE_ADDR, I2C_1_BASE_ADDR, InterruptStatus, MmioRegisters, TransferSize,
+    },
     slcr::reset::DualClockReset,
 };
 
@@ -37,13 +39,13 @@ pub enum I2cId {
 }
 
 pub trait PsI2c {
-    fn reg_block(&self) -> MmioI2c<'static>;
+    fn reg_block(&self) -> MmioRegisters<'static>;
     fn id(&self) -> Option<I2cId>;
 }
 
-impl PsI2c for MmioI2c<'static> {
+impl PsI2c for MmioRegisters<'static> {
     #[inline]
-    fn reg_block(&self) -> MmioI2c<'static> {
+    fn reg_block(&self) -> MmioRegisters<'static> {
         unsafe { self.clone() }
     }
 
@@ -309,7 +311,7 @@ pub enum I2cConstructionError {
     InvalidPinConf,
 }
 pub struct I2c {
-    regs: MmioI2c<'static>,
+    regs: MmioRegisters<'static>,
 }
 
 impl I2c {
@@ -344,7 +346,7 @@ impl I2c {
         ))
     }
 
-    pub fn new_generic(id: I2cId, mut regs: MmioI2c<'static>, clk_cfg: ClockConfig) -> Self {
+    pub fn new_generic(id: I2cId, mut regs: MmioRegisters<'static>, clk_cfg: ClockConfig) -> Self {
         let periph_sel = match id {
             I2cId::I2c0 => crate::PeriphSelect::I2c0,
             I2cId::I2c1 => crate::PeriphSelect::I2c1,

@@ -11,7 +11,7 @@ use cortex_ar::{
         invalidate_data_cache_line_to_poc,
     },
 };
-use zynq7000::l2_cache::{L2Cache, MmioL2Cache};
+use zynq7000::l2_cache::{MmioRegisters, Registers};
 
 pub const CACHE_LINE_SIZE: usize = 32;
 
@@ -19,7 +19,7 @@ pub const CACHE_LINE_SIZE: usize = 32;
 #[error("alignment error, addresses and lengths must be aligned to 32 byte cache line length")]
 pub struct AlignmentError;
 
-pub fn clean_and_invalidate_l2c_line(l2c: &mut MmioL2Cache<'static>, addr: u32) {
+pub fn clean_and_invalidate_l2c_line(l2c: &mut MmioRegisters<'static>, addr: u32) {
     l2c.write_clean_by_pa(addr);
     l2c.write_invalidate_by_pa(addr);
 }
@@ -32,7 +32,7 @@ pub fn clean_and_invalidate_data_cache() {
     dsb();
 
     // Clean all ways in L2 cache.
-    let mut l2c = unsafe { L2Cache::new_mmio_fixed() };
+    let mut l2c = unsafe { Registers::new_mmio_fixed() };
     l2c.write_clean_invalidate_by_way(0xffff);
     while l2c.read_cache_sync().busy() {}
     compiler_fence(core::sync::atomic::Ordering::SeqCst);
@@ -54,7 +54,7 @@ pub fn invalidate_data_cache_range(addr: u32, len: usize) -> Result<(), Alignmen
     }
     let mut current_addr = addr;
     let end_addr = addr.saturating_add(len as u32);
-    let mut l2c = unsafe { L2Cache::new_mmio_fixed() };
+    let mut l2c = unsafe { Registers::new_mmio_fixed() };
 
     dsb();
     // Invalidate outer caches lines first, see chapter 3.3.10 of the L2C technical reference
@@ -103,7 +103,7 @@ pub fn clean_and_invalidate_data_cache_range(addr: u32, len: usize) -> Result<()
     dsb();
 
     // Clean and invalidates outer cache.
-    let mut l2c = unsafe { L2Cache::new_mmio_fixed() };
+    let mut l2c = unsafe { Registers::new_mmio_fixed() };
     current_addr = addr;
     while current_addr < end_addr {
         // ARM errate 588369 specifies that clean and invalidate need to be separate, but the
@@ -155,7 +155,7 @@ pub fn clean_data_cache_range(addr: u32, len: usize) -> Result<(), AlignmentErro
     dsb();
 
     // Clean and invalidates outer cache.
-    let mut l2c = unsafe { L2Cache::new_mmio_fixed() };
+    let mut l2c = unsafe { Registers::new_mmio_fixed() };
     current_addr = addr;
     while current_addr < end_addr {
         l2c.write_clean_by_pa(current_addr);

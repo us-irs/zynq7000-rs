@@ -281,7 +281,7 @@ impl InterruptStatus {
 /// UART register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Uart {
+pub struct Registers {
     /// Control Register
     cr: Control,
     /// Mode register
@@ -325,9 +325,9 @@ pub struct Uart {
     tx_fifo_trigger: FifoTrigger,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Uart>(), 0x48);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x48);
 
-impl Uart {
+impl Registers {
     /// Create a new UART MMIO instance for uart0 at address 0xE000_0000.
     ///
     /// # Safety
@@ -335,7 +335,7 @@ impl Uart {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_0() -> MmioUart<'static> {
+    pub const unsafe fn new_mmio_fixed_0() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(UART_0_BASE) }
     }
 
@@ -346,7 +346,7 @@ impl Uart {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_1() -> MmioUart<'static> {
+    pub const unsafe fn new_mmio_fixed_1() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(UART_1_BASE) }
     }
 }
