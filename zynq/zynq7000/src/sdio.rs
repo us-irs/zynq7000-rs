@@ -251,7 +251,7 @@ pub struct HostPowerBlockgapWakeupControl {
 
 #[bitbybit::bitenum(u8, exhaustive = false)]
 #[derive(Debug, PartialEq, Eq)]
-pub enum SdclkFrequencySelect {
+pub enum SdClockDivisor {
     Div256 = 0x80,
     Div128 = 0x40,
     Div64 = 0x20,
@@ -277,7 +277,7 @@ pub struct ClockAndTimeoutAndSwResetControl {
     #[bits(16..=19, rw)]
     data_timeout_counter_value: u4,
     #[bits(8..=15, rw)]
-    sdclk_frequency_select: Option<SdclkFrequencySelect>,
+    sdclk_frequency_select: Option<SdClockDivisor>,
     #[bit(2, rw)]
     sd_clock_enable: bool,
     #[bit(1, r)]
@@ -388,7 +388,6 @@ pub struct InterruptMask {
     transfer_complete: bool,
     #[bit(0, rw)]
     command_complete: bool,
-
 }
 
 #[derive(derive_mmio::Mmio)]
@@ -430,3 +429,15 @@ pub struct Registers {
 }
 
 static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x100);
+
+impl Registers {
+    #[inline]
+    pub fn new_mmio_fixed_0() -> MmioRegisters<'static> {
+        unsafe { Self::new_mmio_at(SDIO_BASE_ADDR_0) }
+    }
+
+    #[inline]
+    pub fn new_mmio_fixed_1() -> MmioRegisters<'static> {
+        unsafe { Self::new_mmio_at(SDIO_BASE_ADDR_1) }
+    }
+}

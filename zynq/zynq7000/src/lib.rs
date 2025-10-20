@@ -64,6 +64,8 @@ pub struct Peripherals {
     pub qspi: qspi::MmioRegisters<'static>,
     pub devcfg: devcfg::MmioRegisters<'static>,
     pub xadc: xadc::MmioRegisters<'static>,
+    pub sdio_0: sdio::MmioRegisters<'static>,
+    pub sdio_1: sdio::MmioRegisters<'static>,
 }
 
 impl Peripherals {
@@ -104,6 +106,8 @@ impl Peripherals {
                 qspi: qspi::Registers::new_mmio_fixed(),
                 devcfg: devcfg::Registers::new_mmio_fixed(),
                 xadc: xadc::Registers::new_mmio_fixed(),
+                sdio_0: sdio::Registers::new_mmio_fixed_0(),
+                sdio_1: sdio::Registers::new_mmio_fixed_1(),
             }
         }
     }
