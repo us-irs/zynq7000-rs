@@ -11,7 +11,7 @@ use cortex_ar::{
         invalidate_data_cache_line_to_poc,
     },
 };
-use zynq7000::l2_cache::{Registers, MmioRegisters};
+use zynq7000::l2_cache::{MmioRegisters, Registers};
 
 pub const CACHE_LINE_SIZE: usize = 32;
 

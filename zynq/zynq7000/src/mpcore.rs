@@ -4,8 +4,11 @@
 use static_assertions::const_assert_eq;
 
 use crate::{
-    gic::{GicCpuInterfaceRegisters, GicDistributorRegisters, MmioGicCpuInterfaceRegisters, MmioGicDistributorRegisters},
-    gtc::{Registers, MmioRegisters},
+    gic::{
+        GicCpuInterfaceRegisters, GicDistributorRegisters, MmioGicCpuInterfaceRegisters,
+        MmioGicDistributorRegisters,
+    },
+    gtc::{MmioRegisters, Registers},
 };
 
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;

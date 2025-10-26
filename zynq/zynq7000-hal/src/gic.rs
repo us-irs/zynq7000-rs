@@ -10,8 +10,9 @@ use arbitrary_int::prelude::*;
 
 use cortex_ar::interrupt;
 use zynq7000::gic::{
-    DistributorControlRegister, GicCpuInterfaceRegisters, GicDistributorRegisters, InterfaceControl,
-    InterruptSignalRegister, MmioGicCpuInterfaceRegisters, MmioGicDistributorRegisters, PriorityRegister,
+    DistributorControlRegister, GicCpuInterfaceRegisters, GicDistributorRegisters,
+    InterfaceControl, InterruptSignalRegister, MmioGicCpuInterfaceRegisters,
+    MmioGicDistributorRegisters, PriorityRegister,
 };
 
 const SPURIOUS_INTERRUPT_ID: u32 = 1023;

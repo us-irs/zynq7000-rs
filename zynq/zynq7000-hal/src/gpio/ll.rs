@@ -1,6 +1,6 @@
 //! Low-level GPIO access module.
 use embedded_hal::digital::PinState;
-use zynq7000::gpio::{Registers, MaskedOutput, MmioRegisters};
+use zynq7000::gpio::{MaskedOutput, MmioRegisters, Registers};
 
 use crate::slcr::Slcr;
 

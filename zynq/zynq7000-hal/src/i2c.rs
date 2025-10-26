@@ -2,7 +2,9 @@
 use arbitrary_int::{u2, u3, u6};
 use embedded_hal::i2c::NoAcknowledgeSource;
 use zynq7000::{
-    i2c::{Control, I2C_0_BASE_ADDR, I2C_1_BASE_ADDR, InterruptStatus, MmioRegisters, TransferSize},
+    i2c::{
+        Control, I2C_0_BASE_ADDR, I2C_1_BASE_ADDR, InterruptStatus, MmioRegisters, TransferSize,
+    },
     slcr::reset::DualClockReset,
 };
 

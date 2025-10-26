@@ -29,11 +29,11 @@ pub mod l2_cache;
 pub mod mpcore;
 pub mod priv_tim;
 pub mod qspi;
+pub mod sdio;
 pub mod slcr;
 pub mod spi;
 pub mod ttc;
 pub mod uart;
-pub mod sdio;
 pub mod xadc;
 
 static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);

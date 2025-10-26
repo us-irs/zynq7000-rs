@@ -25,8 +25,8 @@ pub use embedded_hal::spi::Mode;
 use embedded_hal::spi::SpiBus as _;
 use zynq7000::slcr::reset::DualRefAndClockReset;
 use zynq7000::spi::{
-    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus, MmioRegisters,
-    SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
+    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
+    MmioRegisters, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
 pub const FIFO_DEPTH: usize = 128;

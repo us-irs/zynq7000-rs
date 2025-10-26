@@ -14,8 +14,8 @@ use libm::round;
 use zynq7000::{
     slcr::reset::DualRefAndClockReset,
     uart::{
-        BaudRateDivisor, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl, MmioRegisters,
-        Mode, UART_0_BASE, UART_1_BASE,
+        BaudRateDivisor, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl,
+        MmioRegisters, Mode, UART_0_BASE, UART_1_BASE,
     },
 };
 
