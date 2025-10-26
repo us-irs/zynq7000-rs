@@ -110,42 +110,31 @@ impl PsEthernet for MmioRegisters<'static> {
     }
 }
 
-pub trait TxClockPin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait TxControlPin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait TxData0Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait TxData1Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait TxData2Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait TxData3Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait RxClockPin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait RxControlPin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait RxData0Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait RxData1Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait RxData2Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
-pub trait RxData3Pin: MioPin {
-    const ETH_ID: EthernetId;
-}
+pub trait Eth0TxClockPin: MioPin {}
+pub trait Eth0TxControlPin: MioPin {}
+pub trait Eth0TxData0Pin: MioPin {}
+pub trait Eth0TxData1Pin: MioPin {}
+pub trait Eth0TxData2Pin: MioPin {}
+pub trait Eth0TxData3Pin: MioPin {}
+pub trait Eth0RxClockPin: MioPin {}
+pub trait Eth0RxControlPin: MioPin {}
+pub trait Eth0RxData0Pin: MioPin {}
+pub trait Eth0RxData1Pin: MioPin {}
+pub trait Eth0RxData2Pin: MioPin {}
+pub trait Eth0RxData3Pin: MioPin {}
+
+pub trait Eth1TxClockPin: MioPin {}
+pub trait Eth1TxControlPin: MioPin {}
+pub trait Eth1TxData0Pin: MioPin {}
+pub trait Eth1TxData1Pin: MioPin {}
+pub trait Eth1TxData2Pin: MioPin {}
+pub trait Eth1TxData3Pin: MioPin {}
+pub trait Eth1RxClockPin: MioPin {}
+pub trait Eth1RxControlPin: MioPin {}
+pub trait Eth1RxData0Pin: MioPin {}
+pub trait Eth1RxData1Pin: MioPin {}
+pub trait Eth1RxData2Pin: MioPin {}
+pub trait Eth1RxData3Pin: MioPin {}
 
 pub trait MdClockPin: MioPin {}
 pub trait MdIoPin: MioPin {}
@@ -154,90 +143,42 @@ impl MdClockPin for Pin<Mio52> {}
 impl MdIoPin for Pin<Mio53> {}
 
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl TxClockPin for Pin<Mio16> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0TxClockPin for Pin<Mio16> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl TxControlPin for Pin<Mio21> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0TxControlPin for Pin<Mio21> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl TxData0Pin for Pin<Mio17> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0TxData0Pin for Pin<Mio17> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl TxData1Pin for Pin<Mio18> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0TxData1Pin for Pin<Mio18> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl TxData2Pin for Pin<Mio19> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0TxData2Pin for Pin<Mio19> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl TxData3Pin for Pin<Mio20> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0TxData3Pin for Pin<Mio20> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl RxClockPin for Pin<Mio22> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0RxClockPin for Pin<Mio22> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl RxControlPin for Pin<Mio27> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0RxControlPin for Pin<Mio27> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl RxData0Pin for Pin<Mio23> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0RxData0Pin for Pin<Mio23> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl RxData1Pin for Pin<Mio24> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0RxData1Pin for Pin<Mio24> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl RxData2Pin for Pin<Mio25> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0RxData2Pin for Pin<Mio25> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
-impl RxData3Pin for Pin<Mio26> {
-    const ETH_ID: EthernetId = EthernetId::Eth0;
-}
+impl Eth0RxData3Pin for Pin<Mio26> {}
 
-impl TxClockPin for Pin<Mio28> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl TxControlPin for Pin<Mio33> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl TxData0Pin for Pin<Mio29> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl TxData1Pin for Pin<Mio30> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl TxData2Pin for Pin<Mio31> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl TxData3Pin for Pin<Mio32> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl RxClockPin for Pin<Mio34> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl RxControlPin for Pin<Mio39> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl RxData0Pin for Pin<Mio35> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl RxData1Pin for Pin<Mio36> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl RxData2Pin for Pin<Mio37> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
-impl RxData3Pin for Pin<Mio38> {
-    const ETH_ID: EthernetId = EthernetId::Eth1;
-}
+impl Eth1TxClockPin for Pin<Mio28> {}
+impl Eth1TxControlPin for Pin<Mio33> {}
+impl Eth1TxData0Pin for Pin<Mio29> {}
+impl Eth1TxData1Pin for Pin<Mio30> {}
+impl Eth1TxData2Pin for Pin<Mio31> {}
+impl Eth1TxData3Pin for Pin<Mio32> {}
+impl Eth1RxClockPin for Pin<Mio34> {}
+impl Eth1RxControlPin for Pin<Mio39> {}
+impl Eth1RxData0Pin for Pin<Mio35> {}
+impl Eth1RxData1Pin for Pin<Mio36> {}
+impl Eth1RxData2Pin for Pin<Mio37> {}
+impl Eth1RxData3Pin for Pin<Mio38> {}
 
 /// Calculate the CPU 1x clock divisor required to achieve a clock speed which is below
 /// 2.5 MHz, as specified by the 802.3 standard.
@@ -329,26 +270,26 @@ const IRQ_CLEAR_ALL: InterruptStatus = InterruptStatus::builder()
     .build();
 
 impl Ethernet {
-    /// Creates a new Ethernet instance with the given configuration while also
-    /// configuring all the necessary MIO pins.
+    /// Creates a new Ethernet instance for the Ethernet 0 block with the given configuration while
+    /// also configuring all the necessary MIO pins.
     #[allow(clippy::too_many_arguments)]
-    pub fn new_with_mio<
-        TxClock: TxClockPin,
-        TxControl: TxControlPin,
-        TxData0: TxData0Pin,
-        TxData1: TxData1Pin,
-        TxData2: TxData2Pin,
-        TxData3: TxData3Pin,
-        RxClock: RxClockPin,
-        RxControl: RxControlPin,
-        RxData0: RxData0Pin,
-        RxData1: RxData1Pin,
-        RxData2: RxData2Pin,
-        RxData3: RxData3Pin,
+    pub fn new_with_mio_eth_0<
+        TxClock: Eth0TxClockPin,
+        TxControl: Eth0TxControlPin,
+        TxData0: Eth0TxData0Pin,
+        TxData1: Eth0TxData1Pin,
+        TxData2: Eth0TxData2Pin,
+        TxData3: Eth0TxData3Pin,
+        RxClock: Eth0RxClockPin,
+        RxControl: Eth0RxControlPin,
+        RxData0: Eth0RxData0Pin,
+        RxData1: Eth0RxData1Pin,
+        RxData2: Eth0RxData2Pin,
+        RxData3: Eth0RxData3Pin,
         MdClock: MdClockPin,
         MdIo: MdIoPin,
     >(
-        mut ll: ll::EthernetLowLevel,
+        ll: ll::EthernetLowLevel,
         config: EthernetConfig,
         tx_clk: TxClock,
         tx_ctrl: TxControl,
@@ -356,6 +297,59 @@ impl Ethernet {
         rx_clk: RxClock,
         rx_ctrl: RxControl,
         rx_data: (RxData0, RxData1, RxData2, RxData3),
+        md_pins: Option<(MdClock, MdIo)>,
+    ) -> Self {
+        Self::new_with_mio(
+            ll, config, tx_clk, tx_ctrl, tx_data, rx_clk, rx_ctrl, rx_data, md_pins,
+        )
+    }
+
+    /// Creates a new Ethernet instance for the Ethernet 1 block with the given configuration while
+    /// also configuring all the necessary MIO pins.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new_with_mio_eth_1<
+        TxClock: Eth1TxClockPin,
+        TxControl: Eth1TxControlPin,
+        TxData0: Eth1TxData0Pin,
+        TxData1: Eth1TxData1Pin,
+        TxData2: Eth1TxData2Pin,
+        TxData3: Eth1TxData3Pin,
+        RxClock: Eth1RxClockPin,
+        RxControl: Eth1RxControlPin,
+        RxData0: Eth1RxData0Pin,
+        RxData1: Eth1RxData1Pin,
+        RxData2: Eth1RxData2Pin,
+        RxData3: Eth1RxData3Pin,
+        MdClock: MdClockPin,
+        MdIo: MdIoPin,
+    >(
+        ll: ll::EthernetLowLevel,
+        config: EthernetConfig,
+        tx_clk: TxClock,
+        tx_ctrl: TxControl,
+        tx_data: (TxData0, TxData1, TxData2, TxData3),
+        rx_clk: RxClock,
+        rx_ctrl: RxControl,
+        rx_data: (RxData0, RxData1, RxData2, RxData3),
+        md_pins: Option<(MdClock, MdIo)>,
+    ) -> Self {
+        Self::new_with_mio(
+            ll, config, tx_clk, tx_ctrl, tx_data, rx_clk, rx_ctrl, rx_data, md_pins,
+        )
+    }
+
+    // Creates a new Ethernet instance with the given configuration while also
+    // configuring all the necessary MIO pins.
+    #[allow(clippy::too_many_arguments)]
+    fn new_with_mio<MdClock: MdClockPin, MdIo: MdIoPin>(
+        mut ll: ll::EthernetLowLevel,
+        config: EthernetConfig,
+        tx_clk: impl MioPin,
+        tx_ctrl: impl MioPin,
+        tx_data: (impl MioPin, impl MioPin, impl MioPin, impl MioPin),
+        rx_clk: impl MioPin,
+        rx_ctrl: impl MioPin,
+        rx_data: (impl MioPin, impl MioPin, impl MioPin, impl MioPin),
         md_pins: Option<(MdClock, MdIo)>,
     ) -> Self {
         Self::common_init(&mut ll, config.mac_address);

@@ -290,7 +290,7 @@ async fn main(spawner: Spawner) -> ! {
     );
     // Configures all the physical pins for ethernet operation and sets up the
     // ethernet peripheral.
-    let mut eth = zynq7000_hal::eth::Ethernet::new_with_mio(
+    let mut eth = zynq7000_hal::eth::Ethernet::new_with_mio_eth_0(
         eth_ll,
         eth_cfg,
         gpio_pins.mio.mio16,
