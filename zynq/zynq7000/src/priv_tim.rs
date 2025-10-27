@@ -24,14 +24,14 @@ pub struct InterruptStatus {
 /// CPU private timer register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct CpuPrivateTimer {
+pub struct Registers {
     reload: u32,
     counter: u32,
     control: Control,
     interrupt_status: InterruptStatus,
 }
 
-impl CpuPrivateTimer {
+impl Registers {
     /// Create a new CPU Private Timer MMIO instance at the fixed base address.
     ///
     /// # Safety
@@ -43,7 +43,7 @@ impl CpuPrivateTimer {
     /// It should also be noted that the calls to this MMIO structure are private for each CPU
     /// core, which might lead to unexpected results when using this in a SMP system.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioCpuPrivateTimer<'static> {
-        unsafe { CpuPrivateTimer::new_mmio_at(CPU_PRIV_TIM_BASE_ADDR) }
+    pub const unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
+        unsafe { Registers::new_mmio_at(CPU_PRIV_TIM_BASE_ADDR) }
     }
 }

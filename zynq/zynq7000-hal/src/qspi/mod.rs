@@ -284,15 +284,15 @@ impl ClockConfig {
     }
 }
 
-pub struct QspiLowLevel(zynq7000::qspi::MmioQspi<'static>);
+pub struct QspiLowLevel(zynq7000::qspi::MmioRegisters<'static>);
 
 impl QspiLowLevel {
     #[inline]
-    pub fn new(regs: zynq7000::qspi::MmioQspi<'static>) -> Self {
+    pub fn new(regs: zynq7000::qspi::MmioRegisters<'static>) -> Self {
         Self(regs)
     }
 
-    pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioQspi<'static> {
+    pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioRegisters<'static> {
         &mut self.0
     }
 
@@ -399,7 +399,7 @@ impl Qspi {
         Io3: Qspi0Io3Pin,
         Clock: Qspi0ClockPin,
     >(
-        regs: zynq7000::qspi::MmioQspi<'static>,
+        regs: zynq7000::qspi::MmioRegisters<'static>,
         clock_config: ClockConfig,
         mode: embedded_hal::spi::Mode,
         voltage: IoType,
@@ -452,7 +452,7 @@ impl Qspi {
         Clock: Qspi0ClockPin,
         Feedback: FeedbackClockPin,
     >(
-        regs: zynq7000::qspi::MmioQspi<'static>,
+        regs: zynq7000::qspi::MmioRegisters<'static>,
         clock_config: ClockConfig,
         mode: embedded_hal::spi::Mode,
         voltage: IoType,
@@ -479,7 +479,7 @@ impl Qspi {
     }
 
     #[inline]
-    pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioQspi<'static> {
+    pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioRegisters<'static> {
         &mut self.ll.0
     }
 
@@ -500,7 +500,7 @@ pub struct QspiIoMode {
 
 impl QspiIoMode {
     #[inline]
-    pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioQspi<'static> {
+    pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioRegisters<'static> {
         &mut self.ll.0
     }
 

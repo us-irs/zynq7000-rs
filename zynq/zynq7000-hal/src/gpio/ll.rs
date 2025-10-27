@@ -1,6 +1,6 @@
 //! Low-level GPIO access module.
 use embedded_hal::digital::PinState;
-use zynq7000::gpio::{Gpio, MaskedOutput, MmioGpio};
+use zynq7000::gpio::{MaskedOutput, MmioRegisters, Registers};
 
 use crate::slcr::Slcr;
 
@@ -48,14 +48,14 @@ impl PinOffset {
 
 pub struct LowLevelGpio {
     offset: PinOffset,
-    regs: MmioGpio<'static>,
+    regs: MmioRegisters<'static>,
 }
 
 impl LowLevelGpio {
     pub fn new(offset: PinOffset) -> Self {
         Self {
             offset,
-            regs: unsafe { Gpio::new_mmio_fixed() },
+            regs: unsafe { Registers::new_mmio_fixed() },
         }
     }
 
@@ -158,7 +158,7 @@ impl LowLevelGpio {
     /// Set the MIO pin configuration with an unlocked SLCR.
     pub fn set_mio_pin_config_with_unlocked_slcr(
         &mut self,
-        slcr: &mut zynq7000::slcr::MmioSlcr<'static>,
+        slcr: &mut zynq7000::slcr::MmioRegisters<'static>,
         config: zynq7000::slcr::mio::Config,
     ) {
         let raw_offset = self.offset.offset();

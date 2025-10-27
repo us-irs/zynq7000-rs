@@ -1,11 +1,11 @@
 use core::convert::Infallible;
 
-use zynq7000::uart::{Fifo, InterruptControl, InterruptStatus, MmioUart};
+use zynq7000::uart::{Fifo, InterruptControl, InterruptStatus, MmioRegisters};
 
 use super::UartId;
 
 pub struct Tx {
-    pub(crate) regs: MmioUart<'static>,
+    pub(crate) regs: MmioRegisters<'static>,
     pub(crate) idx: UartId,
 }
 
@@ -29,7 +29,7 @@ impl Tx {
     }
 
     #[inline]
-    pub const fn regs(&mut self) -> &mut MmioUart<'static> {
+    pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.regs
     }
 

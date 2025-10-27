@@ -43,7 +43,7 @@ pub type Typer = TypeRegister;
 /// GIC Distributor registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
-pub struct GicDistributor {
+pub struct GicDistributorRegisters {
     /// Distributor Control Register
     pub dcr: DistributorControlRegister,
     /// Interrupt Controller Type Register
@@ -109,9 +109,9 @@ pub struct GicDistributor {
     pub cidr: [u32; 4],
 }
 
-const_assert_eq!(core::mem::size_of::<GicDistributor>(), 0x1000);
+const_assert_eq!(core::mem::size_of::<GicDistributorRegisters>(), 0x1000);
 
-impl GicDistributor {
+impl GicDistributorRegisters {
     /// Create a new Global Interrupt Controller Distributor MMIO instance at the fixed address of
     /// the processing system.
     ///
@@ -121,7 +121,7 @@ impl GicDistributor {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGicDistributor<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioGicDistributorRegisters<'static> {
         unsafe { Self::new_mmio_at(GICD_BASE_ADDR) }
     }
 }
@@ -160,7 +160,7 @@ pub struct InterruptSignalRegister {
 /// GIC CPU interface registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
-pub struct GicCpuInterface {
+pub struct GicCpuInterfaceRegisters {
     /// CPU Interface Control Register (ICR).
     pub icr: InterfaceControl,
     /// Interrupt Priority Mask Register.
@@ -183,9 +183,9 @@ pub struct GicCpuInterface {
     pub iidr: u32,
 }
 
-const_assert_eq!(core::mem::size_of::<GicCpuInterface>(), 0x100);
+const_assert_eq!(core::mem::size_of::<GicCpuInterfaceRegisters>(), 0x100);
 
-impl GicCpuInterface {
+impl GicCpuInterfaceRegisters {
     /// Create a new Global Interrupt Controller CPU MMIO instance at the fixed address of the
     /// processing system.
     ///
@@ -195,7 +195,7 @@ impl GicCpuInterface {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGicCpuInterface<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioGicCpuInterfaceRegisters<'static> {
         unsafe { Self::new_mmio_at(GICC_BASE_ADDR) }
     }
 }

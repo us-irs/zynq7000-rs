@@ -2,7 +2,7 @@
 //!
 //! Writing any of these registers required unlocking the SLCR first.
 use arbitrary_int::u4;
-pub use clocks::{ClockControl, MmioClockControl};
+pub use clocks::{ClockControlRegisters, MmioClockControlRegisters};
 pub use reset::{MmioResetControl, ResetControl};
 
 const SLCR_BASE_ADDR: usize = 0xF8000000;
@@ -94,7 +94,7 @@ pub struct LevelShifterRegister {
 /// System Level Control Registers access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Slcr {
+pub struct Registers {
     /// Secure configuration lock.
     scl: u32,
     /// SLCR write protection lock
@@ -107,7 +107,7 @@ pub struct Slcr {
     _gap0: [u32; 0x3C],
 
     #[mmio(Inner)]
-    clk_ctrl: ClockControl,
+    clk_ctrl: ClockControlRegisters,
 
     _gap1: [u32; 0x0E],
 
@@ -180,12 +180,12 @@ pub struct Slcr {
     gpiob: GpiobRegisters,
 
     #[mmio(Inner)]
-    ddriob: ddriob::DdrIoB,
+    ddriob: ddriob::DdrIobRegisters,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Slcr>(), 0xB78);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0xB78);
 
-impl Slcr {
+impl Registers {
     /// Create a new handle to this peripheral.
     ///
     /// Writing to this register requires unlocking the SLCR registers first.
@@ -194,7 +194,7 @@ impl Slcr {
     ///
     /// If you create multiple instances of this handle at the same time, you are responsible for
     /// ensuring that there are no read-modify-write races on any of the registers.
-    pub unsafe fn new_mmio_fixed() -> MmioSlcr<'static> {
+    pub unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(SLCR_BASE_ADDR) }
     }
 }

@@ -1,6 +1,6 @@
 //! Low-level DDR configuration module.
 use arbitrary_int::{prelude::*, u2, u3, u6};
-use zynq7000::ddrc::{MmioDdrController, regs::*};
+use zynq7000::ddrc::{MmioRegisters, regs::*};
 use zynq7000::slcr::{clocks::DciClockControl, ddriob::DdriobConfig};
 
 use crate::{clocks::DdrClocks, time::Hertz};
@@ -272,7 +272,7 @@ pub struct DdrcConfigSet {
 ///
 /// It does NOT take care of taking the DDR controller out of reset and polling for DDR
 /// configuration completion.
-pub fn configure_ddr_config(ddrc: &mut MmioDdrController<'static>, cfg_set: &DdrcConfigSet) {
+pub fn configure_ddr_config(ddrc: &mut MmioRegisters<'static>, cfg_set: &DdrcConfigSet) {
     ddrc.write_ddrc_ctrl(cfg_set.ctrl);
     // Write all configuration registers.
     ddrc.write_two_rank_cfg(cfg_set.two_rank);

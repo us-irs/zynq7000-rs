@@ -25,8 +25,8 @@ pub use embedded_hal::spi::Mode;
 use embedded_hal::spi::SpiBus as _;
 use zynq7000::slcr::reset::DualRefAndClockReset;
 use zynq7000::spi::{
-    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus, MmioSpi,
-    SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
+    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
+    MmioRegisters, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
 pub const FIFO_DEPTH: usize = 128;
@@ -42,13 +42,13 @@ pub enum SpiId {
 }
 
 pub trait PsSpi {
-    fn reg_block(&self) -> MmioSpi<'static>;
+    fn reg_block(&self) -> MmioRegisters<'static>;
     fn id(&self) -> Option<SpiId>;
 }
 
-impl PsSpi for MmioSpi<'static> {
+impl PsSpi for MmioRegisters<'static> {
     #[inline]
-    fn reg_block(&self) -> MmioSpi<'static> {
+    fn reg_block(&self) -> MmioRegisters<'static> {
         unsafe { self.clone() }
     }
 
@@ -392,7 +392,7 @@ impl Config {
 /// Thin re-usable low-level helper to interface with the SPI.
 pub struct SpiLowLevel {
     id: SpiId,
-    regs: zynq7000::spi::MmioSpi<'static>,
+    regs: zynq7000::spi::MmioRegisters<'static>,
 }
 
 impl SpiLowLevel {
@@ -406,8 +406,8 @@ impl SpiLowLevel {
     pub unsafe fn steal(id: SpiId) -> Self {
         let regs = unsafe {
             match id {
-                SpiId::Spi0 => zynq7000::spi::Spi::new_mmio_fixed_0(),
-                SpiId::Spi1 => zynq7000::spi::Spi::new_mmio_fixed_1(),
+                SpiId::Spi0 => zynq7000::spi::Registers::new_mmio_fixed_0(),
+                SpiId::Spi1 => zynq7000::spi::Registers::new_mmio_fixed_1(),
             }
         };
         Self { id, regs }
@@ -808,7 +808,7 @@ impl Spi {
 
     pub fn new_generic_unchecked(
         id: SpiId,
-        regs: MmioSpi<'static>,
+        regs: MmioRegisters<'static>,
         clocks: &IoClocks,
         config: Config,
     ) -> Self {
@@ -863,7 +863,7 @@ impl Spi {
     }
 
     #[inline]
-    pub fn regs(&mut self) -> &mut MmioSpi<'static> {
+    pub fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.inner.regs
     }
 

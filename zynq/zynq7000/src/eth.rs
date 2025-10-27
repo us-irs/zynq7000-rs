@@ -421,7 +421,7 @@ pub struct MatchRegister {
 /// Gigabit Ethernet Controller (GEM) register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct Ethernet {
+pub struct Registers {
     net_ctrl: NetworkControl,
     net_cfg: NetworkConfig,
     #[mmio(PureRead)]
@@ -475,7 +475,7 @@ pub struct Ethernet {
     design_cfg_5: u32,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<Ethernet>(), 0x294);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x294);
 
 /// Ethernet statistics registers
 #[derive(derive_mmio::Mmio)]
@@ -571,7 +571,7 @@ pub struct Statistics {
     rx_udp_checksum_errors: u32,
 }
 
-impl Ethernet {
+impl Registers {
     /// Create a new Gigabit Ethernet MMIO instance for GEM 0 at address [GEM_0_BASE_ADDR].
     ///
     /// # Safety
@@ -579,7 +579,7 @@ impl Ethernet {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_0() -> MmioEthernet<'static> {
+    pub const unsafe fn new_mmio_fixed_0() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(GEM_0_BASE_ADDR) }
     }
 
@@ -590,7 +590,7 @@ impl Ethernet {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed_1() -> MmioEthernet<'static> {
+    pub const unsafe fn new_mmio_fixed_1() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(GEM_1_BASE_ADDR) }
     }
 }

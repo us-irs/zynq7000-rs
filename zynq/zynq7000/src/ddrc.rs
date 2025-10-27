@@ -728,7 +728,7 @@ use regs::*;
 /// DDR controller register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct DdrController {
+pub struct Registers {
     ddrc_ctrl: DdrcControl,
     two_rank_cfg: TwoRankConfig,
     hpr_queue_ctrl: LprHprQueueControl,
@@ -871,9 +871,9 @@ pub struct DdrController {
     lpddr_ctrl_3: LpddrControl3,
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<DdrController>(), 0x2B8);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x2B8);
 
-impl DdrController {
+impl Registers {
     /// Create a new DDR MMIO instance for the DDR controller at address [DDRC_BASE_ADDR].
     ///
     /// # Safety
@@ -881,7 +881,7 @@ impl DdrController {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub const unsafe fn new_mmio_fixed() -> MmioDdrController<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(DDRC_BASE_ADDR) }
     }
 }

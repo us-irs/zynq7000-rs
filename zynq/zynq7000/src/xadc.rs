@@ -3,7 +3,7 @@ pub const XADC_BASE_ADDR: usize = 0xF8007100;
 /// XADC register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
-pub struct XAdc {
+pub struct Registers {
     config: u32,
     interrupt_status: u32,
     interrupt_mask: u32,
@@ -13,7 +13,7 @@ pub struct XAdc {
     misc_control: u32,
 }
 
-impl XAdc {
+impl Registers {
     /// Create a new XADC MMIO instance for for device configuration peripheral at address
     /// [XADC_BASE_ADDR].
     ///
@@ -22,9 +22,9 @@ impl XAdc {
     /// This API can be used to potentially create a driver to the same peripheral structure
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
-    pub unsafe fn new_mmio_fixed() -> MmioXAdc<'static> {
-        unsafe { XAdc::new_mmio_at(XADC_BASE_ADDR) }
+    pub unsafe fn new_mmio_fixed() -> MmioRegisters<'static> {
+        unsafe { Registers::new_mmio_at(XADC_BASE_ADDR) }
     }
 }
 
-static_assertions::const_assert_eq!(core::mem::size_of::<XAdc>(), 0x1C);
+static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x1C);

@@ -10,7 +10,7 @@ use super::{EthernetId, PsEthernet as _};
 
 pub struct EthernetLowLevel {
     id: EthernetId,
-    pub regs: zynq7000::eth::MmioEthernet<'static>,
+    pub regs: zynq7000::eth::MmioRegisters<'static>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -177,7 +177,7 @@ impl ClockDivSet {
 impl EthernetLowLevel {
     /// Creates a new instance of the Ethernet low-level interface.
     #[inline]
-    pub fn new(regs: zynq7000::eth::MmioEthernet<'static>) -> Option<Self> {
+    pub fn new(regs: zynq7000::eth::MmioRegisters<'static>) -> Option<Self> {
         regs.id()?;
         Some(EthernetLowLevel {
             id: regs.id().unwrap(),
@@ -196,8 +196,8 @@ impl EthernetLowLevel {
             id,
             regs: unsafe {
                 match id {
-                    EthernetId::Eth0 => zynq7000::eth::Ethernet::new_mmio_fixed_0(),
-                    EthernetId::Eth1 => zynq7000::eth::Ethernet::new_mmio_fixed_1(),
+                    EthernetId::Eth0 => zynq7000::eth::Registers::new_mmio_fixed_0(),
+                    EthernetId::Eth1 => zynq7000::eth::Registers::new_mmio_fixed_1(),
                 }
             },
         }
