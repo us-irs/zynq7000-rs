@@ -431,13 +431,27 @@ pub struct Registers {
 static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x100);
 
 impl Registers {
+    /// Create a new SDIO MMIO instance for SDIO 0 at address [SDIO_BASE_ADDR_0].
+    ///
+    /// # Safety
+    ///
+    /// This API can be used to potentially create a driver to the same peripheral structure
+    /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
+    /// interfere with each other.
     #[inline]
-    pub fn new_mmio_fixed_0() -> MmioRegisters<'static> {
+    pub const unsafe fn new_mmio_fixed_0() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(SDIO_BASE_ADDR_0) }
     }
 
+    /// Create a new SDIO MMIO instance for SDIO 1 at address [SDIO_BASE_ADDR_1].
+    ///
+    /// # Safety
+    ///
+    /// This API can be used to potentially create a driver to the same peripheral structure
+    /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
+    /// interfere with each other.
     #[inline]
-    pub fn new_mmio_fixed_1() -> MmioRegisters<'static> {
+    pub const unsafe fn new_mmio_fixed_1() -> MmioRegisters<'static> {
         unsafe { Self::new_mmio_at(SDIO_BASE_ADDR_1) }
     }
 }
