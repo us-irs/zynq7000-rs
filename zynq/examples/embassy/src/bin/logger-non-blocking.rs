@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
+use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
-use cortex_ar::asm::nop;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
@@ -70,6 +70,7 @@ async fn main(spawner: Spawner) -> ! {
     uart.write_all(b"-- Zynq 7000 Logging example --\n\r")
         .unwrap();
     uart.flush().unwrap();
+
     let (tx, _rx) = uart.split();
     let mut logger = TxAsync::new(tx);
 
@@ -79,7 +80,7 @@ async fn main(spawner: Spawner) -> ! {
     info!("Boot mode: {:?}", boot_mode);
 
     let led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
-    spawner.spawn(led_task(led).unwrap());
+    spawner.spawn(led_task(led)).unwrap();
     let mut log_buf: [u8; 2048] = [0; 2048];
     let frame_queue = zynq7000_hal::log::rb::get_frame_queue();
     loop {

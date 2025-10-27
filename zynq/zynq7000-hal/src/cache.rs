@@ -4,7 +4,7 @@
 //! L2 cache in the correct order. This module provides commonly required operations.
 use core::sync::atomic::compiler_fence;
 
-use cortex_ar::{
+use aarch32_cpu::{
     asm::dsb,
     cache::{
         clean_and_invalidate_data_cache_line_to_poc, clean_data_cache_line_to_poc,
@@ -28,7 +28,7 @@ pub fn clean_and_invalidate_l2c_line(l2c: &mut MmioRegisters<'static>, addr: u32
 pub fn clean_and_invalidate_data_cache() {
     dsb();
 
-    cortex_ar::cache::clean_l1_data_cache::<2, 5, 8>();
+    aarch32_cpu::cache::clean_l1_data_cache::<2, 5, 8>();
     dsb();
 
     // Clean all ways in L2 cache.
@@ -37,7 +37,7 @@ pub fn clean_and_invalidate_data_cache() {
     while l2c.read_cache_sync().busy() {}
     compiler_fence(core::sync::atomic::Ordering::SeqCst);
 
-    cortex_ar::cache::clean_and_invalidate_l1_data_cache::<2, 5, 8>();
+    aarch32_cpu::cache::clean_and_invalidate_l1_data_cache::<2, 5, 8>();
     dsb();
 }
 

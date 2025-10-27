@@ -20,7 +20,7 @@ pub mod uart_blocking {
     use core::cell::{Cell, RefCell, UnsafeCell};
     use embedded_io::Write as _;
 
-    use cortex_ar::register::Cpsr;
+    use aarch32_cpu::register::Cpsr;
     use critical_section::Mutex;
     use log::{LevelFilter, Log, set_logger, set_max_level};
 
@@ -130,8 +130,8 @@ pub mod uart_blocking {
         fn log(&self, record: &log::Record) {
             if self.skip_in_isr.get() {
                 match Cpsr::read().mode().unwrap() {
-                    cortex_ar::register::cpsr::ProcessorMode::Fiq
-                    | cortex_ar::register::cpsr::ProcessorMode::Irq => {
+                    aarch32_cpu::register::cpsr::ProcessorMode::Fiq
+                    | aarch32_cpu::register::cpsr::ProcessorMode::Irq => {
                         return;
                     }
                     _ => {}

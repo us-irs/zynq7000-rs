@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-cortex-ar = { version = "0.3" }
+aarch32-cpu = { version = "0.1", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../zynq7000-rt" }
 zynq7000 = { path = "../zynq7000" }
 zynq7000-hal = { path = "../zynq7000-hal" }

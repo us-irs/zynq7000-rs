@@ -5,15 +5,15 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-use core::cell::UnsafeCell;
-use cortex_ar::mmu::L1Section;
+use aarch32_cpu::mmu::L1Section;
 #[cfg(all(not(feature = "tools"), arm_profile = "a"))]
-use cortex_ar::{
+use aarch32_cpu::{
     asm::{dsb, isb},
     cache::clean_and_invalidate_l1_data_cache,
     mmu::SectionAttributes,
     register::{BpIAll, TlbIAll},
 };
+use core::cell::UnsafeCell;
 
 pub const NUM_L1_PAGE_TABLE_ENTRIES: usize = 4096;
 

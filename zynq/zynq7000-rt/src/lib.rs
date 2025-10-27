@@ -10,7 +10,7 @@
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(all(feature = "rt", arm_profile = "a"))]
-pub use cortex_a_rt::*;
+pub use aarch32_rt::*;
 
 #[cfg(feature = "rt")]
 use zynq7000_mmu::L1TableWrapper;

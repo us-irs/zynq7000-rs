@@ -19,7 +19,7 @@ clean target:
   cd {{target}} && cargo clean
 
 fmt target:
-  cd {{target}} && cargo +stable fmt --all -- --check
+  cd {{target}} && cargo +stable fmt
 
 clippy target:
   cd {{target}} && cargo clippy -- -D warnings
