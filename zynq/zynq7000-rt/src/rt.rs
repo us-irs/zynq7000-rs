@@ -5,8 +5,8 @@
 //! but does NOT provide the L2 cache initialization.
 //!
 //! The boot routine includes stack, MMU and .bss/.data section initialization.
-use cortex_a_rt as _;
-use cortex_ar::register::{Cpsr, cpsr::ProcessorMode};
+use aarch32_cpu::register::{Cpsr, cpsr::ProcessorMode};
+use aarch32_rt as _;
 
 // Start-up code for Armv7-A
 //
@@ -16,17 +16,6 @@ core::arch::global_asm!(
 .set PSS_L2CC_BASE_ADDR, 0xF8F02000
 .set PSS_SLCR_BASE_ADDR, 0xF8000000
 
-.set RESERVED,		0x0fffff00
-.set LRemap,		0xFE00000F		/* set the base address of the peripheral block as not shared */
-.set L2CCWay,		(PSS_L2CC_BASE_ADDR + 0x077C)	/*(PSS_L2CC_BASE_ADDR + PSS_L2CC_CACHE_INVLD_WAY_OFFSET)*/
-.set L2CCSync,		(PSS_L2CC_BASE_ADDR + 0x0730)	/*(PSS_L2CC_BASE_ADDR + PSS_L2CC_CACHE_SYNC_OFFSET)*/
-.set L2CCCrtl,		(PSS_L2CC_BASE_ADDR + 0x0100)	/*(PSS_L2CC_BASE_ADDR + PSS_L2CC_CNTRL_OFFSET)*/
-.set L2CCAuxCrtl,	(PSS_L2CC_BASE_ADDR + 0x0104)	/*(PSS_L2CC_BASE_ADDR + XPSS_L2CC_AUX_CNTRL_OFFSET)*/
-.set L2CCTAGLatReg,	(PSS_L2CC_BASE_ADDR + 0x0108)	/*(PSS_L2CC_BASE_ADDR + XPSS_L2CC_TAG_RAM_CNTRL_OFFSET)*/
-.set L2CCDataLatReg,	(PSS_L2CC_BASE_ADDR + 0x010C)	/*(PSS_L2CC_BASE_ADDR + XPSS_L2CC_DATA_RAM_CNTRL_OFFSET)*/
-.set L2CCIntClear,	(PSS_L2CC_BASE_ADDR + 0x0220)	/*(PSS_L2CC_BASE_ADDR + XPSS_L2CC_IAR_OFFSET)*/
-.set L2CCIntRaw,	(PSS_L2CC_BASE_ADDR + 0x021C)	/*(PSS_L2CC_BASE_ADDR + XPSS_L2CC_ISR_OFFSET)*/
-
 .set SLCRlockReg,	    (PSS_SLCR_BASE_ADDR + 0x04)	/*(PSS_SLCR_BASE_ADDR + XPSS_SLCR_LOCK_OFFSET)*/
 .set SLCRUnlockReg,     (PSS_SLCR_BASE_ADDR + 0x08)	/*(PSS_SLCR_BASE_ADDR + XPSS_SLCR_UNLOCK_OFFSET)*/
 .set SLCRL2cRamReg,     (PSS_SLCR_BASE_ADDR + 0xA1C) /*(PSS_SLCR_BASE_ADDR + XPSS_SLCR_L2C_RAM_OFFSET)*/
@@ -35,12 +24,6 @@ core::arch::global_asm!(
 
 .set CRValMmuCac,	0b01000000000101	/* Enable IDC, and MMU */
 .set CRValHiVectorAddr,	0b10000000000000	/* Set the Vector address to high, 0xFFFF0000 */
-
-.set L2CCAuxControl,	0x72360000		/* Enable all prefetching, Cache replacement policy, Parity enable,
-                                        Event monitor bus enable and Way Size (64 KB) */
-.set L2CCControl,	0x01			/* Enable L2CC */
-.set L2CCTAGLatency,	0x0111			/* latency for TAG RAM */
-.set L2CCDataLatency,	0x0121			/* latency for DATA RAM */
 
 .set SLCRlockKey,	        0x767B			/* SLCR lock key */
 .set SLCRUnlockKey,	        0xDF0D			/* SLCR unlock key */

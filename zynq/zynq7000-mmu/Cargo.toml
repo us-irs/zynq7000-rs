@@ -11,7 +11,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 thiserror = { version = "2", default-features = false }
-cortex-ar = { version = "0.3" }
+aarch32-cpu = { git = "https://github.com/thejpster/cortex-ar.git", branch = "merge-rename", version = "0.3" }
 
 [build-dependencies]
 arm-targets = { version = "0.3" }

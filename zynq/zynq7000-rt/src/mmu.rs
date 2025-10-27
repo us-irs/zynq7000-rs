@@ -84,10 +84,10 @@ pub mod segments {
 }
 
 pub mod section_attrs {
-    use arbitrary_int::u4;
-    use cortex_ar::mmu::{
+    use aarch32_cpu::mmu::{
         AccessPermissions, CacheableMemoryAttribute, MemoryRegionAttributes, SectionAttributes,
     };
+    use arbitrary_int::u4;
 
     pub const DEFAULT_DOMAIN: u4 = u4::new(0b0000);
     // DDR is in different domain, but all domains are set as manager domains during run-time

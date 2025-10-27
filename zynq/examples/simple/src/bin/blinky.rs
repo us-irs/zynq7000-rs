@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
+use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
-use cortex_ar::asm::nop;
 use embedded_hal::{delay::DelayNs, digital::StatefulOutputPin};
 use zynq7000::Peripherals;
 use zynq7000_hal::{

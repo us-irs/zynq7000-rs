@@ -226,7 +226,7 @@ impl EthernetLowLevel {
             Slcr::with(|regs| {
                 regs.reset_ctrl().write_eth(assert_reset);
                 for _ in 0..cycles {
-                    cortex_ar::asm::nop();
+                    aarch32_cpu::asm::nop();
                 }
                 regs.reset_ctrl().write_eth(EthernetReset::DEFAULT);
             });

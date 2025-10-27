@@ -11,8 +11,8 @@ keywords = ["no-std", "rt", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-cortex-a-rt = { version = "0.1", optional = true, features = ["vfp-dp"] }
-cortex-ar = { version = "0.3" }
+aarch32-rt = { git = "https://github.com/thejpster/cortex-ar.git", branch = "merge-rename", version = "0.2", optional = true } # features = ["vfp-dp"] }
+aarch32-cpu = { git = "https://github.com/thejpster/cortex-ar.git", branch = "merge-rename", version = "0.3" }
 arbitrary-int = "2"
 zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
 
@@ -21,7 +21,7 @@ arm-targets = { version = "0.3" }
 
 [features]
 default = ["rt"]
-rt = ["dep:cortex-a-rt"]
+rt = ["dep:aarch32-rt"]
 
 [package.metadata.docs.rs]
 targets = ["armv7a-none-eabihf"]

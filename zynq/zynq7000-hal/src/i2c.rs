@@ -658,7 +658,7 @@ pub fn reset(id: I2cId) {
             // Keep it in reset for some cycles.. The TMR just mentions some small delay,
             // no idea what is meant with that.
             for _ in 0..3 {
-                cortex_ar::asm::nop();
+                aarch32_cpu::asm::nop();
             }
             regs.reset_ctrl().write_i2c(DualClockReset::DEFAULT);
         });

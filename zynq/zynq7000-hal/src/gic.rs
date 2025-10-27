@@ -8,7 +8,7 @@
 //! - [GTC ticks](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/examples/simple/src/bin/gtc-ticks.rs)
 use arbitrary_int::prelude::*;
 
-use cortex_ar::interrupt;
+use aarch32_cpu::interrupt;
 use zynq7000::gic::{
     DistributorControlRegister, GicCpuInterfaceRegisters, GicDistributorRegisters,
     InterfaceControl, InterruptSignalRegister, MmioGicCpuInterfaceRegisters,

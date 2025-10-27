@@ -1119,7 +1119,7 @@ pub fn reset(id: SpiId) {
             // Keep it in reset for some cycles.. The TMR just mentions some small delay,
             // no idea what is meant with that.
             for _ in 0..3 {
-                cortex_ar::asm::nop();
+                aarch32_cpu::asm::nop();
             }
             regs.reset_ctrl().write_spi(DualRefAndClockReset::DEFAULT);
         });

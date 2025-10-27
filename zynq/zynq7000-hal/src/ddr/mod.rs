@@ -89,7 +89,7 @@ pub fn configure_ddr_for_ddr3(
     let ddriob_shared = slcr.regs().ddriob_shared();
     // Wait for DDR IOB impedance calibration to complete first.
     while !ddriob_shared.read_dci_status().done() {
-        cortex_ar::asm::nop();
+        aarch32_cpu::asm::nop();
     }
     log::debug!("DDR IOB impedance calib done");
 
@@ -103,7 +103,7 @@ pub fn configure_ddr_for_ddr3(
         != zynq7000::ddrc::regs::OperatingMode::NormalOperation
     {
         // Wait for the soft reset to complete.
-        cortex_ar::asm::nop();
+        aarch32_cpu::asm::nop();
     }
 }
 

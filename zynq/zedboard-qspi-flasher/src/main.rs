@@ -4,7 +4,7 @@
 #![no_main]
 
 use core::panic::PanicInfo;
-use cortex_ar::asm::nop;
+use aarch32_cpu::asm::nop;
 use embedded_hal::{delay::DelayNs as _, digital::StatefulOutputPin as _};
 use embedded_io::Write as _;
 use log::{error, info};

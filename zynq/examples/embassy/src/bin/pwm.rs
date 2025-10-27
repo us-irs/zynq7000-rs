@@ -7,8 +7,8 @@
 #![no_std]
 #![no_main]
 
+use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
-use cortex_ar::asm::nop;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::{digital::StatefulOutputPin, pwm::SetDutyCycle};
@@ -80,8 +80,7 @@ async fn main(_spawner: Spawner) -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 Embassy Hello World --\n\r")
-        .unwrap();
+    uart.write_all(b"-- Zynq 7000 PWM example--\n\r").unwrap();
     // Safety: We are not multi-threaded yet.
     unsafe {
         zynq7000_hal::log::uart_blocking::init_unsafe_single_core(

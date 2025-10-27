@@ -25,7 +25,7 @@
 #![no_main]
 
 use core::{net::Ipv4Addr, panic::PanicInfo};
-use cortex_ar::asm::nop;
+use aarch32_cpu::asm::nop;
 use embassy_executor::Spawner;
 use embassy_net::{Ipv4Cidr, StaticConfigV4, tcp::TcpSocket, udp::UdpSocket};
 use embassy_time::{Duration, Timer};

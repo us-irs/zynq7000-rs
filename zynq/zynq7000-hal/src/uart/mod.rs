@@ -645,7 +645,7 @@ pub fn reset(id: UartId) {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_uart(assert_reset);
             // Keep it in reset for one cycle.. not sure if this is necessary.
-            cortex_ar::asm::nop();
+            aarch32_cpu::asm::nop();
             regs.reset_ctrl().write_uart(DualRefAndClockReset::DEFAULT);
         });
     }

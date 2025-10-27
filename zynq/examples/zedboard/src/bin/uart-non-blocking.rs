@@ -29,7 +29,7 @@ use alloc::format;
 use axi_uart16550::AxiUart16550;
 use axi_uartlite::AxiUartlite;
 use core::{cell::RefCell, panic::PanicInfo};
-use cortex_ar::asm::nop;
+use aarch32_cpu::asm::nop;
 use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};

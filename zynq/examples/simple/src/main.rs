@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
+use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
-use cortex_ar::asm::nop;
 use zynq7000_rt as _;
 
 /// Entry point (not called like a normal main function)
@@ -18,7 +18,7 @@ pub extern "C" fn boot_core(cpu_id: u32) -> ! {
 #[unsafe(export_name = "main")]
 pub fn main() -> ! {
     loop {
-        cortex_ar::asm::nop();
+        nop();
     }
 }
 

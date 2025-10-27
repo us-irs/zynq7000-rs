@@ -346,9 +346,7 @@ unsafe fn configure_pll_unchecked(
     while ((slcr.clk_ctrl().read_pll_status().raw_value() >> pll_type.bit_offset_pll_locked())
         & 0b1)
         != 1
-    {
-        cortex_ar::asm::nop();
-    }
+    {}
 
     pll_ctrl = unsafe { core::ptr::read_volatile(pll_ctrl_reg) };
     pll_ctrl.set_bypass_force(false);
