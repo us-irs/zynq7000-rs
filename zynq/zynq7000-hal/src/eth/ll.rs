@@ -52,7 +52,10 @@ impl ClockDivisors {
 
     /// Calls [Self::calculate_for_rgmii], assuming that the IO clock is the reference clock,
     /// which is the default clock for the Ethernet module.
-    pub fn calculate_for_rgmii_and_io_clock(io_clks: IoClocks, target_speed: Speed) -> (Self, u32) {
+    pub fn calculate_for_rgmii_and_io_clock(
+        io_clks: &IoClocks,
+        target_speed: Speed,
+    ) -> (Self, u32) {
         Self::calculate_for_rgmii(io_clks.ref_clk(), target_speed)
     }
 
