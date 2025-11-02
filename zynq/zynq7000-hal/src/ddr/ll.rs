@@ -163,10 +163,7 @@ pub unsafe fn calibrate_iob_impedance(
             val
         });
         if poll_for_done {
-            while !slcr.ddriob().read_dci_status().done() {
-                // Wait for the DDR IOB impedance calibration to complete.
-                cortex_ar::asm::nop();
-            }
+            while !slcr.ddriob().read_dci_status().done() {}
         }
     });
 }

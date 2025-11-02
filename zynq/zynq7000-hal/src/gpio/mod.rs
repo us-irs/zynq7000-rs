@@ -49,7 +49,7 @@ pub fn reset() {
             regs.reset_ctrl()
                 .write_gpio(GpioClockReset::builder().with_gpio_cpu1x_rst(true).build());
             // Keep it in reset for one cycle.. not sure if this is necessary.
-            cortex_ar::asm::nop();
+            aarch32_cpu::asm::nop();
             regs.reset_ctrl()
                 .write_gpio(GpioClockReset::builder().with_gpio_cpu1x_rst(false).build());
         });

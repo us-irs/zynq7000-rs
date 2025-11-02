@@ -10,7 +10,7 @@
 
 use arbitrary_int::u6;
 use core::panic::PanicInfo;
-use cortex_ar::asm::nop;
+use aarch32_cpu::asm::nop;
 use embedded_io::Write as _;
 use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
@@ -178,7 +178,7 @@ pub fn main() -> ! {
         qspi_boot(spansion_lqspi, priv_tim);
     }
     loop {
-        cortex_ar::asm::nop();
+        aarch32_cpu::asm::nop();
     }
 }
 
@@ -321,10 +321,10 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
 
             // Some clean up and preparation for jumping to the user application.
             zynq7000_hal::cache::clean_and_invalidate_data_cache();
-            cortex_ar::register::TlbIAll::write();
-            cortex_ar::register::BpIAll::write();
-            cortex_ar::asm::dsb();
-            cortex_ar::asm::isb();
+            aarch32_cpu::register::TlbIAll::write();
+            aarch32_cpu::register::BpIAll::write();
+            aarch32_cpu::asm::dsb();
+            aarch32_cpu::asm::isb();
 
             let jump_func: extern "C" fn() -> ! = unsafe { core::mem::transmute(jump_addr) };
             jump_func();

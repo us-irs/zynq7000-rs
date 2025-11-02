@@ -2,8 +2,8 @@
 #![no_std]
 #![no_main]
 
+use aarch32_cpu::asm::nop;
 use core::{panic::PanicInfo, sync::atomic::AtomicU64};
-use cortex_ar::asm::nop;
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
 use log::{error, info};

@@ -27,7 +27,7 @@ impl CpuPrivateTimer {
     ///
     /// This function can only be called once for each given core.
     pub fn take(clocks: &ArmClocks) -> Option<Self> {
-        let mpidr = cortex_ar::register::mpidr::Mpidr::read();
+        let mpidr = aarch32_cpu::register::mpidr::Mpidr::read();
         let core = mpidr.0 & 0xff;
         if core != 0 && core != 1 {
             return None;

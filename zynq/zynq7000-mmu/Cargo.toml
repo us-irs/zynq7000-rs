@@ -11,10 +11,10 @@ categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 thiserror = { version = "2", default-features = false }
-cortex-ar = { version = "0.3" }
+aarch32-cpu = { version = "0.1" }
 
 [build-dependencies]
-arm-targets = { version = "0.3" }
+arm-targets = { version = "0.4" }
 
 [features]
 tools = []
