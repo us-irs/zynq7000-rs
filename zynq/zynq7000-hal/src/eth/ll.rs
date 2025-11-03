@@ -8,11 +8,6 @@ use crate::{clocks::IoClocks, enable_amba_peripheral_clock, slcr::Slcr, time::He
 
 use super::{EthernetId, PsEthernet as _};
 
-pub struct EthernetLowLevel {
-    id: EthernetId,
-    pub regs: zynq7000::eth::MmioRegisters<'static>,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Speed {
     Mbps10,
@@ -177,8 +172,17 @@ impl ClockDivSet {
 /// Ethernet low-level interface.
 ///
 /// Basic building block for higher-level abstraction.
+pub struct EthernetLowLevel {
+    id: EthernetId,
+    /// Register block. Direct public access is allowed to allow low-level operations.
+    pub regs: zynq7000::eth::MmioRegisters<'static>,
+}
+
 impl EthernetLowLevel {
     /// Creates a new instance of the Ethernet low-level interface.
+    ///
+    /// Returns [None] if the given registers block base address does not correspond to a valid
+    /// Ethernet peripheral.
     #[inline]
     pub fn new(regs: zynq7000::eth::MmioRegisters<'static>) -> Option<Self> {
         regs.id()?;
@@ -207,33 +211,7 @@ impl EthernetLowLevel {
     }
 
     pub fn reset(&mut self, cycles: usize) {
-        let assert_reset = match self.id {
-            EthernetId::Eth0 => EthernetReset::builder()
-                .with_gem1_ref_rst(false)
-                .with_gem0_ref_rst(true)
-                .with_gem1_rx_rst(false)
-                .with_gem0_rx_rst(true)
-                .with_gem1_cpu1x_rst(false)
-                .with_gem0_cpu1x_rst(true)
-                .build(),
-            EthernetId::Eth1 => EthernetReset::builder()
-                .with_gem1_ref_rst(true)
-                .with_gem0_ref_rst(false)
-                .with_gem1_rx_rst(true)
-                .with_gem0_rx_rst(false)
-                .with_gem1_cpu1x_rst(true)
-                .with_gem0_cpu1x_rst(false)
-                .build(),
-        };
-        unsafe {
-            Slcr::with(|regs| {
-                regs.reset_ctrl().write_eth(assert_reset);
-                for _ in 0..cycles {
-                    aarch32_cpu::asm::nop();
-                }
-                regs.reset_ctrl().write_eth(EthernetReset::DEFAULT);
-            });
-        }
+        reset(self.id, cycles);
     }
 
     #[inline]
@@ -384,5 +362,36 @@ impl EthernetLowLevel {
     #[inline]
     pub const fn id(&self) -> EthernetId {
         self.id
+    }
+}
+
+/// Resets the Ethernet peripheral with the given ID.
+pub fn reset(id: EthernetId, cycles: usize) {
+    let assert_reset = match id {
+        EthernetId::Eth0 => EthernetReset::builder()
+            .with_gem1_ref_rst(false)
+            .with_gem0_ref_rst(true)
+            .with_gem1_rx_rst(false)
+            .with_gem0_rx_rst(true)
+            .with_gem1_cpu1x_rst(false)
+            .with_gem0_cpu1x_rst(true)
+            .build(),
+        EthernetId::Eth1 => EthernetReset::builder()
+            .with_gem1_ref_rst(true)
+            .with_gem0_ref_rst(false)
+            .with_gem1_rx_rst(true)
+            .with_gem0_rx_rst(false)
+            .with_gem1_cpu1x_rst(true)
+            .with_gem0_cpu1x_rst(false)
+            .build(),
+    };
+    unsafe {
+        Slcr::with(|regs| {
+            regs.reset_ctrl().write_eth(assert_reset);
+            for _ in 0..cycles {
+                aarch32_cpu::asm::nop();
+            }
+            regs.reset_ctrl().write_eth(EthernetReset::DEFAULT);
+        });
     }
 }

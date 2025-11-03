@@ -240,9 +240,91 @@ impl SdioClockConfig {
         })
     }
 }
+/// SDIO low-level interface.
+///
+/// Basic building block for higher-level abstraction.
+pub struct SdioLowLevel {
+    id: SdioId,
+    /// Register block. Direct public access is allowed to allow low-level operations.
+    pub regs: zynq7000::sdio::MmioRegisters<'static>,
+}
+
+impl SdioLowLevel {
+    /// Create a new SDIO low-level interface from the given register block.
+    ///
+    /// Returns [None] if the given registers block base address does not correspond to a valid
+    /// Ethernet peripheral.
+    pub fn new(regs: zynq7000::sdio::MmioRegisters<'static>) -> Option<Self> {
+        let id = regs.id()?;
+        Some(Self { id, regs })
+    }
+
+    /// Common SDIO clock configuration routine which should be called once before using the SDIO.
+    ///
+    /// This does NOT disable the clock, which should be done before changing the clock
+    /// configuration. It also does NOT enable the clock.
+    ///
+    /// It will configure the SDIO peripheral clock as well as initializing the SD clock frequency
+    /// divisor based on the initial phase divider specified in the [SdioDivisors] field of the
+    /// configuration.
+    pub fn configure_clock(&mut self, clock_config: &SdioClockConfig) {
+        unsafe {
+            Slcr::with(|slcr| {
+                slcr.clk_ctrl().modify_sdio_clk_ctrl(|mut val| {
+                    val.set_srcsel(clock_config.src_sel);
+                    val.set_divisor(clock_config.ref_clock_divisor);
+                    if self.id == SdioId::Sdio1 {
+                        val.set_clk_1_act(true);
+                    } else {
+                        val.set_clk_0_act(true);
+                    }
+                    val
+                });
+            });
+        }
+        self.configure_sd_clock_div_init_phase(&clock_config.sdio_clock_divisors);
+    }
+
+    /// Configure the SD clock divisor for the initialization phase (400 kHz target clock).
+    pub fn configure_sd_clock_div_init_phase(&mut self, divs: &SdioDivisors) {
+        self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_sdclk_frequency_select(divs.divisor_init_phase);
+            val
+        });
+    }
+
+    /// Configure the SD clock divisor for the normal phase (regular SDIO speed clock).
+    pub fn configure_sd_clock_div_normal_phase(&mut self, divs: &SdioDivisors) {
+        self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_sdclk_frequency_select(divs.divisor_normal);
+            val
+        });
+    }
+
+    #[inline]
+    pub fn enable_clock(&mut self) {
+        self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_sd_clock_enable(true);
+            val
+        });
+    }
+
+    #[inline]
+    pub fn disable_clock(&mut self) {
+        self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_sd_clock_enable(false);
+            val
+        });
+    }
+
+    /// Reset the SDIO peripheral using the SLCR reset register for SDIO.
+    pub fn reset(&mut self, cycles: u32) {
+        reset(self.id, cycles);
+    }
+}
 
 pub struct Sdio {
-    regs: zynq7000::sdio::MmioRegisters<'static>,
+    ll: SdioLowLevel,
 }
 
 impl Sdio {
@@ -265,7 +347,6 @@ impl Sdio {
             return None;
         }
         Some(Self::new(
-            id,
             regs,
             clock_config,
             clock_pin,
@@ -293,7 +374,6 @@ impl Sdio {
             return None;
         }
         Some(Self::new(
-            id,
             regs,
             clock_config,
             clock_pin,
@@ -303,37 +383,39 @@ impl Sdio {
     }
 
     fn new(
-        id: SdioId,
         regs: zynq7000::sdio::MmioRegisters<'static>,
         clock_config: SdioClockConfig,
         clock_pin: impl MioPin,
         command_pin: impl MioPin,
         data_pins: (impl MioPin, impl MioPin, impl MioPin, impl MioPin),
     ) -> Self {
+        let mut ll = SdioLowLevel::new(regs).unwrap();
+        Self::initialize(&mut ll, &clock_config);
         IoPeriphPin::new(clock_pin, MUX_CONF, None);
         IoPeriphPin::new(command_pin, MUX_CONF, None);
         IoPeriphPin::new(data_pins.0, MUX_CONF, None);
         IoPeriphPin::new(data_pins.1, MUX_CONF, None);
         IoPeriphPin::new(data_pins.2, MUX_CONF, None);
         IoPeriphPin::new(data_pins.3, MUX_CONF, None);
-        Self { regs }
+        Self { ll }
     }
 
-    fn initialize(
-        id: SdioId,
-        regs: &mut zynq7000::sdio::MmioRegisters<'static>,
-        clock_config: &SdioClockConfig,
-    ) {
-        reset(id, 10);
-        // TODO: Clock Config
-        // TODO: There is probably some other configuartion necessary.. the docs really are not
+    fn initialize(ll: &mut SdioLowLevel, clock_config: &SdioClockConfig) {
+        ll.reset(10);
+        // TODO: SW reset for all?
+        // TODO: Internal clock?
+        ll.disable_clock();
+        ll.configure_clock(clock_config);
+        ll.enable_clock();
+
+        // TODO: There is probably some other configuration necessary.. the docs really are not
         // complete here..
         unsafe {}
     }
 
     #[inline]
     pub fn regs(&mut self) -> &mut zynq7000::sdio::MmioRegisters<'static> {
-        &mut self.regs
+        &mut self.ll.regs
     }
 }
 
@@ -362,7 +444,7 @@ pub fn reset(id: SdioId, cycles: u32) {
             regs.reset_ctrl().write_sdio(assert_reset);
             // Keep it in reset for a few cycle.. not sure if this is necessary.
             for _ in 0..cycles {
-                cortex_ar::asm::nop();
+                aarch32_cpu::asm::nop();
             }
             regs.reset_ctrl().write_sdio(DualRefAndClockReset::DEFAULT);
         });
