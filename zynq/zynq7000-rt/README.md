@@ -15,7 +15,7 @@ Some major differences:
 - MMU table is specified as Rust code.
 - Modification to the stack setup code, because a different linker script is used.
 
-This crate pulls in the [cortex-a-rt](https://github.com/us-irs/cortex-ar/tree/cortex-a-addition/cortex-a-rt)
+This crate pulls in the [aarch32-rt](https://github.com/rust-embedded/aarch32/tree/main/aarch32-rt)
 crate to provide ARM vectors and the linker script.
 
 ## Features
