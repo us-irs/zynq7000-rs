@@ -57,7 +57,7 @@ fn main() {
     writeln!(buf_writer, "use crate::mmu::section_attrs;").unwrap();
     writeln!(buf_writer, "use cortex_ar::mmu::L1Section;").unwrap();
     writeln!(buf_writer, "use zynq7000_mmu::L1Table;").unwrap();
-    writeln!(buf_writer, "").unwrap();
+    writeln!(buf_writer).unwrap();
 
     writeln!(buf_writer, "/// MMU Level 1 Page table.").unwrap();
     writeln!(buf_writer, "///").unwrap();
@@ -200,7 +200,7 @@ fn main() {
         offset_u64 += ONE_MB as u64;
     }
     // Check that the full 4 GB were covered (not too much, or less)
-    assert_eq!(offset_u64, 0x1_0000_0000 as u64);
+    assert_eq!(offset_u64, 0x1_0000_0000_u64);
 
     writeln!(buf_writer, "]);").unwrap();
     // Finish the file.
