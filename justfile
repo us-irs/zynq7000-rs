@@ -24,6 +24,7 @@ fmt target:
 clippy target:
   cd {{target}} && cargo clippy -- -D warnings
 
+[working-directory: 'zynq']
 docs-zynq: docs-pac docs-hal
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-mmu
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt
@@ -35,7 +36,7 @@ docs-pac-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 --open
 [working-directory: 'zynq']
 docs-hal:
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --no-deps
 [working-directory: 'zynq']
 docs-hal-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --open
