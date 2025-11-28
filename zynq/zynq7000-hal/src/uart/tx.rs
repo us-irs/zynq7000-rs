@@ -1,12 +1,20 @@
+//! # Transmitter (TX) support module
 use core::convert::Infallible;
 
 use zynq7000::uart::{Fifo, InterruptControl, InterruptStatus, MmioRegisters};
 
 use super::UartId;
 
+/// Transmitter (TX) driver.
 pub struct Tx {
     pub(crate) regs: MmioRegisters<'static>,
     pub(crate) idx: UartId,
+}
+
+impl core::fmt::Debug for Tx {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Tx").field("idx", &self.idx).finish()
+    }
 }
 
 impl Tx {
@@ -23,16 +31,21 @@ impl Tx {
         }
     }
 
+    /// UART index.
     #[inline]
     pub const fn uart_idx(&self) -> UartId {
         self.idx
     }
 
+    /// Direct access to the UART MMIO registers.
     #[inline]
     pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.regs
     }
 
+    /// Write a byte to the TX FIFO.
+    ///
+    /// [nb] API which returns [nb::Error::WouldBlock] if the FIFO is full.
     #[inline]
     pub fn write_fifo(&mut self, word: u8) -> nb::Result<(), Infallible> {
         if self.regs.read_sr().tx_full() {
@@ -65,6 +78,7 @@ impl Tx {
         });
     }
 
+    /// Performs a soft-reset of the TX side of the UART.
     #[inline]
     pub fn soft_reset(&mut self) {
         self.regs.modify_cr(|mut val| {
@@ -78,10 +92,12 @@ impl Tx {
         }
     }
 
+    /// Flushes the TX FIFO by blocking until it is empty.
     pub fn flush(&mut self) {
         while !self.regs.read_sr().tx_empty() {}
     }
 
+    /// Write a byte to the TX FIFO without checking if there is space available.
     #[inline]
     pub fn write_fifo_unchecked(&mut self, word: u8) {
         self.regs.write_fifo(Fifo::new_with_raw_value(word as u32));

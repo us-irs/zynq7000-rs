@@ -3,6 +3,7 @@
 //! ## Examples
 //!
 //! - Private timer as delay provider in [blinky](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/blinky.rs)
+#![deny(missing_docs)]
 use core::{marker::PhantomData, sync::atomic::AtomicBool};
 
 use zynq7000::priv_tim::InterruptStatus;
@@ -62,11 +63,13 @@ impl CpuPrivateTimer {
         self.regs.write_reload(value);
     }
 
+    /// Write the current counter value.
     #[inline]
     pub fn write_counter(&mut self, value: u32) {
         self.regs.write_counter(value);
     }
 
+    /// Read the current counter value.
     #[inline]
     pub fn counter(&self) -> u32 {
         self.regs.read_counter()

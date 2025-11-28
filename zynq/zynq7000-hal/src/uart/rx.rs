@@ -1,3 +1,4 @@
+//! # Receiver (RX) support module
 use core::convert::Infallible;
 
 use arbitrary_int::prelude::*;
@@ -5,12 +6,23 @@ use zynq7000::uart::{InterruptControl, InterruptStatus, MmioRegisters};
 
 use super::FIFO_DEPTH;
 
+/// Receiver (RX) driver.
 pub struct Rx {
     pub(crate) regs: MmioRegisters<'static>,
 }
-// TODO: Remove once this is impelemnted for MmioUart
+
+impl core::fmt::Debug for Rx {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Rx").finish_non_exhaustive()
+    }
+}
+
+/// # Safety
+///
+/// This is not a CPU specific register block.
 unsafe impl Send for Rx {}
 
+/// RX errors structure.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct RxErrors {
     framing: bool,
@@ -19,20 +31,26 @@ pub struct RxErrors {
 }
 
 impl RxErrors {
+    /// Framing error occurred.
     #[inline]
     pub const fn framing(&self) -> bool {
         self.framing
     }
+
+    /// Overrun error occurred.
     #[inline]
     pub const fn overrun(&self) -> bool {
         self.overrun
     }
+
+    /// Parity error occurred.
     #[inline]
     pub const fn parity(&self) -> bool {
         self.parity
     }
 }
 
+/// RX interrupt result structure.
 #[derive(Debug, Default)]
 pub struct RxInterruptResult {
     read_bytes: usize,
@@ -40,16 +58,19 @@ pub struct RxInterruptResult {
 }
 
 impl RxInterruptResult {
+    /// Bytes read during the interrupt.
     pub fn read_bytes(&self) -> usize {
         self.read_bytes
     }
 
+    /// Errors occurred during reception.
     pub fn errors(&self) -> Option<RxErrors> {
         self.errors
     }
 }
 
 impl Rx {
+    /// Read one byte from the FIFO in a non-blocking manner.
     #[inline]
     pub fn read_fifo(&mut self) -> nb::Result<u8, Infallible> {
         if self.regs.read_sr().rx_empty() {
@@ -58,6 +79,7 @@ impl Rx {
         Ok(self.regs.read_fifo().fifo())
     }
 
+    /// Read one byte from the FIFO without checking if data is available.
     #[inline(always)]
     pub fn read_fifo_unchecked(&mut self) -> u8 {
         self.regs.read_fifo().fifo()
@@ -74,6 +96,7 @@ impl Rx {
         self.regs.write_rx_tout(rto as u32);
     }
 
+    /// Perform a soft-reset of the RX side of the UART.
     #[inline]
     pub fn soft_reset(&mut self) {
         self.regs.modify_cr(|mut cr| {
@@ -121,6 +144,9 @@ impl Rx {
         );
     }
 
+    /// This function should be called from the UART interrupt handler.
+    ///
+    /// It reads all available data from the RX FIFO into the provided buffer.
     pub fn on_interrupt(
         &mut self,
         buf: &mut [u8; FIFO_DEPTH],
@@ -180,7 +206,7 @@ impl Rx {
         result
     }
 
-    // This clears all RX related interrupts.
+    /// This clears all RX related interrupts.
     #[inline]
     pub fn clear_interrupts(&mut self) {
         self.regs.write_isr(

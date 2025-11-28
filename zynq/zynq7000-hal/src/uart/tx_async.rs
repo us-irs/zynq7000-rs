@@ -1,3 +1,4 @@
+//! Asynchronous UART transmitter (TX) implementation.
 use core::{cell::RefCell, convert::Infallible, sync::atomic::AtomicBool};
 
 use critical_section::Mutex;
@@ -5,14 +6,6 @@ use embassy_sync::waitqueue::AtomicWaker;
 use raw_slice::RawBufSlice;
 
 use crate::uart::{FIFO_DEPTH, Tx, UartId};
-
-#[derive(Debug)]
-pub enum TransferType {
-    Read,
-    Write,
-    Transfer,
-    TransferInPlace,
-}
 
 static UART_TX_WAKERS: [AtomicWaker; 2] = [const { AtomicWaker::new() }; 2];
 static TX_CONTEXTS: [Mutex<RefCell<TxContext>>; 2] =
@@ -84,7 +77,7 @@ pub fn on_interrupt_tx(peripheral: UartId) {
 }
 
 #[derive(Debug, Copy, Clone)]
-pub struct TxContext {
+struct TxContext {
     progress: usize,
     tx_overrun: bool,
     slice: RawBufSlice,
@@ -101,6 +94,7 @@ impl TxContext {
     }
 }
 
+/// Transmission future for UART TX.
 pub struct TxFuture {
     id: UartId,
 }
@@ -164,11 +158,13 @@ impl Drop for TxFuture {
     }
 }
 
+/// Asynchronous UART transmitter (TX) driver.
 pub struct TxAsync {
     tx: Tx,
 }
 
 impl TxAsync {
+    /// Constructor.
     pub fn new(tx: Tx) -> Self {
         Self { tx }
     }
@@ -185,6 +181,7 @@ impl TxAsync {
         fut.await
     }
 
+    /// Release the underlying blocking TX driver.
     pub fn release(self) -> Tx {
         self.tx
     }

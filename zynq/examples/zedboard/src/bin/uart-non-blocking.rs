@@ -197,7 +197,7 @@ async fn main(spawner: Spawner) -> ! {
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mut log_uart = Uart::new_with_mio(
+    let mut log_uart = Uart::new_with_mio_for_uart_1(
         dp.uart_1,
         Config::new_with_clk_config(uart_clk_config),
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
@@ -245,7 +245,7 @@ async fn main(spawner: Spawner) -> ! {
     uartlite.enable_interrupt();
 
     let (clk_config, error) =
-        axi_uart16550::ClkConfig::new_autocalc_with_error(clocks.pl_clocks()[0], 115200).unwrap();
+        axi_uart16550::ClockConfig::new_autocalc_with_error(clocks.pl_clocks()[0], 115200).unwrap();
     assert!(error < 0.02);
     let _uart_16550 = unsafe {
         AxiUart16550::new(
@@ -492,19 +492,19 @@ fn on_interrupt_axi_16550() {
     let iir = rx.read_iir();
     if let Ok(int_id) = iir.int_id() {
         match int_id {
-            axi_uart16550::registers::IntId2::ReceiverLineStatus => {
+            axi_uart16550::registers::InterruptId2::ReceiverLineStatus => {
                 let errors = rx.on_interrupt_receiver_line_status(iir);
                 warn!("Receiver line status error: {errors:?}");
             }
-            axi_uart16550::registers::IntId2::RxDataAvailable
-            | axi_uart16550::registers::IntId2::CharTimeout => {
+            axi_uart16550::registers::InterruptId2::RxDataAvailable
+            | axi_uart16550::registers::InterruptId2::CharTimeout => {
                 read_bytes = rx.on_interrupt_data_available_or_char_timeout(int_id, &mut buf);
             }
-            axi_uart16550::registers::IntId2::ThrEmpty => {
+            axi_uart16550::registers::InterruptId2::ThrEmpty => {
                 let mut tx = unsafe { axi_uart16550::Tx::steal(AXI_UAR16550_BASE_ADDR as usize) };
                 axi_uart16550::tx_async::on_interrupt_tx(&mut tx, 0);
             }
-            axi_uart16550::registers::IntId2::ModemStatus => (),
+            axi_uart16550::registers::InterruptId2::ModemStatus => (),
         }
     }
     // Send received RX data to main task.

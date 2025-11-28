@@ -1,4 +1,5 @@
 //! # L2 cache module
+#![deny(missing_docs)]
 use core::sync::atomic::compiler_fence;
 
 use arbitrary_int::{u2, u3};
@@ -44,7 +45,7 @@ pub const DEFAULT_DATA_RAM_LATENCY: LatencyConfig = LatencyConfig::builder()
     .with_setup_latency(u3::new(0b001))
     .build();
 
-// SLCR L2C ram configuration.
+/// SLCR L2C RAM configuration magic value.
 pub const SLCR_L2C_CONFIG_MAGIC_VALUE: u32 = 0x00020202;
 
 /// Similar to [init], but uses Xilinx/AMD defaults for the latency configurations.

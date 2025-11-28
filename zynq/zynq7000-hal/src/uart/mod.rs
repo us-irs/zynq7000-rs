@@ -7,6 +7,7 @@
 //! - [Logger through UART](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/logger.rs)
 //! - [Zedboard Blocking UART](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/uart-blocking.rs)
 //! - [Zedboard Non-Blocking UART](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/uart-non-blocking.rs)
+#![deny(missing_docs)]
 use core::convert::Infallible;
 
 use arbitrary_int::u3;
@@ -49,18 +50,27 @@ pub use tx_async::*;
 pub mod rx;
 pub use rx::*;
 
+/// FIFO depth of the UART peripheral.
 pub const FIFO_DEPTH: usize = 64;
+/// Default RX trigger level.
 pub const DEFAULT_RX_TRIGGER_LEVEL: u8 = 32;
+/// UART pin configuration.
 pub const UART_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b111));
 
+/// UART ID.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum UartId {
+    /// UART 0.
     Uart0 = 0,
+    /// UART 1.
     Uart1 = 1,
 }
 
+/// Common trait for PS UART peripherals.
 pub trait PsUart {
+    /// UART register block.
     fn reg_block(&self) -> MmioRegisters<'static>;
+    /// UART ID.
     fn uart_id(&self) -> Option<UartId>;
 }
 
@@ -95,38 +105,57 @@ impl UartId {
     }
 }
 
-pub trait RxPin: MioPin {
-    const UART_IDX: UartId;
+/// Receiver (RX) pin for UART 0.
+pub trait RxPin0: MioPin {
+    /// UART index.
+    const UART_IDX: UartId = UartId::Uart0;
 }
-pub trait TxPin: MioPin {
-    const UART_IDX: UartId;
+/// Transmitter (TX) pin for UART 0.
+pub trait TxPin0: MioPin {
+    /// UART index.
+    const UART_IDX: UartId = UartId::Uart0;
 }
 
-pub trait UartPins {}
+/// Receiver (RX) pin for UART 1.
+pub trait RxPin1: MioPin {
+    /// UART index.
+    const UART_IDX: UartId = UartId::Uart0;
+}
+/// Transmitter (TX) pin for UART 1.
+pub trait TxPin1: MioPin {
+    /// UART index.
+    const UART_IDX: UartId = UartId::Uart0;
+}
 
+/// UART pin pair trait for UART 0.
+pub trait UartPins0 {}
+
+/// UART pin pair trait for UART 1.
+pub trait UartPins1 {}
+
+/// Divisor zero error.
 #[derive(Debug, thiserror::Error)]
 #[error("divisor is zero")]
 pub struct DivisorZero;
 
 macro_rules! pin_pairs {
-    ($UartPeriph:path, ($( [$(#[$meta:meta], )? $TxMio:ident, $RxMio:ident] ),+ $(,)? )) => {
+    ($index:literal, $UartPeriph:path, ($( [$(#[$meta:meta], )? $TxMio:ident, $RxMio:ident] ),+ $(,)? )) => {
         $(
-            $( #[$meta] )?
-            impl TxPin for Pin<$TxMio> {
-                const UART_IDX: UartId = $UartPeriph;
-            }
+            paste::paste! {
+                $( #[$meta] )?
+                impl [<TxPin $index>] for Pin<$TxMio> {}
 
-            $( #[$meta] )?
-            impl RxPin for Pin<$RxMio> {
-                const UART_IDX: UartId = $UartPeriph;
-            }
+                $( #[$meta] )?
+                impl [<RxPin $index>] for Pin<$RxMio> {}
 
-            impl UartPins for (Pin<$TxMio>, Pin<$RxMio>) {}
+                impl [<UartPins $index>] for (Pin<$TxMio>, Pin<$RxMio>) {}
+            }
         )+
     };
 }
 
 pin_pairs!(
+    0,
     UartId::Uart0,
     (
         [Mio11, Mio10],
@@ -144,7 +173,7 @@ pin_pairs!(
 );
 
 pin_pairs!(
-    UartId::Uart1,
+    1, UartId::Uart1,
     (
         [Mio8, Mio9],
         [Mio12, Mio13],
@@ -166,38 +195,53 @@ pub const MAX_BAUD_RATE: u32 = 6240000;
 /// Based on values provided by the vendor library.
 pub const MIN_BAUD_RATE: u32 = 110;
 
+/// Maximum acceptable baud rate error rate (0.5 %).
 pub const MAX_BAUDERROR_RATE: f32 = 0.005;
 
+/// Parity configuration.
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Parity {
+    /// Even parity.
     Even,
+    /// Odd parity.
     Odd,
+    /// No parity (default).
     #[default]
     None,
 }
 
+/// Stopbit configuration.
 #[derive(Debug, Default, Clone, Copy)]
 pub enum Stopbits {
+    /// One stop bit (default).
     #[default]
     One,
+    /// 1.5 stopbits.
     OnePointFive,
+    /// 2 stopbits.
     Two,
 }
 
+/// Character length configuration.
 #[derive(Debug, Default, Clone, Copy)]
 pub enum CharLen {
+    /// 6 bits.
     SixBits,
+    /// 7 bits.
     SevenBits,
+    /// 8 bits (default).
     #[default]
     EightBits,
 }
 
+/// Clock configuration for baud rate generation.
 #[derive(Debug, Clone, Copy)]
 pub struct ClockConfig {
     cd: u16,
     bdiv: u8,
 }
 
+/// Calculate all viable clock configurations.
 #[cfg(feature = "alloc")]
 pub fn calculate_viable_configs(
     mut uart_clk: Hertz,
@@ -265,6 +309,7 @@ pub fn calculate_raw_baud_cfg_smallest_error(
 }
 
 impl ClockConfig {
+    /// Constructor.
     #[inline]
     pub const fn new(cd: u16, bdiv: u8) -> Result<Self, DivisorZero> {
         if cd == 0 {
@@ -285,6 +330,7 @@ impl ClockConfig {
         Self::new_autocalc_generic(io_clks, ClockSelect::UartRefClk, target_baud)
     }
 
+    /// New generic autocalculating constructor.
     pub fn new_autocalc_generic(
         io_clks: &IoClocks,
         clk_sel: ClockSelect,
@@ -293,6 +339,7 @@ impl ClockConfig {
         Self::new_autocalc_with_raw_clk(io_clks.uart_clk(), clk_sel, target_baud)
     }
 
+    /// New generic autocalculating constructor using a raw UART Input clock.
     pub fn new_autocalc_with_raw_clk(
         uart_clk: Hertz,
         clk_sel: ClockSelect,
@@ -301,21 +348,25 @@ impl ClockConfig {
         calculate_raw_baud_cfg_smallest_error(uart_clk, clk_sel, target_baud)
     }
 
+    /// CD value.
     #[inline]
     pub const fn cd(&self) -> u16 {
         self.cd
     }
 
+    /// Baud divisor value.
     #[inline]
     pub const fn bdiv(&self) -> u8 {
         self.bdiv
     }
 
+    /// Rounded baudrate.
     #[inline]
     pub fn rounded_baud(&self, sel_clk: Hertz) -> u32 {
         round(self.actual_baud(sel_clk)) as u32
     }
 
+    /// Actual baudrate.
     #[inline]
     pub fn actual_baud(&self, sel_clk: Hertz) -> f64 {
         sel_clk.raw() as f64 / (self.cd as f64 * (self.bdiv + 1) as f64)
@@ -329,6 +380,7 @@ impl Default for ClockConfig {
     }
 }
 
+/// UART configuration.
 #[derive(Debug)]
 pub struct Config {
     clk_config: ClockConfig,
@@ -340,6 +392,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Create a new configuration from a given clock configuartion.
     pub fn new_with_clk_config(clk_config: ClockConfig) -> Self {
         Self::new(
             clk_config,
@@ -351,6 +404,7 @@ impl Config {
         )
     }
 
+    /// Constructor.
     #[inline]
     pub const fn new(
         clk_config: ClockConfig,
@@ -370,54 +424,63 @@ impl Config {
         }
     }
 
+    /// Raw clock configuration.
     #[inline]
     pub const fn raw_clk_config(&self) -> ClockConfig {
         self.clk_config
     }
 
+    /// Character mode.
     #[inline]
     pub const fn chmode(&self) -> ChMode {
         self.chmode
     }
 
+    /// Parity configuration.
     #[inline]
     pub const fn parity(&self) -> Parity {
         self.parity
     }
 
+    /// Stopbits configuration.
     #[inline]
     pub const fn stopbits(&self) -> Stopbits {
         self.stopbits
     }
 
+    /// Character length configuration.
     #[inline]
-    pub const fn chrl(&self) -> CharLen {
+    pub const fn charlen(&self) -> CharLen {
         self.chrl
     }
 
+    /// Clock select configuration.
     #[inline]
     pub const fn clksel(&self) -> ClockSelect {
         self.clk_sel
     }
 }
 
-// TODO: Impl Debug
+/// UART peripheral driver.
+#[derive(Debug)]
 pub struct Uart {
     rx: Rx,
     tx: Tx,
     cfg: Config,
 }
 
+/// Invalid PS UART error.
 #[derive(Debug, thiserror::Error)]
 #[error("invalid UART ID")]
 pub struct InvalidPsUart;
 
+/// UART construction error.
 #[derive(Debug, thiserror::Error)]
 pub enum UartConstructionError {
+    /// Invalid PS UART error.
     #[error("invalid UART ID")]
     InvalidPsUart(#[from] InvalidPsUart),
-    #[error("missmatch between pins index and passed index")]
-    IdxMissmatch,
+    /// Invalid pin configuration.
     #[error("invalid pin mux conf for UART")]
     InvalidMuxConf(MuxConfig),
 }
@@ -439,21 +502,46 @@ impl Uart {
         ))
     }
 
-    /// This is the constructor to use the PS UART with MIO pins.
-    pub fn new_with_mio<TxPinI: TxPin, RxPinI: RxPin>(
+    /// This is the constructor to use the PS UART with MIO pins for UART 0.
+    pub fn new_with_mio_for_uart_0<TxPinI: TxPin0, RxPinI: RxPin0>(
         uart: impl PsUart,
         cfg: Config,
         pins: (TxPinI, RxPinI),
     ) -> Result<Self, UartConstructionError>
     where
-        (TxPinI, RxPinI): UartPins,
+        (TxPinI, RxPinI): UartPins0,
     {
         let id = uart.uart_id();
         if id.is_none() {
             return Err(InvalidPsUart.into());
         }
-        if id.unwrap() != TxPinI::UART_IDX || id.unwrap() != RxPinI::UART_IDX {
-            return Err(UartConstructionError::IdxMissmatch);
+        if id.unwrap() != UartId::Uart0 {
+            return Err(InvalidPsUart.into());
+        }
+        IoPeriphPin::new(pins.0, UART_MUX_CONF, None);
+        IoPeriphPin::new(pins.1, UART_MUX_CONF, None);
+        Ok(Self::new_generic_unchecked(
+            uart.reg_block(),
+            id.unwrap(),
+            cfg,
+        ))
+    }
+
+    /// This is the constructor to use the PS UART with MIO pins for UART 1.
+    pub fn new_with_mio_for_uart_1<TxPinI: TxPin1, RxPinI: RxPin1>(
+        uart: impl PsUart,
+        cfg: Config,
+        pins: (TxPinI, RxPinI),
+    ) -> Result<Self, UartConstructionError>
+    where
+        (TxPinI, RxPinI): UartPins1,
+    {
+        let id = uart.uart_id();
+        if id.is_none() {
+            return Err(InvalidPsUart.into());
+        }
+        if id.unwrap() != UartId::Uart1 {
+            return Err(InvalidPsUart.into());
         }
         IoPeriphPin::new(pins.0, UART_MUX_CONF, None);
         IoPeriphPin::new(pins.1, UART_MUX_CONF, None);
@@ -549,6 +637,7 @@ impl Uart {
         }
     }
 
+    /// Set character mode.
     #[inline]
     pub fn set_mode(&mut self, mode: ChMode) {
         self.regs().modify_mr(|mut mr| {
@@ -557,16 +646,19 @@ impl Uart {
         });
     }
 
+    /// Raw access to the UART registers.
     #[inline]
     pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.rx.regs
     }
 
+    /// Configuration.
     #[inline]
     pub const fn cfg(&self) -> &Config {
         &self.cfg
     }
 
+    /// Split into TX and RX halves.
     #[inline]
     pub const fn split(self) -> (Tx, Rx) {
         (self.tx, self.rx)

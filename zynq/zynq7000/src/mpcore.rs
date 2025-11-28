@@ -5,8 +5,8 @@ use static_assertions::const_assert_eq;
 
 use crate::{
     gic::{
-        GicCpuInterfaceRegisters, GicDistributorRegisters, MmioGicCpuInterfaceRegisters,
-        MmioGicDistributorRegisters,
+        CpuInterfaceRegisters, DistributorRegisters, MmioCpuInterfaceRegisters,
+        MmioDistributorRegisters,
     },
     gtc::{MmioRegisters, Registers},
 };
@@ -57,7 +57,7 @@ pub struct MpCore {
     _reserved_0: [u32; 0x2A],
 
     #[mmio(Inner)]
-    gicc: GicCpuInterfaceRegisters,
+    gicc: CpuInterfaceRegisters,
 
     #[mmio(Inner)]
     gt: Registers,
@@ -81,7 +81,7 @@ pub struct MpCore {
     _reserved_3: [u32; 0x272],
 
     #[mmio(Inner)]
-    gicd: GicDistributorRegisters,
+    gicd: DistributorRegisters,
 }
 
 const_assert_eq!(core::mem::size_of::<MpCore>(), 0x2000);

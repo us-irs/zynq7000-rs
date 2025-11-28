@@ -42,10 +42,5 @@ embassy-net = { version = "0.7", features = ["dhcpv4", "packet-trace", "medium-e
 embassy-sync = { version = "0.7" }
 # TODO: Bump as soon as new compatible smoltcp/embassy-net version is released.
 heapless = "0.8"
-axi-uartlite = { git = "https://egit.irs.uni-stuttgart.de/rust/axi-uartlite.git" }
-axi-uart16550 = { git = "https://egit.irs.uni-stuttgart.de/rust/axi-uart16550.git" }
-
-[profile.release]
-codegen-units = 1
-debug = true
-lto = true
+axi-uartlite = { version = "0.1" }
+axi-uart16550 = { version = "0.1" }

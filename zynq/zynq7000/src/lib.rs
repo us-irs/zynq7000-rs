@@ -43,8 +43,8 @@ static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
 /// The [`svd2rust` documentation](https://docs.rs/svd2rust/latest/svd2rust/#peripheral-api)
 /// provides some more information about this.
 pub struct Peripherals {
-    pub gicc: gic::MmioGicCpuInterfaceRegisters<'static>,
-    pub gicd: gic::MmioGicDistributorRegisters<'static>,
+    pub gicc: gic::MmioCpuInterfaceRegisters<'static>,
+    pub gicd: gic::MmioDistributorRegisters<'static>,
     pub l2c: l2_cache::MmioRegisters<'static>,
     pub ddrc: ddrc::MmioRegisters<'static>,
     pub uart_0: uart::MmioRegisters<'static>,
@@ -83,8 +83,8 @@ impl Peripherals {
     pub unsafe fn steal() -> Self {
         unsafe {
             Self {
-                gicc: gic::GicCpuInterfaceRegisters::new_mmio_fixed(),
-                gicd: gic::GicDistributorRegisters::new_mmio_fixed(),
+                gicc: gic::CpuInterfaceRegisters::new_mmio_fixed(),
+                gicd: gic::DistributorRegisters::new_mmio_fixed(),
                 l2c: l2_cache::Registers::new_mmio_fixed(),
                 ddrc: ddrc::Registers::new_mmio_fixed(),
                 uart_0: uart::Registers::new_mmio_fixed_0(),

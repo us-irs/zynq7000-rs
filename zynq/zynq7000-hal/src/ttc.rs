@@ -5,7 +5,7 @@
 //! ## Examples
 //!
 //! - [PWM](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/embassy/src/bin/pwm.rs)
-
+#![deny(missing_docs)]
 use core::convert::Infallible;
 
 use arbitrary_int::{prelude::*, u3, u4};
@@ -25,19 +25,28 @@ use crate::{
 /// Each TTC consists of three independent timers/counters.
 #[derive(Debug, Copy, Clone)]
 pub enum TtcId {
+    /// TTC 0.
     Ttc0 = 0,
+    /// TTC 1.
     Ttc1 = 1,
 }
 
+/// Each TTC has 3 channels.
 #[derive(Debug, Copy, Clone)]
 pub enum ChannelId {
+    /// Channel 0.
     Ch0 = 0,
+    /// Channel 1.
     Ch1 = 1,
+    /// Channel 2.
     Ch2 = 2,
 }
 
+/// Common trait for TTC register blocks.
 pub trait PsTtc {
+    /// Register block.
     fn reg_block(&self) -> MmioRegisters<'static>;
+    /// ID.
     fn id(&self) -> Option<TtcId>;
 }
 
@@ -59,13 +68,18 @@ impl PsTtc for MmioRegisters<'static> {
     }
 }
 
+/// TTC pin configuration
 pub const TTC_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b110));
 
+/// Input clock pin trait.
 pub trait ClockInPin: MioPin {
+    /// TTC ID.
     const ID: TtcId;
 }
 
+/// Output wave pin trait.
 pub trait WaveOutPin: MioPin {
+    /// TTC ID.
     const ID: TtcId;
 }
 
@@ -121,9 +135,13 @@ impl WaveOutPin for Pin<Mio40> {
     const ID: TtcId = TtcId::Ttc1;
 }
 
+/// Triple-timer counter (TTC) peripheral.
 pub struct Ttc {
+    /// TTC channel 0.
     pub ch0: TtcChannel,
+    /// TTC channel 1.
     pub ch1: TtcChannel,
+    /// TTC channel 2.
     pub ch2: TtcChannel,
 }
 
@@ -151,16 +169,20 @@ impl Ttc {
     }
 }
 
+/// Single TTC channel.
 pub struct TtcChannel {
     regs: MmioRegisters<'static>,
     id: ChannelId,
 }
 
 impl TtcChannel {
+    /// Raw access to the TTC MMIO registers.
+    #[inline]
     pub fn regs_mut(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.regs
     }
 
+    /// Read the current counter value.
     #[inline]
     pub fn read_counter(&self) -> u16 {
         self.regs
@@ -169,27 +191,36 @@ impl TtcChannel {
             .count()
     }
 
+    /// Channel ID.
+    #[inline]
     pub fn id(&self) -> ChannelId {
         self.id
     }
 }
 
+/// Invalid TTC pin configuration error.
 #[derive(Debug, thiserror::Error)]
 #[error("invalid TTC pin configuration")]
 pub struct InvalidTtcPinConfigError(pub MuxConfig);
 
+/// Frequency is zero error.
 #[derive(Debug, thiserror::Error)]
 #[error("frequency is zero")]
 pub struct FrequencyIsZeroError;
 
+/// TTC construction error.
 #[derive(Debug, thiserror::Error)]
 pub enum TtcConstructionError {
+    /// Invalid TTC pin configuration.
     #[error("invalid TTC pin configuration")]
     InvalidTtcPinConfig(#[from] InvalidTtcPinConfigError),
+    /// Frequency is zero.
     #[error("frequency is zero")]
     FrequencyIsZero(#[from] FrequencyIsZeroError),
 }
 
+/// Calculate prescaler register value and interval ticks for a given reference clock and
+/// frequency.
 pub fn calc_prescaler_reg_and_interval_ticks(mut ref_clk: Hertz, freq: Hertz) -> (Option<u4>, u16) {
     // TODO: Can this be optimized?
     let mut prescaler: Option<u32> = None;
@@ -210,6 +241,7 @@ pub fn calc_prescaler_reg_and_interval_ticks(mut ref_clk: Hertz, freq: Hertz) ->
     (prescaler.map(|v| u4::new(v as u8)), tick_val as u16)
 }
 
+/// PWM driver using a TTC channel.
 pub struct Pwm {
     channel: TtcChannel,
     ref_clk: Hertz,
@@ -266,11 +298,13 @@ impl Pwm {
         Ok(())
     }
 
+    /// Mutable access to the underlying TTC channel.
     #[inline]
     pub fn ttc_channel_mut(&mut self) -> &mut TtcChannel {
         &mut self.channel
     }
 
+    /// Maximum duty cycle value.
     #[inline]
     pub fn max_duty_cycle(&self) -> u16 {
         self.channel
@@ -280,6 +314,7 @@ impl Pwm {
             .value()
     }
 
+    /// Set duty cycle value.
     #[inline]
     pub fn set_duty_cycle(&mut self, duty: u16) {
         let id = self.channel.id() as usize;

@@ -1,9 +1,13 @@
 //! # System Level Control Register (SLCR) module
+#![deny(missing_docs)]
 use zynq7000::slcr::MmioRegisters;
 
+/// Lock key for the SLCR registers.
 pub const LOCK_KEY: u32 = 0x767B;
+/// Unlock key for the SLCR registers.
 pub const UNLOCK_KEY: u32 = 0xDF0D;
 
+/// SLCR helper structure.
 pub struct Slcr(zynq7000::slcr::MmioRegisters<'static>);
 
 impl Slcr {
@@ -12,7 +16,7 @@ impl Slcr {
     /// # Safety
     ///
     /// This method unsafely steals the SLCR MMIO block and then calls a user provided function
-    /// with the [SLCR MMIO][MmioSlcr] block as an input argument. It is the user's responsibility
+    /// with the [SLCR MMIO][MmioRegisters] block as an input argument. It is the user's responsibility
     /// that the SLCR is not used concurrently in a way which leads to data races.
     pub unsafe fn with<F: FnOnce(&mut MmioRegisters<'static>)>(f: F) {
         let mut slcr = unsafe { zynq7000::slcr::Registers::new_mmio_fixed() };
@@ -47,7 +51,7 @@ impl Slcr {
     /// Modify the SLCR register.
     ///
     /// This method unlocks the SLCR registers and then calls a user provided function
-    /// with the [SLCR MMIO][MmioSlcr] block as an input argument. This allows the user
+    /// with the [SLCR MMIO][MmioRegisters] block as an input argument. This allows the user
     /// to safely modify the SLCR registers. The SLCR will be locked afte the operation.
     pub fn modify<F: FnMut(&mut MmioRegisters)>(&mut self, mut f: F) {
         self.0.write_unlock(UNLOCK_KEY);

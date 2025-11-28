@@ -20,3 +20,23 @@ embedded-hal = "1"
 fugit = "0.3"
 log = "0.4"
 arbitrary-int = "2"
+
+# cargo build/run
+[profile.dev]
+# default is opt-level = '0', but that makes very
+# verbose machine code
+opt-level = 's'
+# trade compile speed for slightly better optimisations
+codegen-units = 1
+
+# cargo build/run --release
+[profile.release]
+# Optimize for size.
+opt-level = 's'
+# trade compile speed for slightly better optimisations
+codegen-units = 1
+# Use Link Time Optimisations to further inline things across
+# crates
+lto = 'fat'
+# Leave the debug symbols in (default is no debug info)
+debug = 2

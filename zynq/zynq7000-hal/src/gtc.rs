@@ -4,6 +4,7 @@
 //!
 //! - [GTC ticks example](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/gtc-ticks.rs)
 //! - [Embassy Timer Driver](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zynq7000-embassy/src/lib.rs)
+#![deny(missing_docs)]
 use zynq7000::gtc::MmioRegisters;
 
 use crate::{clocks::ArmClocks, time::Hertz};
@@ -20,6 +21,7 @@ pub struct GlobalTimerCounter {
 
 unsafe impl Send for GlobalTimerCounter {}
 
+/// Convert a frequency to GTC ticks given a clock frequency.
 pub const fn frequency_to_ticks(clock: Hertz, frequency: Hertz) -> u32 {
     clock.raw().div_ceil(frequency.raw())
 }
@@ -38,7 +40,7 @@ impl GlobalTimerCounter {
     /// # Safety
     ///
     /// This function allows creating an arbitrary amount of memory-mapped peripheral drivers.
-    /// See the [zynq7000::gtc::GlobalTimerCounter::new_mmio] docs for more safety information.
+    /// See the [zynq7000::gtc::Registers::new_mmio] docs for more safety information.
     #[inline]
     pub const unsafe fn steal_fixed(cpu_3x2x_clk: Option<Hertz>) -> Self {
         Self {
@@ -47,6 +49,7 @@ impl GlobalTimerCounter {
         }
     }
 
+    /// Set the CPU 3x2x clock frequency.
     #[inline]
     pub fn set_cpu_3x2x_clock(&mut self, clock: Hertz) {
         self.cpu_3x2x_clock = Some(clock);
@@ -85,6 +88,7 @@ impl GlobalTimerCounter {
         });
     }
 
+    /// Convert a frequency to GTC ticks.
     pub fn frequency_to_ticks(&self, frequency: Hertz) -> u32 {
         if self.cpu_3x2x_clock.is_none() {
             return 0;
@@ -99,12 +103,14 @@ impl GlobalTimerCounter {
         self.regs.write_auto_increment(value);
     }
 
+    /// Set auto-increment value for a given frequency.
     #[inline]
     pub fn set_auto_increment_value_for_frequency(&mut self, frequency: Hertz) {
         self.regs
             .write_auto_increment(self.frequency_to_ticks(frequency));
     }
 
+    /// Enable the GTC.
     #[inline]
     pub fn enable(&mut self) {
         self.regs.modify_ctrl(|mut ctrl| {
@@ -113,6 +119,7 @@ impl GlobalTimerCounter {
         });
     }
 
+    /// Enable auto-increment.
     #[inline]
     pub fn enable_auto_increment(&mut self) {
         self.regs.modify_ctrl(|mut ctrl| {
@@ -121,6 +128,7 @@ impl GlobalTimerCounter {
         });
     }
 
+    /// Set a pre-scaler.
     #[inline]
     pub fn set_prescaler(&mut self, prescaler: u8) {
         self.regs.modify_ctrl(|mut ctrl| {
@@ -129,6 +137,7 @@ impl GlobalTimerCounter {
         });
     }
 
+    /// Disable the GTC.
     #[inline]
     pub fn disable(&mut self) {
         self.regs.modify_ctrl(|mut ctrl| {

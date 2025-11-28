@@ -31,24 +31,3 @@ embassy-executor = { version = "0.9", features = [
 ]}
 # TODO: Remove generic-queue-16 feature as soon as upstream executor is used again.
 embassy-time = { version = "0.5", features = ["tick-hz-1_000_000", "generic-queue-16"] }
-
-# cargo build/run
-[profile.dev]
-# default is opt-level = '0', but that makes very
-# verbose machine code
-opt-level = 's'
-# trade compile speed for slightly better optimisations
-codegen-units = 1
-
-# cargo build/run --release
-[profile.release]
-# default is opt-level = '3', but that makes quite
-# verbose machine code
-opt-level = 's'
-# trade compile speed for slightly better optimisations
-codegen-units = 1
-# Use Link Time Optimisations to further inline things across
-# crates
-lto = 'fat'
-# Leave the debug symbols in (default is no debug info)
-debug = 2

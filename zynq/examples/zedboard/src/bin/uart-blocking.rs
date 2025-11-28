@@ -126,7 +126,7 @@ async fn main(_spawner: Spawner) -> ! {
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mut log_uart = Uart::new_with_mio(
+    let mut log_uart = Uart::new_with_mio_for_uart_1(
         dp.uart_1,
         Config::new_with_clk_config(uart_clk_config),
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
@@ -151,7 +151,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // TODO: Can we determine/read the clock frequency to the FPGAs as well?
     let (clk_config, error) =
-        axi_uart16550::ClkConfig::new_autocalc_with_error(100.MHz(), 115200).unwrap();
+        axi_uart16550::ClockConfig::new_autocalc_with_error(100.MHz(), 115200).unwrap();
     assert!(error < 0.02);
     let mut uart_16550 = unsafe {
         AxiUart16550::new(
