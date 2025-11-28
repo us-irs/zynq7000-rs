@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 Bugfixes in startup assembler code.
 
+## Changed
+
+- `.data` initialization is skipped if it is already in place, which is usually the default
+  case because it is flashed to RAM.
+
+## Fixed
+
+- Stack initialization was bugged and stack was not properly initialized for some of the
+  processor modes (all modes except system mode and IRQ mode).
+- MMU is enabled after the MMU table was copied (which is done in the `.data` coping step).
+
 # [v0.1.1] 2025-10-10
 
 Documentation fixes.
