@@ -390,6 +390,38 @@ pub struct InterruptMask {
     command_complete: bool,
 }
 
+#[bitbybit::bitfield(u32, debug)]
+pub struct Capabilities {
+    #[bit(30, rw)]
+    spi_block_mode: bool,
+    #[bit(29, rw)]
+    spi_mode: bool,
+    #[bit(28, rw)]
+    _64_bit_system_bus_support: bool,
+    #[bit(27, rw)]
+    interrupt_mode: bool,
+    #[bit(26, rw)]
+    voltage_support_1_8v: bool,
+    #[bit(25, rw)]
+    voltage_support_3_0v: bool,
+    #[bit(24, rw)]
+    voltage_support_3_3v: bool,
+    #[bit(23, rw)]
+    suspend_resume_support: bool,
+    #[bit(22, rw)]
+    sdma_support: bool,
+    #[bit(21, rw)]
+    high_speed_support: bool,
+    #[bit(19, rw)]
+    adma2_support: bool,
+    #[bit(18, rw)]
+    extended_media_bus_support: bool,
+    #[bits(16..=17, rw)]
+    max_block_length: u2,
+    #[bit(7, rw)]
+    timeout_clock_unit: bool,
+}
+
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Registers {
@@ -411,7 +443,7 @@ pub struct Registers {
     #[mmio(PureRead)]
     auto_cmd12_error_status: u32,
     #[mmio(PureRead)]
-    capabilities: u32,
+    capabilities: Capabilities,
     _reserved_0: u32,
     #[mmio(PureRead)]
     maximum_current_capabilities: u32,
