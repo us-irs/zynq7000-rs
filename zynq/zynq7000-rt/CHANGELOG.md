@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+Bugfixes in startup assembler code.
+
 # [v0.1.1] 2025-10-10
 
 Documentation fixes.

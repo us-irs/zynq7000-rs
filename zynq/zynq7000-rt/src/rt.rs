@@ -96,64 +96,43 @@ initialize:
     // Set up stacks first.
     ldr     r3, =_stack_top
 
-    // get the current PSR
-    mrs	r0, cpsr
-    // mask for mode bits
-    mvn	r1, #0x1f
-    and	r2, r1, r0
     // IRQ mode
-    orr	r2, r2, {irq_mode}
-    msr	cpsr, r2
+    msr cpsr_c, {irq_mode}
     // IRQ stack pointer
     mov	sp, r3
     ldr r1, =_irq_stack_size
     sub r3, r3, r1
 
-    mrs	r0, cpsr
-    and	r2, r1, r0
     // Supervisor mode
-    orr	r2, r2, {svc_mode}
-    msr	cpsr, r2
+    msr cpsr_c, {svc_mode}
     // Supervisor stack pointer
     mov	sp, r3
     ldr r1, =_svc_stack_size
     sub r3, r3, r1
 
-    mrs	r0, cpsr
-    and	r2, r1, r0
     // Abort mode
-    orr	r2, r2, {abt_mode}
-    msr	cpsr, r2
+    msr cpsr_c, {abt_mode}
     // Abort stack pointer
     mov	sp, r3
     ldr r1, =_abt_stack_size
     sub r3, r3, r1
 
-    mrs	r0, cpsr
-    and	r2, r1, r0
     // FIQ mode
-    orr	r2, r2, {fiq_mode}
-    msr	cpsr, r2
+    msr cpsr_c, {fiq_mode}
     // FIQ stack pointer
     mov	sp, r3
     ldr r1, =_fiq_stack_size
     sub r3, r3, r1
 
-    mrs	r0, cpsr
-    and	r2, r1, r0
     // Undefined mode
-    orr	r2, r2, {und_mode}
-    msr	cpsr, r2
+    msr cpsr_c, {und_mode}
     // Undefined stack pointer
     mov	sp, r3
     ldr r1, =_und_stack_size
     sub r3, r3, r1
 
-    mrs	r0, cpsr
-    and	r2, r1, r0
     // System mode
-    orr	r2, r2, {sys_mode}
-    msr	cpsr, r2
+    msr cpsr_c, {sys_mode}
     // System stack pointer (main stack)
     mov	sp, r3
 
@@ -162,18 +141,6 @@ initialize:
     ldr	r0, [r7]
     orr	r0, r0, #0x1
     str	r0, [r7]
-
-    /* enable MMU and cache */
-    bl load_mmu_table
-
-    mvn	r0,#0				/* Load MMU domains -- all ones=manager */
-    mcr	p15,0,r0,c3,c0,0
-
-    /* Enable mmu, icahce and dcache */
-    ldr	r0,=CRValMmuCac
-    mcr	p15,0,r0,c1,c0,0		/* Enable cache and MMU */
-    dsb					/* dsb	allow the MMU to start up */
-    isb					/* isb	flush prefetch buffer */
 
     /* Write to ACTLR */
     mrc	p15, 0, r0, c1, c0, 1		/* Read ACTLR*/
@@ -220,13 +187,29 @@ initialize:
     ldr     r0, =__sdata
     ldr     r1, =__edata
     ldr     r2, =__sidata
+    cmp     r0, r2          /* Shortcut if code is run from RAM and .data is there already */
+    beq     data_init_done
 0:
     cmp     r1, r0
-    beq     1f
+    beq     data_init_done
     ldm     r2!, {{r3}}
     stm     r0!, {{r3}}
     b       0b
-1:
+data_init_done:
+    /* enable MMU and cache */
+    /* MMU Table is in .data, so this needs to be performed after .data is relocated */
+    /* (Even if in most cases, .data is already in RAM and relocation is a no-op) */
+    bl load_mmu_table
+
+    mvn	r0,#0				/* Load MMU domains -- all ones=manager */
+    mcr	p15,0,r0,c3,c0,0
+
+    /* Enable mmu, icache and dcache */
+    ldr	r0,=CRValMmuCac
+    mcr	p15,0,r0,c1,c0,0		/* Enable cache and MMU */
+    dsb					/* dsb	allow the MMU to start up */
+    isb					/* isb	flush prefetch buffer */
+
     // Jump to application
     // Load CPU ID 0, which will be used as a function argument to the boot_core function.
     mov      r0, #0x0
