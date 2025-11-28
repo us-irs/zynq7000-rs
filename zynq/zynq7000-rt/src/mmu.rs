@@ -183,7 +183,8 @@ pub mod section_attrs {
 #[unsafe(no_mangle)]
 #[cfg(feature = "rt")]
 unsafe extern "C" fn load_mmu_table() {
-    let table_base = crate::mmu_table::MMU_L1_PAGE_TABLE.0.get() as u32;
+    // if usize != u32 we are on the wrong platform...
+    let table_base = crate::mmu_table::MMU_L1_PAGE_TABLE.0.get().addr() as u32;
 
     unsafe {
         core::arch::asm!(
