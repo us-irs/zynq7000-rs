@@ -10,7 +10,7 @@ use crate::gpio::mio::{
     Mio41, Mio42, Mio43, Mio44, Mio45, Mio46, Mio47, Mio50, Mio51,
 };
 use crate::{
-    clocks::{Clocks, IoClocks},
+    clocks::IoClocks,
     gpio::{
         IoPeriphPin,
         mio::{
@@ -21,6 +21,10 @@ use crate::{
     slcr::Slcr,
     time::Hertz,
 };
+
+#[derive(Debug, thiserror::Error)]
+#[error("invalid peripheral instance")]
+pub struct InvalidPeripheralError;
 
 pub const MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b100));
 
@@ -354,12 +358,12 @@ impl Sdio {
         clock_pin: Sdio0Clock,
         command_pin: Sdio0Command,
         data_pins: (Sdio0Data0, Sdio0Data1, Sdio0Data2, Sdio0Data3),
-    ) -> Option<Self> {
-        let id = regs.id()?;
-        if id != SdioId::Sdio1 {
-            return None;
+    ) -> Result<Self, InvalidPeripheralError> {
+        let id = regs.id().ok_or(InvalidPeripheralError)?;
+        if id != SdioId::Sdio0 {
+            return Err(InvalidPeripheralError);
         }
-        Some(Self::new(
+        Ok(Self::new(
             regs,
             clock_config,
             clock_pin,
@@ -381,12 +385,12 @@ impl Sdio {
         clock_pin: Sdio1Clock,
         command_pin: Sdio1Command,
         data_pins: (Sdio1Data0, Sdio1Data1, Sdio1Data2, Sdio1Data3),
-    ) -> Option<Self> {
-        let id = regs.id()?;
+    ) -> Result<Self, InvalidPeripheralError> {
+        let id = regs.id().ok_or(InvalidPeripheralError)?;
         if id != SdioId::Sdio1 {
-            return None;
+            return Err(InvalidPeripheralError);
         }
-        Some(Self::new(
+        Ok(Self::new(
             regs,
             clock_config,
             clock_pin,

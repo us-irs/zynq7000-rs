@@ -470,7 +470,7 @@ impl Ethernet {
                 });
             });
         }
-        ll.configure_peripheral_clock(config.clk_config_1000_mbps, true);
+        ll.configure_clock(config.clk_config_1000_mbps, true);
         let mut mdio = mdio::Mdio::new(&ll, true);
         mdio.configure_clock_div(config.mdc_clk_div);
         ll.regs.modify_net_ctrl(|mut val| {
@@ -491,7 +491,7 @@ impl Ethernet {
 
     pub fn new(mut ll: EthernetLowLevel, config: EthernetConfig) -> Self {
         Self::common_init(&mut ll, config.mac_address);
-        ll.configure_peripheral_clock(config.clk_config_1000_mbps, true);
+        ll.configure_clock(config.clk_config_1000_mbps, true);
         let mut mdio = mdio::Mdio::new(&ll, true);
         mdio.configure_clock_div(config.mdc_clk_div);
         Ethernet {
