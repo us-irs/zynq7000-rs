@@ -86,7 +86,7 @@ async fn main(spawner: Spawner) -> ! {
     let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mut uart = uart::Uart::new_with_mio(
+    let mut uart = uart::Uart::new_with_mio_for_uart_1(
         dp.uart_1,
         uart::Config::new_with_clk_config(uart_clk_config),
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),

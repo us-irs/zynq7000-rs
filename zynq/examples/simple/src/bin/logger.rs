@@ -62,7 +62,7 @@ pub fn main() -> ! {
     gtc.enable();
     let mio_pins = mio::Pins::new(dp.gpio);
 
-    let mut uart = Uart::new_with_mio(
+    let mut uart = Uart::new_with_mio_for_uart_1(
         dp.uart_1,
         Config::new_with_clk_config(uart_clk_config),
         (mio_pins.mio48, mio_pins.mio49),

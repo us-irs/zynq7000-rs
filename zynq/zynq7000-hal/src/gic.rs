@@ -10,9 +10,8 @@ use arbitrary_int::prelude::*;
 
 use aarch32_cpu::interrupt;
 use zynq7000::gic::{
-    DistributorControlRegister, GicCpuInterfaceRegisters, GicDistributorRegisters,
-    InterfaceControl, InterruptSignalRegister, MmioGicCpuInterfaceRegisters,
-    MmioGicDistributorRegisters, PriorityRegister,
+    CpuInterfaceRegisters, DistributorControlRegister, DistributorRegisters, InterfaceControl,
+    InterruptSignalRegister, MmioCpuInterfaceRegisters, MmioDistributorRegisters, PriorityRegister,
 };
 
 const SPURIOUS_INTERRUPT_ID: u32 = 1023;
@@ -193,7 +192,7 @@ pub struct InvalidSgiInterruptId(pub usize);
 /// The flow of using this controller is as follows:
 ///
 /// 1. Create the controller using [Self::new_with_init]. You can use the [zynq7000::Peripherals]
-///    structure or the [zynq7000::gic::GicCpuInterface::new_mmio] and [zynq7000::gic::GicDistributor::new_mmio]
+///    structure or the [zynq7000::gic::CpuInterfaceRegisters::new_mmio] and [zynq7000::gic::DistributorRegisters::new_mmio]
 ///    functions to retrieve the MMIO instances. The constructor configures all PL interrupts
 ///    sensivities to high-level sensitivity and configures all sensitivities which are expected
 ///    to have a certain value. It also sets the priority mask to 0xff by calling
@@ -225,8 +224,8 @@ pub struct InvalidSgiInterruptId(pub usize);
 /// For the handling of the interrupts, you can use the [GicInterruptHelper] which assumes a
 /// properly configured GIC.
 pub struct GicConfigurator {
-    pub gicc: MmioGicCpuInterfaceRegisters<'static>,
-    pub gicd: MmioGicDistributorRegisters<'static>,
+    pub gicc: MmioCpuInterfaceRegisters<'static>,
+    pub gicd: MmioDistributorRegisters<'static>,
 }
 
 impl GicConfigurator {
@@ -234,8 +233,8 @@ impl GicConfigurator {
     /// strongly recommended initialization routines for the GIC.
     #[inline]
     pub fn new_with_init(
-        gicc: MmioGicCpuInterfaceRegisters<'static>,
-        gicd: MmioGicDistributorRegisters<'static>,
+        gicc: MmioCpuInterfaceRegisters<'static>,
+        gicd: MmioDistributorRegisters<'static>,
     ) -> Self {
         let mut gic = GicConfigurator { gicc, gicd };
         gic.initialize();
@@ -252,8 +251,8 @@ impl GicConfigurator {
     #[inline]
     pub unsafe fn steal() -> Self {
         GicConfigurator {
-            gicc: unsafe { GicCpuInterfaceRegisters::new_mmio_fixed() },
-            gicd: unsafe { GicDistributorRegisters::new_mmio_fixed() },
+            gicc: unsafe { CpuInterfaceRegisters::new_mmio_fixed() },
+            gicd: unsafe { DistributorRegisters::new_mmio_fixed() },
         }
     }
 
@@ -489,12 +488,12 @@ impl GicConfigurator {
 
 /// Helper structure which should only be used inside the interrupt handler once the GIC has
 /// been configured with the [GicConfigurator].
-pub struct GicInterruptHelper(MmioGicCpuInterfaceRegisters<'static>);
+pub struct GicInterruptHelper(MmioCpuInterfaceRegisters<'static>);
 
 impl GicInterruptHelper {
     /// Create the interrupt helper with the fixed GICC MMIO instance.
     pub const fn new() -> Self {
-        GicInterruptHelper(unsafe { GicCpuInterfaceRegisters::new_mmio_fixed() })
+        GicInterruptHelper(unsafe { CpuInterfaceRegisters::new_mmio_fixed() })
     }
 
     /// Acknowledges an interrupt by reading the IAR register and returning the interrupt context

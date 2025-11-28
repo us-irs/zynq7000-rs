@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+## Changed
+
+- Increased UART type safety by providing dedicated MIO constructors for UART 0 and UART 1
+  respectively.
+
 # [v0.1.1] 2025-10-10
 
 Documentation fixes.

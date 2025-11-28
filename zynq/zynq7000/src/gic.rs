@@ -40,10 +40,13 @@ impl TypeRegister {
 
 pub type Typer = TypeRegister;
 
+#[deprecated(note = "Use DistributorRegisters instead")]
+pub type GicDistributorTyper = DistributorRegisters;
+
 /// GIC Distributor registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
-pub struct GicDistributorRegisters {
+pub struct DistributorRegisters {
     /// Distributor Control Register
     pub dcr: DistributorControlRegister,
     /// Interrupt Controller Type Register
@@ -109,9 +112,9 @@ pub struct GicDistributorRegisters {
     pub cidr: [u32; 4],
 }
 
-const_assert_eq!(core::mem::size_of::<GicDistributorRegisters>(), 0x1000);
+const_assert_eq!(core::mem::size_of::<DistributorRegisters>(), 0x1000);
 
-impl GicDistributorRegisters {
+impl DistributorRegisters {
     /// Create a new Global Interrupt Controller Distributor MMIO instance at the fixed address of
     /// the processing system.
     ///
@@ -121,7 +124,7 @@ impl GicDistributorRegisters {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGicDistributorRegisters<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioDistributorRegisters<'static> {
         unsafe { Self::new_mmio_at(GICD_BASE_ADDR) }
     }
 }
@@ -157,10 +160,13 @@ pub struct InterruptSignalRegister {
     ack_int_id: u10,
 }
 
+#[deprecated(note = "Use DistributorRegisters instead")]
+pub type GicCpuInterfaceIar = CpuInterfaceRegisters;
+
 /// GIC CPU interface registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C, align(8))]
-pub struct GicCpuInterfaceRegisters {
+pub struct CpuInterfaceRegisters {
     /// CPU Interface Control Register (ICR).
     pub icr: InterfaceControl,
     /// Interrupt Priority Mask Register.
@@ -183,9 +189,9 @@ pub struct GicCpuInterfaceRegisters {
     pub iidr: u32,
 }
 
-const_assert_eq!(core::mem::size_of::<GicCpuInterfaceRegisters>(), 0x100);
+const_assert_eq!(core::mem::size_of::<CpuInterfaceRegisters>(), 0x100);
 
-impl GicCpuInterfaceRegisters {
+impl CpuInterfaceRegisters {
     /// Create a new Global Interrupt Controller CPU MMIO instance at the fixed address of the
     /// processing system.
     ///
@@ -195,7 +201,7 @@ impl GicCpuInterfaceRegisters {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     #[inline]
-    pub const unsafe fn new_mmio_fixed() -> MmioGicCpuInterfaceRegisters<'static> {
+    pub const unsafe fn new_mmio_fixed() -> MmioCpuInterfaceRegisters<'static> {
         unsafe { Self::new_mmio_at(GICC_BASE_ADDR) }
     }
 }

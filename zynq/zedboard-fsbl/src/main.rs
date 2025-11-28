@@ -94,7 +94,7 @@ pub fn main() -> ! {
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mut logger_uart = Uart::new_with_mio(
+    let mut logger_uart = Uart::new_with_mio_for_uart_1(
         periphs.uart_1,
         Config::new_with_clk_config(uart_clk_config),
         (mio_pins.mio48, mio_pins.mio49),

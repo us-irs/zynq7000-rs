@@ -17,8 +17,3 @@ embedded-io = "0.7"
 embedded-hal = "1"
 fugit = "0.3"
 log = "0.4"
-
-[profile.release]
-codegen-units = 1
-debug = true
-lto = true
