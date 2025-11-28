@@ -10,9 +10,9 @@ hardware design to other boards with modifications.
 
 - [Vivado installation](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html)
   or [Vitis installation](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vitis.html)
-  which includes Vivado. This example design was created with/for Vivado 2024.1, but also might work
+  which includes Vivado. This example design was created with/for Vivado 2025.2, but also might work
+  for newer versions. You might have to manually adjust some variables in `src/zedboard-bd.tcl`
   for newer versions.
-- [Zedboard board files](https://github.com/Digilent/vivado-boards) added to the Vivado installation.
 
 # Loading the project and the block design with the GUI
 
@@ -54,7 +54,7 @@ named `sdt_out` for a hardware description files `zedboard-rust/zedboard-rust.xs
 assuming that the Vitis tool suite is installed at `/tools/Xilinx/Vitis/2024.1`:
 
 ```sh
-export AMD_TOOLS="/tools/Xilinx/Vitis/2024.1"
+export AMD_TOOLS="/tools/2025.2/Vitis"
 ./sdtgen.py -x ./zedboard-rust/zedboard-rust.xsa
 ```
 
