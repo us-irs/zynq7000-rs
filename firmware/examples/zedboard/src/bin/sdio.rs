@@ -13,13 +13,13 @@ use zynq7000_hal::gpio::Input;
 use zynq7000_hal::prelude::*;
 use zynq7000_hal::{
     BootMode, clocks, gic, gpio, gtc,
-    sdio::{Sdio, SdioClockConfig, SdioLowLevel},
+    sdio::{Sdio, SdioClockConfig},
     uart,
 };
 
 use zynq7000_rt as _;
 
-const INIT_STRING: &str = "-- Zynq 7000 Zedboard GPIO blinky example --\n\r";
+const INIT_STRING: &str = "-- Zynq 7000 Zedboard SDIO example --\n\r";
 
 /// Entry point (not called like a normal main function)
 #[unsafe(no_mangle)]
@@ -42,7 +42,7 @@ async fn main(_spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let mut gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::GpioPins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -69,7 +69,7 @@ async fn main(_spawner: Spawner) -> ! {
     };
 
     let sdio_clock_config =
-        SdioClockConfig::calculate_for_io_clock(clocks.io_clocks(), 100.MHz(), 10.MHz());
+        SdioClockConfig::calculate_for_io_clock(clocks.io_clocks(), 100.MHz(), 10.MHz()).unwrap();
     let sdio = Sdio::new_for_sdio_0(
         periphs.sdio_0,
         sdio_clock_config,
@@ -85,7 +85,10 @@ async fn main(_spawner: Spawner) -> ! {
     .unwrap();
     let card_detect = Input::new_for_mio(gpio_pins.mio.mio47).unwrap();
     let write_protect = Input::new_for_mio(gpio_pins.mio.mio46).unwrap();
-    info!("Card detect state: {:?}", card_detect.is_high());
+    // The card detect being active low makes sense according to the Zedboard docs. Not sure
+    // about write-protect though.. It seems that write protect on means that the
+    // the pin is pulled high.
+    info!("Card detect state: {:?}", card_detect.is_low());
     info!("Write protect state: {:?}", write_protect.is_high());
 
     let capabilities = sdio.ll().capabilities();
