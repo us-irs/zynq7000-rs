@@ -2,7 +2,7 @@
 # The following two env variables need to be set for the supplied runner.sh script to work.
 
 # Absolute path to the Vitis install directory.
-# AMD_TOOLS = "/tools/Xilinx/Vitis/2024.1"
+# AMD_TOOLS = "/tools/2025.2/Vitis"
 # Absolute path to the PS7 initialization TCL script.
 # TCL_INIT_SCRIPT = "/home/$user/$project/$sdt_dir/ps7_init.tcl"
 
