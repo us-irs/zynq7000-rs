@@ -96,42 +96,42 @@ initialize:
     // Set up stacks first.
     ldr     r3, =_stack_top
 
-    // IRQ mode
+    // Set stack pointer (right after) and mask interrupts for IRQ mode (Mode 0x12)
     msr cpsr_c, {irq_mode}
     // IRQ stack pointer
     mov	sp, r3
     ldr r1, =_irq_stack_size
     sub r3, r3, r1
 
-    // Supervisor mode
+    // Set stack pointer (right after) and mask interrupts for Supervisor/SVC mode (Mode 0x13)
     msr cpsr_c, {svc_mode}
     // Supervisor stack pointer
     mov	sp, r3
     ldr r1, =_svc_stack_size
     sub r3, r3, r1
 
-    // Abort mode
+    // Set stack pointer (right after) and mask interrupts for Abort/ABT mode (Mode 0x17)
     msr cpsr_c, {abt_mode}
     // Abort stack pointer
     mov	sp, r3
     ldr r1, =_abt_stack_size
     sub r3, r3, r1
 
-    // FIQ mode
+    // Set stack pointer (right after) and mask interrupts for FIQ mode (Mode 0x11)
     msr cpsr_c, {fiq_mode}
     // FIQ stack pointer
     mov	sp, r3
     ldr r1, =_fiq_stack_size
     sub r3, r3, r1
 
-    // Undefined mode
+    // Set stack pointer (right after) and mask interrupts for Undefined/UND mode (Mode 0x1B)
     msr cpsr_c, {und_mode}
     // Undefined stack pointer
     mov	sp, r3
     ldr r1, =_und_stack_size
     sub r3, r3, r1
 
-    // System mode
+    // Set stack pointer (right after) and mask interrupts for System/SYS mode (Mode 0x1F)
     msr cpsr_c, {sys_mode}
     // System stack pointer (main stack)
     mov	sp, r3
