@@ -259,6 +259,11 @@ impl SdioLowLevel {
         Some(Self { id, regs })
     }
 
+    #[inline]
+    pub fn capabilities(&self) -> zynq7000::sdio::Capabilities {
+        self.regs.read_capabilities()
+    }
+
     /// Common SDIO clock configuration routine which should be called once before using the SDIO.
     ///
     /// This does NOT disable the clock, which should be done before changing the clock
@@ -302,7 +307,15 @@ impl SdioLowLevel {
     }
 
     #[inline]
-    pub fn enable_clock(&mut self) {
+    pub fn enable_internal_clock(&mut self) {
+        self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_internal_clock_enable(true);
+            val
+        });
+    }
+
+    #[inline]
+    pub fn enable_sd_clock(&mut self) {
         self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
             val.set_sd_clock_enable(true);
             val
@@ -310,7 +323,7 @@ impl SdioLowLevel {
     }
 
     #[inline]
-    pub fn disable_clock(&mut self) {
+    pub fn disable_sd_clock(&mut self) {
         self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
             val.set_sd_clock_enable(false);
             val
@@ -400,17 +413,39 @@ impl Sdio {
         Self { ll }
     }
 
+    /// Direct access to the low-level SDIO driver.
+    pub fn ll_mut(&mut self) -> &mut SdioLowLevel {
+        &mut self.ll
+    }
+
+    pub fn ll(&self) -> &SdioLowLevel {
+        &self.ll
+    }
+
     fn initialize(ll: &mut SdioLowLevel, clock_config: &SdioClockConfig) {
         ll.reset(10);
-        // TODO: SW reset for all?
-        // TODO: Internal clock?
-        ll.disable_clock();
+        ll.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_software_reset_for_all(true);
+            val
+        });
+        ll.regs.modify_clock_timeout_sw_reset_control(|mut val| {
+            val.set_software_reset_for_all(false);
+            val
+        });
+        // Explicitely clear the clock bit.
+        ll.disable_sd_clock();
         ll.configure_clock(clock_config);
-        ll.enable_clock();
+        // As specified in the TRM, wait until the internal clock is stable before enabling the
+        // SD clock.
+        ll.enable_internal_clock();
+        while !ll
+            .regs
+            .read_clock_timeout_sw_reset_control()
+            .internal_clock_stable()
+        {}
+        ll.enable_sd_clock();
 
-        // TODO: There is probably some other configuration necessary.. the docs really are not
-        // complete here..
-        unsafe {}
+        // TODO: Perform the regular SDIO setup sequence.
     }
 
     #[inline]
