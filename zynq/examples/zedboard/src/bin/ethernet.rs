@@ -104,12 +104,9 @@ pub enum IpMode {
     StackReady,
 }
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
+/// Entry point which calls the embassy main method.
+#[zynq7000_rt::entry]
+fn entry_point() -> ! {
     main();
 }
 
@@ -204,7 +201,6 @@ async fn tcp_task(mut tcp: TcpSocket<'static>) -> ! {
 }
 
 #[embassy_executor::main]
-#[unsafe(export_name = "main")]
 async fn main(spawner: Spawner) -> ! {
     let mut dp = Peripherals::take().unwrap();
     l2_cache::init_with_defaults(&mut dp.l2c);

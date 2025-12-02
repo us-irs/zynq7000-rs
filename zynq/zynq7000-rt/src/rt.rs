@@ -213,7 +213,7 @@ data_init_done:
     // Jump to application
     // Load CPU ID 0, which will be used as a function argument to the boot_core function.
     mov      r0, #0x0
-    bl      boot_core
+    bl      kmain
     // In case the application returns, loop forever
     b       .
 .size _start, . - _start

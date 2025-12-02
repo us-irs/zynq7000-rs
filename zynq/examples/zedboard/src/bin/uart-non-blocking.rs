@@ -95,12 +95,9 @@ static UARTLITE_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8,
 static UART16550_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
     Mutex::new(RefCell::new(None));
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
+/// Entry point which calls the embassy main method.
+#[zynq7000_rt::entry]
+fn entry_point() -> ! {
     main();
 }
 
@@ -164,7 +161,6 @@ impl UartMultiplexer {
 }
 
 #[embassy_executor::main]
-#[unsafe(export_name = "main")]
 async fn main(spawner: Spawner) -> ! {
     let mut dp = Peripherals::take().unwrap();
     l2_cache::init_with_defaults(&mut dp.l2c);

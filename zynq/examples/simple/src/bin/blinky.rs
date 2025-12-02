@@ -13,7 +13,6 @@ use zynq7000_hal::{
     priv_tim::CpuPrivateTimer,
     time::Hertz,
 };
-use zynq7000_rt as _;
 
 pub const LIB: Lib = Lib::Hal;
 
@@ -31,17 +30,8 @@ pub enum Lib {
     Hal,
 }
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
-    main();
-}
-
-#[unsafe(export_name = "main")]
-pub fn main() -> ! {
+#[zynq7000_rt::entry]
+fn main() -> ! {
     l2_cache::init_with_defaults(&mut unsafe { zynq7000::l2_cache::Registers::new_mmio_fixed() });
     match LIB {
         Lib::Pac => {

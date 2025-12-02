@@ -29,7 +29,6 @@ use zynq7000_hal::{
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
 };
-use zynq7000_rt as _;
 
 // PS clock input frequency.
 const PS_CLK: Hertz = Hertz::from_raw(33_333_333);
@@ -60,17 +59,8 @@ pub const ELF_BASE_ADDR: usize = 0x100000;
 /// 8 MB reserved for application ELF.
 pub const BOOT_BIN_STAGING_OFFSET: usize = 8 * 1024 * 1024;
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
-    main();
-}
-
-#[unsafe(export_name = "main")]
-pub fn main() -> ! {
+#[zynq7000_rt::entry]
+fn main() -> ! {
     let boot_mode = BootMode::new_from_regs();
     // The unwraps are okay here, the provided clock frequencies are standard values also used
     // by other Xilinx tools.
