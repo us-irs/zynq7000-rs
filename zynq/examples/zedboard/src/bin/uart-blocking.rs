@@ -31,12 +31,9 @@ const INIT_STRING: &str = "-- Zynq 7000 Zedboard blocking UART example --\n\r";
 const AXI_UARTLITE_BASE_ADDR: u32 = 0x42C0_0000;
 const AXI_UAR16550_BASE_ADDR: u32 = 0x43C0_0000;
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
+/// Entry point which calls the embassy main method.
+#[zynq7000_rt::entry]
+fn entry_point() -> ! {
     main();
 }
 
@@ -99,7 +96,6 @@ impl UartMultiplexer {
     }
 }
 #[embassy_executor::main]
-#[unsafe(export_name = "main")]
 async fn main(_spawner: Spawner) -> ! {
     let mut dp = Peripherals::take().unwrap();
     l2_cache::init_with_defaults(&mut dp.l2c);

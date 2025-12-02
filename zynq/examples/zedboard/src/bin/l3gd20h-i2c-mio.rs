@@ -36,17 +36,13 @@ use zynq7000_rt as _;
 const PS_CLOCK_FREQUENCY: Hertz = Hertz::from_raw(33_333_300);
 const I2C_ADDR_SEL: I2cAddr = I2cAddr::Sa0Low;
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
+/// Entry point which calls the embassy main method.
+#[zynq7000_rt::entry]
+fn entry_point() -> ! {
     main();
 }
 
 #[embassy_executor::main]
-#[unsafe(export_name = "main")]
 async fn main(_spawner: Spawner) -> ! {
     let mut dp = Peripherals::take().unwrap();
     l2_cache::init_with_defaults(&mut dp.l2c);

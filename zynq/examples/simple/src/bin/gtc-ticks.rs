@@ -18,24 +18,13 @@ use zynq7000_hal::{
     uart::{ClockConfig, Config, Uart},
 };
 
-use zynq7000_rt as _;
-
 // Define the clock frequency as a constant
 const PS_CLOCK_FREQUENCY: Hertz = Hertz::from_raw(33_333_333);
 
 static MS_TICKS: AtomicU64 = AtomicU64::new(0);
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
-    main();
-}
-
-#[unsafe(export_name = "main")]
-pub fn main() -> ! {
+#[zynq7000_rt::entry]
+fn main() -> ! {
     let mut dp = zynq7000::Peripherals::take().unwrap();
     l2_cache::init_with_defaults(&mut dp.l2c);
 

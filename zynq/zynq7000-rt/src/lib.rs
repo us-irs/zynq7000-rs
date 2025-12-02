@@ -1,8 +1,16 @@
 //! # Rust bare metal run-time support for the AMD Zynq 7000 SoCs
 //!
-//! This includes basic low-level startup code similar to the bare-metal boot routines
-//! [provided by Xilinx](https://github.com/Xilinx/embeddedsw/tree/master/lib/bsp/standalone/src/arm/cortexa9/gcc).
-//! Some major differences:
+//! Startup code and minimal runtime for the AMD Zynq7000 SoC to write bare metal Rust code.
+//! This run-time crate is strongly based on the
+//! [startup code provided by AMD](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S).
+//!
+//! It mostly builds on [aarch32-rt](https://github.com/rust-embedded/aarch32/tree/main/aarch32-rt).
+//! It activates the `fpu-d32` feature on that crate and overrides the `_default_start` method
+//! to add necessary setup code for the Zynq7000. It re-exports the `aarch32-rt` crate, including
+//! the attributes macros. The [documentation](https://docs.rs/aarch32-rt/latest/aarch32_rt/) specifies
+//! these in detail.
+//!
+//! Some major differences to the startup code provided by AMD:
 //!
 //! - No L2 cache initialization is performed.
 //! - MMU table is specified as Rust code.

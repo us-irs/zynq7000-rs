@@ -14,6 +14,9 @@ Bugfixes in startup assembler code.
 
 - `.data` initialization is skipped if it is already in place, which is usually the default
   case because it is flashed to RAM.
+- Runtime now calls a `kmain` method similar to the re-export `aarch32-rt` crate.
+  Former `boot_core` method must be renamed to `kmain`, but it is recommended to use
+  the `zynq7000-rt::entry` proc macro to annotate the main method.
 
 ## Fixed
 

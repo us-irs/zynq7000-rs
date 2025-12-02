@@ -36,19 +36,10 @@ const QSPI_DEV_COMBINATION: qspi::QspiDeviceCombination = qspi::QspiDeviceCombin
     two_devices: false,
 };
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
-    main();
-}
-
 const INIT_STRING: &str = "-- Zynq 7000 Zedboard QSPI flasher --\n\r";
 
-#[unsafe(export_name = "main")]
-pub fn main() -> ! {
+#[zynq7000_rt::entry]
+fn main() -> ! {
     let periphs = zynq7000_hal::init(zynq7000_hal::Config {
         init_l2_cache: true,
         level_shifter_config: Some(LevelShifterConfig::EnableAll),

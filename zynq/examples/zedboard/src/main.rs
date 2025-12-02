@@ -15,17 +15,13 @@ use zynq7000_rt as _;
 
 const INIT_STRING: &str = "-- Zynq 7000 Zedboard GPIO blinky example --\n\r";
 
-/// Entry point (not called like a normal main function)
-#[unsafe(no_mangle)]
-pub extern "C" fn boot_core(cpu_id: u32) -> ! {
-    if cpu_id != 0 {
-        panic!("unexpected CPU ID {}", cpu_id);
-    }
+/// Entry point which calls the embassy main method.
+#[zynq7000_rt::entry]
+fn entry_point() -> ! {
     main();
 }
 
 #[embassy_executor::main]
-#[unsafe(export_name = "main")]
 async fn main(_spawner: Spawner) -> ! {
     let periphs = zynq7000_hal::init(zynq7000_hal::Config {
         init_l2_cache: true,
