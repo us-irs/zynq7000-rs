@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - Increased UART type safety by providing dedicated MIO constructors for UART 0 and UART 1
   respectively.
+- Several bugfixes and improvements for GIC module. Some of the registers previously were
+  completely overwritten instead of only modifying their own bit portions. Also allow targeting
+  interrupts without clearing other CPU target.
 
 # [v0.1.1] 2025-10-10
 

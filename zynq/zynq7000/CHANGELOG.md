@@ -8,8 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
-- Renamed all register blocks to `Registers` to subblocks to `<Subblock>Registers`
-- Added SDIO registers
+- Renamed all register blocks to `Registers` to subblocks to `<Subblock>Registers`.
+- Updated IPTR registers in the GIC module to use a custom register type instead of a raw u32.
+- Added SDIO registers.
 
 # [v0.1.1] 2025-10-09
 

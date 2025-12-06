@@ -1,6 +1,6 @@
 //! # GIC (Generic Interrupt Controller) register module.
 pub use crate::mpcore::{GICC_BASE_ADDR, GICD_BASE_ADDR};
-use arbitrary_int::{u3, u5, u10};
+use arbitrary_int::{u2, u3, u5, u10};
 use static_assertions::const_assert_eq;
 
 /// Distributor Control Register
@@ -40,6 +40,16 @@ impl TypeRegister {
 
 pub type Typer = TypeRegister;
 
+// TODO: Use bitbybit debug derive if new release was released.
+/// Interrupt processor target register (IPTR).
+#[bitbybit::bitfield(u32)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct InterruptProcessorTargetRegister {
+    /// Target array. Every register holds the information for 4 interrupts.
+    #[bits(0..=1, rw, stride = 8)]
+    targets: [u2; 4],
+}
+
 #[deprecated(note = "Use DistributorRegisters instead")]
 pub type GicDistributorTyper = DistributorRegisters;
 
@@ -78,10 +88,11 @@ pub struct DistributorRegisters {
     pub ipr: [u32; 0x18],
     _reserved_11: [u32; 0xE8],
     /// Interrupt Processor Targes Registers
-    pub iptr_sgi: [u32; 0x4],
-    // TODO: Mark those read-only as soon as that works for arrays.
-    pub iptr_ppi: [u32; 0x4],
-    pub iptr_spi: [u32; 0x10],
+    pub iptr_sgi: [InterruptProcessorTargetRegister; 0x4],
+    /// These are read-only because they always target their private CPU.
+    #[mmio(PureRead)]
+    pub iptr_ppi: [InterruptProcessorTargetRegister; 0x4],
+    pub iptr_spi: [InterruptProcessorTargetRegister; 0x10],
     // Those are split in the ARM documentation for some reason..
     _reserved_12: [u32; 0xE8],
     /// Interrupt Configuration Registers
