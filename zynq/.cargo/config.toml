@@ -12,9 +12,5 @@ rustflags = [
   # "-Clink-args=-Map=app.map"
 ]
 
-# Tier 3 target, so no pre-compiled artifacts included.
-[unstable]
-build-std = ["core", "alloc"]
-
 [build]
 target = "armv7a-none-eabihf"
