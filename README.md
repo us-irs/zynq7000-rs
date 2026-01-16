@@ -77,14 +77,6 @@ You can then adapt the files in `.vscode` to your needs.
 
 # Building the blinky example
 
-Building an application requires `nightly` to build the `core` and `alloc` library
-because the `thumbv7a-none-eabihf` Rust target only has Tier 3 support
-If you have not installed it yet, you can do so with
-
-```sh
-rustup toolchain install nightly
-```
-
 Assuming you have the following segments inside your `.cargo/config.toml`
 
 ```toml
@@ -99,10 +91,6 @@ rustflags = [
   # Can be useful for debugging.
   # "-Clink-args=-Map=app.map"
 ]
-
-# Tier 3 target, so no pre-compiled artifacts included.
-[unstable]
-build-std = ["core", "alloc"]
 
 [build]
 target = "armv7a-none-eabihf"
