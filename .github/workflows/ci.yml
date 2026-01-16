@@ -8,12 +8,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v3
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rust-src
-      - run: just check zynq
-
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: "armv7a-none-eabihf"
+      - run: just check zynq
       - run: just check tools
       - run: just check zynq7000-boot-image
 
@@ -24,12 +22,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v3
 
-      - uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rust-src
-      - run: just build zynq
-
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: "armv7a-none-eabihf"
+      - run: just build zynq
       - run: just build tools
       - run: just build zynq7000-boot-image
 
@@ -42,6 +38,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt
+          targets: "armv7a-none-eabihf"
       - run: just fmt zynq
       - run: just fmt tools
       - run: just fmt zynq7000-boot-image
@@ -55,6 +52,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rust-src
+          targets: "armv7a-none-eabihf"
       - run: just docs-zynq
 
   clippy:
@@ -63,9 +61,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: extractions/setup-just@v3
-      - uses: dtolnay/rust-toolchain@nightly
+      - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy, rust-src
+          targets: "armv7a-none-eabihf"
       - run: just clippy zynq
 
       - uses: dtolnay/rust-toolchain@stable
