@@ -4,6 +4,7 @@ check-all: (check "firmware") (check "host")
 clean-all: (clean "firmware") (clean "host")
 build-all: build-zynq (build "host")
 fmt-all: (fmt "firmware") (fmt "host")
+check-fmt-all: (check-fmt "firmware") (check-fmt "host")
 clippy-all: (clippy "firmware") (clippy "host")
 
 check target:
@@ -17,6 +18,9 @@ build-zynq: (build "firmware")
 
 clean target:
   cd {{target}} && cargo clean
+
+check-fmt target:
+  cd {{target}} && cargo +stable fmt --all -- --check
 
 fmt target:
   cd {{target}} && cargo +stable fmt

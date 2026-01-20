@@ -11,9 +11,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: "armv7a-none-eabihf"
-      - run: just check zynq
-      - run: just check tools
-      - run: just check zynq7000-boot-image
+      - run: just check firmware
+      - run: just check host
 
   build:
     name: Check build
@@ -25,9 +24,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: "armv7a-none-eabihf"
-      - run: just build zynq
-      - run: just build tools
-      - run: just build zynq7000-boot-image
+      - run: just check firmware
+      - run: just check host
 
   fmt:
     name: Check formatting
@@ -39,9 +37,8 @@ jobs:
         with:
           components: rustfmt
           targets: "armv7a-none-eabihf"
-      - run: just fmt zynq
-      - run: just fmt tools
-      - run: just fmt zynq7000-boot-image
+      - run: just check-fmt firmware
+      - run: just check-fmt host
 
   docs:
     name: Check Documentation Build
@@ -65,10 +62,9 @@ jobs:
         with:
           components: clippy, rust-src
           targets: "armv7a-none-eabihf"
-      - run: just clippy zynq
+      - run: just clippy firmware
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: just clippy tools
-      - run: just clippy zynq7000-boot-image
+      - run: just clippy host

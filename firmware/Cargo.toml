@@ -10,6 +10,7 @@ members = [
   "examples/simple",
   "examples/embassy",
   "examples/zedboard",
+  "examples/defmt",
 
   "zedboard-bsp",
   "zedboard-qspi-flasher",
