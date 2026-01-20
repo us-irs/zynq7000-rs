@@ -1,10 +1,10 @@
 all: check-all build-all clean-all fmt-all clippy-all docs-zynq
 
-check-all: (check "zynq") (check "tools") (check "zynq7000-boot-image")
-clean-all: (clean "zynq") (clean "tools") (clean "zynq7000-boot-image")
-build-all: build-zynq (build "tools") (build "zynq7000-boot-image")
-fmt-all: (fmt "zynq") (fmt "tools") (fmt "zynq7000-boot-image")
-clippy-all: (clippy "zynq") (clippy "tools") (clippy "zynq7000-boot-image")
+check-all: (check "firmware") (check "host")
+clean-all: (clean "firmware") (clean "host")
+build-all: build-zynq (build "host")
+fmt-all: (fmt "firmware") (fmt "host")
+clippy-all: (clippy "firmware") (clippy "host")
 
 check target:
   cd {{target}} && cargo check
@@ -12,8 +12,8 @@ check target:
 build target:
   cd {{target}} && cargo build
 
-build-zynq: (build "zynq")
-  cd "zynq/zedboard-fsbl" && cargo build --release
+build-zynq: (build "firmware")
+  cd "firmware/zedboard-fsbl" && cargo build --release
 
 clean target:
   cd {{target}} && cargo clean
@@ -24,24 +24,24 @@ fmt target:
 clippy target:
   cd {{target}} && cargo clippy -- -D warnings
 
-[working-directory: 'zynq']
+[working-directory: 'firmware']
 docs-zynq: docs-pac docs-hal
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-mmu
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt
-[working-directory: 'zynq']
+[working-directory: 'firmware']
 docs-pac:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000
-[working-directory: 'zynq']
+[working-directory: 'firmware']
 docs-pac-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 --open
-[working-directory: 'zynq']
+[working-directory: 'firmware']
 docs-hal:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --no-deps
-[working-directory: 'zynq']
+[working-directory: 'firmware']
 docs-hal-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --open
 
-[working-directory: 'zynq-boot-image/staging']
+[working-directory: 'firmware/zynq-boot-image/staging']
 bootgen:
   bootgen -arch zynq -image boot.bif -o boot.bin -w on
   echo "Generated boot.bin at zynq-boot-image/staging"

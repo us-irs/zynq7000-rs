@@ -1,0 +1,14 @@
+[package]
+name = "zynq7000-ps7init-extract"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+zynq7000 = { path = "../../firmware/zynq7000" }
+log = "0.4"
+simple_logger = "5"
+regex = "1"
+quote = "1"
+syn = "2"
+proc-macro2 = "1"
