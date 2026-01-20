@@ -1,0 +1,21 @@
+[package]
+name = "defmt"
+version = "0.1.0"
+authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
+edition = "2024"
+description = "DEFMT test app"
+homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+aarch32-cpu = { version = "0.1" }
+zynq7000-rt = { path = "../../zynq7000-rt" }
+zynq7000 = { path = "../../zynq7000" }
+zynq7000-hal = { path = "../../zynq7000-hal", features = ["defmt"] }
+defmt = "1"
+defmt-rtt = "1"
+embedded-io = "0.7"
+embedded-hal = "1"
+fugit = "0.3"
+log = "0.4"
