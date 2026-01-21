@@ -1,0 +1,8 @@
+[package]
+name = "probe-rs-test"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+probe-rs = { path = "../../probe-rs/probe-rs" }
+anyhow = { version = "1" }
