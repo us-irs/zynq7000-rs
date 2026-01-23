@@ -11,7 +11,7 @@ rustflags = [
   # If this is not enabled, debugging / stepping can become problematic.
   "-Cforce-frame-pointers=yes",
   # Can be useful for debugging.
-  # "-Clink-args=-Map=app.map"
+  "-Clink-args=-Map=app.map"
 ]
 
 [build]

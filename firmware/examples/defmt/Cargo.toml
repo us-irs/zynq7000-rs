@@ -9,7 +9,7 @@ repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-aarch32-cpu = { version = "0.1" }
+aarch32-cpu = { version = "0.1", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal", features = ["defmt"] }

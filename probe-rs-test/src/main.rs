@@ -2,10 +2,11 @@ use std::{path::Path, time::Duration};
 
 use anyhow::Context;
 use probe_rs::{
-    Permissions,
+    MemoryInterface, Permissions,
     architecture::arm::{FullyQualifiedApAddress, core::registers::cortex_m::PC},
     flashing::{ElfOptions, Format, build_loader},
     probe::list::Lister,
+    rtt::{Rtt, RttChannel, ScanRegion},
     vendor::amd::sequences::x7z::AccessPort,
 };
 
@@ -55,7 +56,23 @@ fn main() -> anyhow::Result<()> {
     core.write_core_reg(PC.id, loader.vector_table_addr().unwrap())
         .with_context(|| "setting PC")?;
     core.run().with_context(|| "resuming core")?;
+    println!("trying to find CB");
+    let range = vec![(0x100000_u64..0x110000)];
+    let rtt_cb = Rtt::find_contol_block(&mut core, &ScanRegion::Ranges(range))?;
+    println!("RTT CB: {:#x}", rtt_cb);
+    let mut rtt = Rtt::attach_at(&mut core, rtt_cb)?;
+    let mut buf: [u8; 1024] = [0; 1024];
+    core.read(rtt_cb, &mut buf[0..12])?;
+    println!("RTT CB: {:#x?}", &buf[0..12]);
     loop {
+        /*
+                for up_ch in rtt.up_channels() {
+                    let read_bytes = up_ch.read(&mut core, &mut buf)?;
+                    if read_bytes > 0 {
+                        println!("read bytes {} on UP channel", read_bytes);
+                    }
+                }
+        */
         std::thread::sleep(Duration::from_millis(100));
     }
 }
