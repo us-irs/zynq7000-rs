@@ -45,6 +45,7 @@ fn main() -> ! {
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::High);
     loop {
         defmt::info!("toggling LED!");
+        zynq7000_hal::cache::clean_and_invalidate_data_cache();
         led.toggle().unwrap();
         cpu_tim.delay_ms(1000);
     }

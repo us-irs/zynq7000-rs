@@ -57,4 +57,4 @@ run binary:
 
   # Run the GDB debugger in GUI mode.
   # gdb-multiarch -q -x {{justfile_directory()}}/zynq/gdb.gdb {{binary}} -tui
-  probe-rs run --chip X7Z --protocol jtag --skip-reset {{binary}}
+  probe-rs run --chip X7Z --protocol jtag --verify --skip-reset {{binary}}
