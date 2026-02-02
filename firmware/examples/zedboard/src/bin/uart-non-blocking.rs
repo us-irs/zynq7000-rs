@@ -284,20 +284,20 @@ async fn main(spawner: Spawner) -> ! {
             .replace(uart16550_prod);
         RX_UART_0.borrow(cs).borrow_mut().replace(uart_0_rx);
     });
-    spawner.spawn(led_task(mio_led, emio_leds)).unwrap();
+    spawner.spawn(led_task(mio_led, emio_leds).unwrap());
 
     match UART_MODE {
         UartMode::Uart0ToUartlite => {
-            spawner.spawn(uartlite_task(uartlite_tx)).unwrap();
-            spawner.spawn(uart_0_task(uart_0_tx)).unwrap();
+            spawner.spawn(uartlite_task(uartlite_tx).unwrap());
+            spawner.spawn(uart_0_task(uart_0_tx).unwrap());
         }
         UartMode::Uart0ToUart16550 => {
-            spawner.spawn(uart_0_task(uart_0_tx)).unwrap();
-            spawner.spawn(uart_16550_task(uart_16550_tx)).unwrap();
+            spawner.spawn(uart_0_task(uart_0_tx).unwrap());
+            spawner.spawn(uart_16550_task(uart_16550_tx).unwrap());
         }
         UartMode::UartliteToUart16550 => {
-            spawner.spawn(uartlite_task(uartlite_tx)).unwrap();
-            spawner.spawn(uart_16550_task(uart_16550_tx)).unwrap();
+            spawner.spawn(uartlite_task(uartlite_tx).unwrap());
+            spawner.spawn(uart_16550_task(uart_16550_tx).unwrap());
         }
     }
     let mut read_buf: [u8; RB_SIZE] = [0; RB_SIZE];

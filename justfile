@@ -56,4 +56,4 @@ run binary:
   python3 {{justfile_directory()}}/scripts/zynq7000-init.py
 
   # Run the GDB debugger in GUI mode.
-  gdb-multiarch -q -x {{justfile_directory()}}/zynq/gdb.gdb {{binary}} -tui
+  gdb-multiarch -q -x {{justfile_directory()}}/firmware/gdb.gdb {{binary}} -tui

@@ -373,9 +373,9 @@ async fn main(spawner: Spawner) -> ! {
     let tcp_socket = TcpSocket::new(stack, RX_TCP_BUFS.take(), TX_TCP_BUFS.take());
 
     // Spawn all embassy tasks.
-    spawner.spawn(embassy_net_task(runner)).unwrap();
-    spawner.spawn(udp_task(udp_socket)).unwrap();
-    spawner.spawn(tcp_task(tcp_socket)).unwrap();
+    spawner.spawn(embassy_net_task(runner).unwrap());
+    spawner.spawn(udp_task(udp_socket).unwrap());
+    spawner.spawn(tcp_task(tcp_socket).unwrap());
 
     let mut mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
 
