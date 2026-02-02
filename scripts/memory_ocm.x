@@ -1,7 +1,7 @@
 MEMORY
 {
-  /* The Zynq7000 has 192 kB of OCM memory which can be used for the FSBL */
-  CODE(rx) : ORIGIN = 0x00000000, LENGTH = 192K
+  /* The Zynq7000 has 256 kB of OCM memory of which 196 kB can be used for the FSBL */
+  CODE(rx) : ORIGIN = 0x00000000, LENGTH = 196K
   OCM_UPPER(rx): ORIGIN = 0xFFFF0000, LENGTH = 64K
   /* Leave 1 MB of memory which will be configured as uncached device memory by the MMU. This can
   be used for something like DMA descriptors, but the DDR needs to be set up first in addition
@@ -9,7 +9,10 @@ MEMORY
   UNCACHED(rx): ORIGIN = 0x4000000, LENGTH = 1M
 }
 
+REGION_ALIAS("VECTORS", CODE);
 REGION_ALIAS("DATA", CODE);
+/* Use the upper OCM as the stack */
+REGION_ALIAS("STACKS", OCM_UPPER);
 
 SECTIONS
 {

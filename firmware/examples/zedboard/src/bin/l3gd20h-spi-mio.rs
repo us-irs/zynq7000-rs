@@ -155,7 +155,7 @@ async fn main(spawner: Spawner) -> ! {
         }
     }
 
-    spawner.spawn(logger_task(uart)).unwrap();
+    spawner.spawn(logger_task(uart).unwrap());
     if BLOCKING {
         blocking_application(mio_led, emio_leds, spi).await;
     } else {

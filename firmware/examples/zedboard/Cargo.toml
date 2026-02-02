@@ -11,7 +11,7 @@ keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-aarch32-cpu = { version = "0.1" }
+aarch32-cpu = { version = "0.2" }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal" }
@@ -22,23 +22,23 @@ l3gd20 = { git = "https://github.com/us-irs/l3gd20.git", branch = "add-async-if"
 embedded-io = "0.7"
 bitbybit = "1.4"
 arbitrary-int = "2"
-embedded-io-async = "0.6"
+embedded-io-async = "0.7"
 critical-section = "1"
 static_cell = "2"
-embedded-alloc = "0.6"
+embedded-alloc = "0.7"
 embedded-hal = "1"
 embedded-hal-async = "1"
 fugit = "0.3"
 log = "0.4"
 rand = { version = "0.9", default-features = false, features = ["small_rng"] }
 
-embassy-executor = { git = "https://github.com/us-irs/embassy.git", branch = "cortex-ar-update", features = [
+embassy-executor = { git = "https://github.com/us-irs/embassy.git", rev = "fd40f3e2f2efb67434a9e7d90eb35a30e30d1736", features = [
   "arch-cortex-ar",
   "executor-thread",
 ]}
 # TODO: Remove generic-queue-16 feature as soon as upstream executor is used again.
 embassy-time = { version = "0.5", features = ["tick-hz-1_000_000", "generic-queue-16"] }
-embassy-net = { version = "0.7", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp"] }
+embassy-net = { version = "0.8", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp"] }
 embassy-sync = { version = "0.7" }
 # TODO: Bump as soon as new compatible smoltcp/embassy-net version is released.
 heapless = "0.8"

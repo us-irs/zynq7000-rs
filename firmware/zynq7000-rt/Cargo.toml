@@ -11,8 +11,8 @@ keywords = ["no-std", "rt", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-aarch32-rt = { version = "0.1", optional = true, features = ["fpu-d32"] }
-aarch32-cpu = { version = "0.1" }
+aarch32-rt = { version = "0.2", optional = true, features = ["fpu-d32"] }
+aarch32-cpu = { version = "0.2" }
 arbitrary-int = "2"
 zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
 
