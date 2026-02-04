@@ -209,7 +209,7 @@ pub fn configure_io_pll(boot_mode: BootMode, pll_config: PllConfig) {
         return;
     }
     // Safety: This will only run at most once because of the atomic boolean check.
-    unsafe { configure_arm_pll_unchecked(boot_mode, pll_config) };
+    unsafe { configure_io_pll_unchecked(boot_mode, pll_config) };
 }
 
 /// This function configures the DDR PLL based on the provided [PllConfig].
@@ -218,7 +218,7 @@ pub fn configure_ddr_pll(boot_mode: BootMode, pll_config: PllConfig) {
         return;
     }
     // Safety: This will only run at most once because of the atomic boolean check.
-    unsafe { configure_arm_pll_unchecked(boot_mode, pll_config) };
+    unsafe { configure_ddr_pll_unchecked(boot_mode, pll_config) };
 }
 
 /// This function configures the ARM PLL based on the provided [PllConfig].

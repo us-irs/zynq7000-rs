@@ -129,7 +129,7 @@ pub mod memtest {
     /// This tests writes and reads on a memory block starting at the base address
     /// with the size `words` times 4.
     pub unsafe fn walking_one_test(base_addr: usize, words: usize) -> Result<(), MemTestError> {
-        unsafe { walking_value_test(true, base_addr, words) }
+        unsafe { walking_value_test(false, base_addr, words) }
     }
 
     /// # Safety
