@@ -53,10 +53,14 @@ pub fn configure_bitstream_non_secure(
         val.set_pcap_rate_enable(false);
         val
     });
-    devcfg.write_dma_source_addr(bitstream.as_ptr() as u32);
+
+    // As specified in the TMR,
+    // Setting the two LSBs of the source and destination address to 2'b01 indicates to the DevC
+    // DMA module the last DMA command of an overall transfer
+    devcfg.write_dma_source_addr(bitstream.as_ptr() as u32 | 0b01);
     devcfg.write_dma_dest_addr(0xFFFF_FFFF);
-    devcfg.write_dma_source_len(bitstream.len() as u32);
-    devcfg.write_dma_dest_len(bitstream.len() as u32);
+    devcfg.write_dma_source_len(bitstream.len() as u32 / 4);
+    devcfg.write_dma_dest_len(bitstream.len() as u32 / 4);
 
     while !devcfg.read_interrupt_status().dma_done() {}
     // TODO: Check for errors.
