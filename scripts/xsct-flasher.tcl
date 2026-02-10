@@ -1,5 +1,5 @@
-if {[info exists env(ip_address_hw_server)]} {
-  set ip $env(ip_address_hw_server)
+if {[info exists env(XSCT_HW_SERVER_IP)]} {
+  set ip $env(XSCT_HW_SERVER_IP)
 } else {
   set ip "localhost"
 }
