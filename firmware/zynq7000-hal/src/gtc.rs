@@ -18,7 +18,11 @@ unsafe impl Send for GlobalTimerCounter {}
 
 /// Convert a frequency to GTC ticks given a clock frequency.
 pub const fn frequency_to_ticks(clock: Hertz, frequency: Hertz) -> u32 {
-    clock.raw().div_ceil(frequency.raw())
+    if frequency.raw() != 0 {
+        clock.raw().div_ceil(frequency.raw())
+    } else {
+        0
+    }
 }
 
 impl GlobalTimerCounter {
