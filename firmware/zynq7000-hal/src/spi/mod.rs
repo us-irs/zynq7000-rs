@@ -18,7 +18,6 @@ use crate::{clocks::IoClocks, slcr::Slcr, time::Hertz};
 use arbitrary_int::{prelude::*, u3, u4, u6};
 use embedded_hal::delay::DelayNs;
 pub use embedded_hal::spi::Mode;
-use embedded_hal::spi::SpiBus as _;
 use zynq7000::slcr::reset::DualRefAndClockReset;
 use zynq7000::spi::{
     BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
@@ -874,7 +873,7 @@ impl Spi {
     fn prepare_generic_blocking_transfer(&mut self, words: &[u8]) -> usize {
         // We want to ensure the FIFO is empty for a new transfer. This is the simpler
         // implementation for now.
-        self.flush().unwrap();
+        self.flush();
         // Write this to 1 in any case to allow polling, defensive programming.
         self.inner.regs.write_rx_trig(1);
 
@@ -886,20 +885,14 @@ impl Spi {
         self.issue_manual_start_for_manual_cfg();
         written
     }
-}
 
-impl embedded_hal::spi::ErrorType for Spi {
-    type Error = Infallible;
-}
-
-impl embedded_hal::spi::SpiBus for Spi {
-    fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+    fn read(&mut self, words: &mut [u8]) {
         if words.is_empty() {
-            return Ok(());
+            return;
         }
         // We want to ensure the FIFO is empty for a new transfer. This is the simpler
         // implementation for now.
-        self.flush()?;
+        self.flush();
         // Write this to 1 in any case to allow polling, defensive programming.
         self.regs().write_rx_trig(1);
 
@@ -926,13 +919,11 @@ impl embedded_hal::spi::SpiBus for Spi {
                 write_idx += 1;
             }
         }
-
-        Ok(())
     }
 
-    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+    fn write(&mut self, words: &[u8]) {
         if words.is_empty() {
-            return Ok(());
+            return;
         }
         let mut written = self.prepare_generic_blocking_transfer(words);
         let mut read_idx = 0;
@@ -954,12 +945,11 @@ impl embedded_hal::spi::SpiBus for Spi {
         // We use the FIFO trigger mechanism to determine when we can read all the remaining bytes.
         self.regs().write_rx_trig((words.len() - read_idx) as u32);
         self.outstanding_rx = true;
-        Ok(())
     }
 
-    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+    fn transfer(&mut self, read: &mut [u8], write: &[u8]) {
         if read.is_empty() {
-            return Ok(());
+            return;
         }
         let mut write_idx = self.prepare_generic_blocking_transfer(write);
         let mut read_idx = 0;
@@ -991,13 +981,11 @@ impl embedded_hal::spi::SpiBus for Spi {
             writes_finished = write_idx == max_idx;
             reads_finished = read_idx == max_idx;
         }
-
-        Ok(())
     }
 
-    fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+    fn transfer_in_place(&mut self, words: &mut [u8]) {
         if words.is_empty() {
-            return Ok(());
+            return;
         }
         let mut write_idx = self.prepare_generic_blocking_transfer(words);
         let mut read_idx = 0;
@@ -1018,14 +1006,12 @@ impl embedded_hal::spi::SpiBus for Spi {
             writes_finished = write_idx == words.len();
             reads_finished = read_idx == words.len();
         }
-
-        Ok(())
     }
 
     /// Blocking flush implementation.
-    fn flush(&mut self) -> Result<(), Self::Error> {
+    fn flush(&mut self) {
         if !self.outstanding_rx {
-            return Ok(());
+            return;
         }
         let rx_trig = self.inner.read_rx_not_empty_threshold();
         while !self.inner.read_isr().rx_not_empty() {}
@@ -1034,6 +1020,37 @@ impl embedded_hal::spi::SpiBus for Spi {
         });
         self.inner.set_rx_fifo_trigger(1).unwrap();
         self.outstanding_rx = false;
+    }
+}
+
+impl embedded_hal::spi::ErrorType for Spi {
+    type Error = Infallible;
+}
+
+impl embedded_hal::spi::SpiBus for Spi {
+    fn read(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+        Self::read(self, words);
+        Ok(())
+    }
+
+    fn write(&mut self, words: &[u8]) -> Result<(), Self::Error> {
+        Self::write(self, words);
+        Ok(())
+    }
+
+    fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Result<(), Self::Error> {
+        Self::transfer(self, read, write);
+        Ok(())
+    }
+
+    fn transfer_in_place(&mut self, words: &mut [u8]) -> Result<(), Self::Error> {
+        Self::transfer_in_place(self, words);
+        Ok(())
+    }
+
+    /// Blocking flush implementation.
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Self::flush(self);
         Ok(())
     }
 }
@@ -1067,23 +1084,23 @@ impl<Delay: DelayNs> embedded_hal::spi::SpiDevice for SpiWithHwCs<Delay> {
         for op in operations {
             match op {
                 embedded_hal::spi::Operation::Read(items) => {
-                    self.spi.read(items)?;
+                    self.spi.read(items);
                 }
                 embedded_hal::spi::Operation::Write(items) => {
-                    self.spi.write(items)?;
+                    self.spi.write(items);
                 }
                 embedded_hal::spi::Operation::Transfer(read, write) => {
-                    self.spi.transfer(read, write)?;
+                    self.spi.transfer(read, write);
                 }
                 embedded_hal::spi::Operation::TransferInPlace(items) => {
-                    self.spi.transfer_in_place(items)?;
+                    self.spi.transfer_in_place(items);
                 }
                 embedded_hal::spi::Operation::DelayNs(delay) => {
                     self.delay.delay_ns(*delay);
                 }
             }
         }
-        self.spi.flush()?;
+        self.spi.flush();
         self.spi.inner.no_hw_cs();
         Ok(())
     }
