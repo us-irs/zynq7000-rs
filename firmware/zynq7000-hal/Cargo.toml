@@ -16,7 +16,7 @@ zynq7000 = { path = "../zynq7000", version = "0.1" }
 zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
 
 static_assertions = "1.1"
-bitbybit = "1.4"
+bitbybit = "2"
 arbitrary-int = "2"
 thiserror = { version = "2", default-features = false }
 num_enum = { version = "0.7", default-features = false }
