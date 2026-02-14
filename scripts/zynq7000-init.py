@@ -22,8 +22,6 @@ def main():
     parser.add_argument(
         "-t",
         "--tools",
-        # Required only if env var is not set
-        required=not bool(os.getenv("AMD_TOOLS")),
         # Use env var if set
         default=os.getenv("AMD_TOOLS"),
         help="The path to the tool to use. Must point to a valid Vivado tools installation which"
@@ -43,10 +41,13 @@ def main():
         help="No bitstream flashing for initialization with SDT.",
     )
     parser.add_argument("-a", "--app", dest="app", help="Path to the app to program")
+    default_ip = os.getenv("HW_SERVER_IP")
+    if not default_ip:
+        default_ip = DEFAULT_IP_ADDRESS_HW_SERVER
     parser.add_argument(
         "-i",
         "--ip",
-        default=DEFAULT_IP_ADDRESS_HW_SERVER,
+        default=default_ip,
         help="The IP address of the hardware server (default: localhost)",
     )
     parser.add_argument(
@@ -91,7 +92,7 @@ def main():
         print(f"The app '{args.app}' does not exist")
         sys.exit(1)
 
-    os.environ["IP_ADDRESS_HW_SERVER"] = args.ip
+    os.environ["XSCT_HW_SERVER_IP"] = args.ip
     init_tcl = None
     bitstream = None
     if args.bit:

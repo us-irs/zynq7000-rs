@@ -10,3 +10,4 @@
 # running the application. You only need to do this once for unchanged bitstream as long as you
 # do not reset the whole board.
 # ZYNQ_BITSTREAM = "/home/$user/$project/$sdt_dir/bitstream.bit"
+# HW_SERVER_IP = "localhost"
