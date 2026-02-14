@@ -1,6 +1,6 @@
 [package]
 name = "zynq7000-rt"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Run-time support for the Zynq7000 family of SoCs for running bare-metal applications"
