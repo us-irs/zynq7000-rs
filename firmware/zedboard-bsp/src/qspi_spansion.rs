@@ -565,7 +565,10 @@ impl QspiSpansionS25Fl256SIoMode {
         let mut reply_word_index = 0;
 
         while read_index < buf.len() {
-            if transfer.read_status().rx_above_threshold() {
+            let rx_is_above_threshold = transfer.read_status().rx_above_threshold();
+
+            // See p.374 of the TRM: Do a double read to ensure this is correct information.
+            if rx_is_above_threshold && transfer.read_status().rx_above_threshold() {
                 let reply = transfer.read_rx_data();
                 if reply_word_index == 0 {
                     reply_word_index += 1;
