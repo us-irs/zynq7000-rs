@@ -533,11 +533,16 @@ impl QspiSpansionS25Fl256SIoMode {
         }
     }
 
-    pub fn read_page_fast_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool) {
+    fn generic_read_page(&self, addr: u32, buf: &mut [u8], dummy_byte: bool, fast_read: bool) {
         let mut qspi = self.0.borrow_mut();
         let mut transfer = qspi.transfer_guard();
+        let reg_id = if fast_read {
+            RegisterId::FastRead
+        } else {
+            RegisterId::Read
+        };
         let raw_word: [u8; 4] = [
-            RegisterId::FastRead as u8,
+            reg_id as u8,
             ((addr >> 16) & 0xff) as u8,
             ((addr >> 8) & 0xff) as u8,
             (addr & 0xff) as u8,
@@ -560,7 +565,10 @@ impl QspiSpansionS25Fl256SIoMode {
         let mut reply_word_index = 0;
 
         while read_index < buf.len() {
-            if transfer.read_status().rx_above_threshold() {
+            let rx_is_above_threshold = transfer.read_status().rx_above_threshold();
+
+            // See p.374 of the TRM: Do a double read to ensure this is correct information.
+            if rx_is_above_threshold && transfer.read_status().rx_above_threshold() {
                 let reply = transfer.read_rx_data();
                 if reply_word_index == 0 {
                     reply_word_index += 1;
@@ -610,6 +618,15 @@ impl QspiSpansionS25Fl256SIoMode {
                 written_words += 1;
             }
         }
+    }
+
+    pub fn read_page_fast_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool) {
+        self.generic_read_page(addr, buf, dummy_byte, true)
+    }
+
+    /// Only works if the clock speed is slower than 50 MHz according to datasheet.
+    pub fn read_page_read(&self, addr: u32, buf: &mut [u8]) {
+        self.generic_read_page(addr, buf, false, false)
     }
 }
 
