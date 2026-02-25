@@ -4,6 +4,7 @@
 #![no_main]
 
 use aarch32_cpu::asm::nop;
+use arbitrary_int::{traits::Integer as _, u2};
 use core::panic::PanicInfo;
 use embedded_hal::{delay::DelayNs as _, digital::StatefulOutputPin as _};
 use embedded_io::Write as _;
@@ -97,7 +98,14 @@ fn main() -> ! {
 
     let qspi_io_mode = qspi.into_io_mode(false);
 
-    let mut spansion_qspi = qspi_spansion::QspiSpansionS25Fl256SIoMode::new(qspi_io_mode, true);
+    let mut spansion_qspi = qspi_spansion::QspiSpansionS25Fl256SIoMode::new(
+        qspi_io_mode,
+        qspi_spansion::Config {
+            set_quad_bit_if_necessary: true,
+            latency_config: Some(u2::ZERO),
+            clear_write_protection: true,
+        },
+    );
 
     let mut boot_bin_slice = unsafe {
         core::slice::from_raw_parts(BOOT_BIN_BASE_ADDR as *const _, BootHeader::FIXED_SIZED_PART)
@@ -121,7 +129,7 @@ fn main() -> ! {
     );
 
     let mut current_addr = 0;
-    let mut read_buf = [0u8; 256];
+    let mut read_buf = [0u8; qspi_spansion::PAGE_SIZE];
     let mut next_checkpoint = 0.05;
     while current_addr < boot_bin_size {
         if current_addr % 0x10000 == 0 {
@@ -137,7 +145,7 @@ fn main() -> ! {
                 }
             }
         }
-        let write_size = core::cmp::min(256, boot_bin_size - current_addr);
+        let write_size = core::cmp::min(qspi_spansion::PAGE_SIZE, boot_bin_size - current_addr);
         let write_slice = &boot_bin_slice[current_addr..current_addr + write_size];
         log::debug!("Programming address {:#x}", current_addr);
         match spansion_qspi.program_page(current_addr as u32, write_slice) {

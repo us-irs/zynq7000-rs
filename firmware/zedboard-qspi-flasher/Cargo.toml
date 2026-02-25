@@ -12,5 +12,6 @@ zynq7000-boot-image = { path = "../../host/zynq7000-boot-image" }
 zedboard-bsp = { path = "../zedboard-bsp" }
 embedded-io = "0.7"
 embedded-hal = "1"
+arbitrary-int = "2"
 log = "0.4"
 libm = "0.2"

@@ -57,3 +57,6 @@ run binary:
 
   # Run the GDB debugger in GUI mode.
   gdb-multiarch -q -x {{justfile_directory()}}/firmware/gdb.gdb {{binary}} -tui
+
+flash-nor-zedboard boot_binary:
+  xsct firmware/zedboard-qspi-flasher/qspi-flasher.tcl scripts/ps7_init.tcl -b {{boot_binary}}

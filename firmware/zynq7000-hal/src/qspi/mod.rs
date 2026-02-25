@@ -35,6 +35,11 @@ pub(crate) mod lqspi_configs;
 
 pub const QSPI_MUX_CONFIG: MuxConfig = MuxConfig::new_with_l0();
 pub const FIFO_DEPTH: usize = 63;
+/// From the TRM:
+///
+/// > The maximum number of bytes per command sequence in this mode is limited by the depth of the
+/// > TxFIFO of 252 bytes.
+pub const MAX_BYTES_PER_TRANSFER_IO_MODE: usize = FIFO_DEPTH * 4;
 /// In linear-addressed mode, the QSPI is memory-mapped, with the address starting here.
 pub const QSPI_START_ADDRESS: usize = 0xFC00_0000;
 

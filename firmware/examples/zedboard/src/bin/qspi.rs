@@ -2,6 +2,7 @@
 #![no_main]
 
 use aarch32_cpu::asm::nop;
+use arbitrary_int::{traits::Integer as _, u2};
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
@@ -90,7 +91,14 @@ async fn main(_spawner: Spawner) -> ! {
 
     let qspi_io_mode = qspi.into_io_mode(false);
 
-    let mut spansion_qspi = qspi_spansion::QspiSpansionS25Fl256SIoMode::new(qspi_io_mode, true);
+    let mut spansion_qspi = qspi_spansion::QspiSpansionS25Fl256SIoMode::new(
+        qspi_io_mode,
+        qspi_spansion::Config {
+            set_quad_bit_if_necessary: true,
+            latency_config: Some(u2::ZERO),
+            clear_write_protection: true,
+        },
+    );
 
     let rdid = spansion_qspi.read_rdid_extended();
     info!(
@@ -103,12 +111,14 @@ async fn main(_spawner: Spawner) -> ! {
     );
     let cr1 = spansion_qspi.read_configuration_register();
     info!("QSPI Configuration Register 1: {:?}", cr1);
+    let sr = spansion_qspi.read_status_register_1();
+    info!("QSPI Status Register: {:?}", sr);
 
-    let mut write_buf: [u8; u8::MAX as usize + 1] = [0x0; u8::MAX as usize + 1];
+    let mut write_buf: [u8; 100 * qspi_spansion::PAGE_SIZE] = [0x0; 100 * qspi_spansion::PAGE_SIZE];
     for (idx, byte) in write_buf.iter_mut().enumerate() {
-        *byte = idx as u8;
+        *byte = (idx % u8::MAX as usize) as u8;
     }
-    let mut read_buf = [0u8; 256];
+    let mut read_buf = [0u8; 100 * qspi_spansion::PAGE_SIZE];
 
     if ERASE_PROGRAM_READ_TEST {
         info!("performing erase, program, read test");
@@ -120,7 +130,7 @@ async fn main(_spawner: Spawner) -> ! {
             assert_eq!(*read, 0xFF);
         }
         read_buf.fill(0);
-        spansion_qspi.program_page(0x10000, &write_buf).unwrap();
+        spansion_qspi.write_pages(0x10000, &write_buf).unwrap();
         spansion_qspi.read_page_fast_read(0x10000, &mut read_buf, true);
         for (read, written) in read_buf.iter().zip(write_buf.iter()) {
             assert_eq!(read, written);

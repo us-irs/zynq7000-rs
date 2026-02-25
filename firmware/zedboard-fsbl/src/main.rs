@@ -8,9 +8,10 @@
 #![no_std]
 #![no_main]
 
-use arbitrary_int::u6;
-use core::panic::PanicInfo;
 use aarch32_cpu::asm::nop;
+use arbitrary_int::traits::Integer as _;
+use arbitrary_int::{u2, u6};
+use core::panic::PanicInfo;
 use embedded_io::Write as _;
 use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
@@ -162,7 +163,14 @@ fn main() -> ! {
         );
 
         let qspi_io_mode = qspi.into_io_mode(false);
-        let spansion_qspi = qspi_spansion::QspiSpansionS25Fl256SIoMode::new(qspi_io_mode, true);
+        let spansion_qspi = qspi_spansion::QspiSpansionS25Fl256SIoMode::new(
+            qspi_io_mode,
+            qspi_spansion::Config {
+                set_quad_bit_if_necessary: true,
+                latency_config: Some(u2::ZERO),
+                clear_write_protection: true,
+            },
+        );
         let spansion_lqspi =
             spansion_qspi.into_linear_addressed(qspi_spansion::QSPI_DEV_COMBINATION_REV_F.into());
         qspi_boot(spansion_lqspi, priv_tim);
