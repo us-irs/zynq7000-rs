@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+## Fixed
+
+- QSPI robustness fixes. Read and fast-read operations are now chunked according to the 252 byte
+  limit specified in the TRM.
+
+## Added
+
+- QSPI constructor can now optionally clear block protection and set latency configuration.
+
 # [v0.1.0]
 
 Initial release
