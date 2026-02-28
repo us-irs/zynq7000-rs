@@ -587,7 +587,9 @@ impl QspiSpansionS25Fl256SIoMode {
         }
 
         while read_index < data.len() as u32 {
-            if transfer.read_status().rx_above_threshold() {
+            // Double read to avoid RX underflows as specified in TRM.
+            let status_read = transfer.read_status();
+            if status_read.rx_above_threshold() && transfer.read_status().rx_above_threshold() {
                 transfer.read_rx_data();
                 read_index = read_index.wrapping_add(4);
             }
