@@ -545,12 +545,13 @@ impl QspiSpansionS25Fl256SIoMode {
         transfer.start();
 
         let mut wait_for_tx_slot = |transfer: &mut QspiIoTransferGuard| loop {
-            let status = transfer.read_status();
-            if status.rx_above_threshold() {
+            let status_read = transfer.read_status();
+            // Double read to avoid RX underflows as specified in TRM.
+            if status_read.rx_above_threshold() && transfer.read_status().rx_above_threshold() {
                 transfer.read_rx_data();
                 read_index = read_index.wrapping_add(4);
             }
-            if !status.tx_full() {
+            if !status_read.tx_full() {
                 break;
             }
         };
@@ -587,7 +588,9 @@ impl QspiSpansionS25Fl256SIoMode {
         }
 
         while read_index < data.len() as u32 {
-            if transfer.read_status().rx_above_threshold() {
+            // Double read to avoid RX underflows as specified in TRM.
+            let status_read = transfer.read_status();
+            if status_read.rx_above_threshold() && transfer.read_status().rx_above_threshold() {
                 transfer.read_rx_data();
                 read_index = read_index.wrapping_add(4);
             }

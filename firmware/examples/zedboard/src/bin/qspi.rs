@@ -15,6 +15,7 @@ use zynq7000_hal::{BootMode, clocks, gic, gpio, gtc, prelude::*, qspi, uart};
 
 use zynq7000_rt as _;
 
+const DISPLAY_CLOCK_CONFIG: bool = false;
 const INIT_STRING: &str = "-- Zynq 7000 Zedboard QSPI example --\n\r";
 const QSPI_DEV_COMBINATION: qspi::QspiDeviceCombination = qspi::QspiDeviceCombination {
     vendor: qspi::QspiVendor::WinbondAndSpansion,
@@ -69,6 +70,9 @@ async fn main(_spawner: Spawner) -> ! {
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
+    if DISPLAY_CLOCK_CONFIG {
+        log::debug!("clock config: {:?}", clocks);
+    }
 
     let qspi_clock_config =
         qspi::ClockConfig::calculate_with_loopback(qspi::SrcSelIo::IoPll, &clocks, 100.MHz())

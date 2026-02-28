@@ -237,7 +237,7 @@ pub struct Registers {
     /// Transmits 1-byte command and 3-byte data OR 4-byte data.
     #[mmio(Write)]
     tx_data_00: u32,
-    #[mmio(PureRead)]
+    #[mmio(Read)]
     rx_data: u32,
     slave_idle_count: u32,
     /// Defines the level at which the TX FIFO not full interrupt is generated.

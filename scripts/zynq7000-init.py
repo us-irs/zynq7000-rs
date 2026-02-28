@@ -112,8 +112,8 @@ def main():
         init_script = sdt_path / "ps7_init.tcl"
         if not init_script.exists():
             sys.exit("Error: ps7_init.tcl file not found in the SDT folder.")
-
-        init_tcl = str(init_script)
+        if not args.init_tcl:
+            init_tcl = str(init_script)
     else:
         if not args.init_tcl:
             print("Error: No ps7_init.tcl file specified.")
