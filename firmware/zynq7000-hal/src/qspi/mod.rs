@@ -266,7 +266,9 @@ impl ClockConfig {
         if qspi_ref_clk < clocks.arm_clocks().cpu_1x_clk() {
             return Err(ClockCalculationError::RefClockSmallerThanCpu1xClock);
         }
-        let qspi_baud_rate_div = qspi_ref_clk.raw().div_ceil(target_qspi_interface_clock.raw());
+        let qspi_baud_rate_div = qspi_ref_clk
+            .raw()
+            .div_ceil(target_qspi_interface_clock.raw());
         let baud_rate_div = match qspi_baud_rate_div {
             0..=2 => BaudRateDivisor::_2,
             3..=4 => BaudRateDivisor::_4,
