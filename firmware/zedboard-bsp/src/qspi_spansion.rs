@@ -500,7 +500,7 @@ impl QspiSpansionS25Fl256SIoMode {
             return Err(AddrError::Alignment.into());
         }
         for chunk in data.chunks(PAGE_SIZE) {
-            self.program_page(addr, chunk)?;
+            self.program(addr, chunk)?;
             addr += PAGE_SIZE as u32;
         }
         Ok(())
@@ -510,12 +510,9 @@ impl QspiSpansionS25Fl256SIoMode {
     /// This function will block until the operation has completed.
     ///
     /// The data length max not exceed the page size [PAGE_SIZE].
-    pub fn program_page(&mut self, addr: u32, data: &[u8]) -> Result<(), ProgramPageError> {
+    pub fn program(&mut self, addr: u32, data: &[u8]) -> Result<(), ProgramPageError> {
         if addr + data.len() as u32 > u24::MAX.as_u32() {
             return Err(AddrError::OutOfRange.into());
-        }
-        if !addr.is_multiple_of(PAGE_SIZE as u32) {
-            return Err(AddrError::Alignment.into());
         }
         if data.len() > PAGE_SIZE {
             return Err(ProgramPageError::DataLargerThanPage);
