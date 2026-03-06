@@ -610,7 +610,7 @@ impl QspiSpansionS25Fl256SIoMode {
         }
     }
 
-    fn generic_read_page(&self, addr: u32, buf: &mut [u8], dummy_byte: bool, fast_read: bool) {
+    fn generic_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool, fast_read: bool) {
         let mut offset = 0;
         let reg_id = if fast_read {
             RegisterId::FastRead
@@ -730,13 +730,13 @@ impl QspiSpansionS25Fl256SIoMode {
         }
     }
 
-    pub fn read_page_fast_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool) {
-        self.generic_read_page(addr, buf, dummy_byte, true)
+    pub fn read_fast_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool) {
+        self.generic_read(addr, buf, dummy_byte, true)
     }
 
     /// Only works if the clock speed is slower than 50 MHz according to datasheet.
     pub fn read_page_read(&self, addr: u32, buf: &mut [u8]) {
-        self.generic_read_page(addr, buf, false, false)
+        self.generic_read(addr, buf, false, false)
     }
 }
 
