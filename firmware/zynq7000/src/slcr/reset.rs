@@ -50,9 +50,9 @@ pub struct EthernetReset {
 
 #[bitbybit::bitfield(u32, default = 0x0, debug)]
 pub struct QspiResetControl {
-    #[bit(2, rw)]
-    qspi_ref_reset: bool,
     #[bit(1, rw)]
+    qspi_ref_reset: bool,
+    #[bit(0, rw)]
     cpu_1x_reset: bool,
 }
 
