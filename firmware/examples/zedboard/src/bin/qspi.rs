@@ -129,13 +129,13 @@ async fn main(_spawner: Spawner) -> ! {
         spansion_qspi
             .erase_sector(0x10000)
             .expect("erasing sector failed");
-        spansion_qspi.read_page_fast_read(0x10000, &mut read_buf, true);
+        spansion_qspi.read_fast_read(0x10000, &mut read_buf, true);
         for read in read_buf.iter() {
             assert_eq!(*read, 0xFF);
         }
         read_buf.fill(0);
         spansion_qspi.write_pages(0x10000, &write_buf).unwrap();
-        spansion_qspi.read_page_fast_read(0x10000, &mut read_buf, true);
+        spansion_qspi.read_fast_read(0x10000, &mut read_buf, true);
         for (read, written) in read_buf.iter().zip(write_buf.iter()) {
             assert_eq!(read, written);
         }

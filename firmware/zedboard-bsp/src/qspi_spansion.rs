@@ -500,7 +500,7 @@ impl QspiSpansionS25Fl256SIoMode {
             return Err(AddrError::Alignment.into());
         }
         for chunk in data.chunks(PAGE_SIZE) {
-            self.program_page(addr, chunk)?;
+            self.program(addr, chunk)?;
             addr += PAGE_SIZE as u32;
         }
         Ok(())
@@ -510,12 +510,9 @@ impl QspiSpansionS25Fl256SIoMode {
     /// This function will block until the operation has completed.
     ///
     /// The data length max not exceed the page size [PAGE_SIZE].
-    pub fn program_page(&mut self, addr: u32, data: &[u8]) -> Result<(), ProgramPageError> {
+    pub fn program(&mut self, addr: u32, data: &[u8]) -> Result<(), ProgramPageError> {
         if addr + data.len() as u32 > u24::MAX.as_u32() {
             return Err(AddrError::OutOfRange.into());
-        }
-        if !addr.is_multiple_of(PAGE_SIZE as u32) {
-            return Err(AddrError::Alignment.into());
         }
         if data.len() > PAGE_SIZE {
             return Err(ProgramPageError::DataLargerThanPage);
@@ -613,7 +610,7 @@ impl QspiSpansionS25Fl256SIoMode {
         }
     }
 
-    fn generic_read_page(&self, addr: u32, buf: &mut [u8], dummy_byte: bool, fast_read: bool) {
+    fn generic_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool, fast_read: bool) {
         let mut offset = 0;
         let reg_id = if fast_read {
             RegisterId::FastRead
@@ -733,13 +730,13 @@ impl QspiSpansionS25Fl256SIoMode {
         }
     }
 
-    pub fn read_page_fast_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool) {
-        self.generic_read_page(addr, buf, dummy_byte, true)
+    pub fn read_fast_read(&self, addr: u32, buf: &mut [u8], dummy_byte: bool) {
+        self.generic_read(addr, buf, dummy_byte, true)
     }
 
     /// Only works if the clock speed is slower than 50 MHz according to datasheet.
     pub fn read_page_read(&self, addr: u32, buf: &mut [u8]) {
-        self.generic_read_page(addr, buf, false, false)
+        self.generic_read(addr, buf, false, false)
     }
 }
 
