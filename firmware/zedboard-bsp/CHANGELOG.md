@@ -10,8 +10,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Fixed
 
-- QSPI robustness fixes. Read and fast-read operations are now chunked according to the 252 byte
-  limit specified in the TRM.
+- QSPI robustness fixes. Read, fast-read and write operations are now chunked according to the 252
+  byte limit specified in the TRM.
 
 ## Added
 

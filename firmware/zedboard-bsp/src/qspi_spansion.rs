@@ -2,9 +2,16 @@ use core::cell::RefCell;
 
 use arbitrary_int::{prelude::*, u24};
 use zynq7000_hal::qspi::{
-    FIFO_DEPTH, LinearQspiConfig, MAX_BYTES_PER_TRANSFER_IO_MODE, QspiIoMode, QspiIoTransferGuard,
-    QspiLinearAddressing, QspiLinearReadGuard,
+    FIFO_DEPTH, LinearQspiConfig, MAX_BYTES_PER_TRANSFER_IO_MODE, QspiIoMode, QspiLinearAddressing,
+    QspiLinearReadGuard,
 };
+
+/// 4 bytes are reserved for command byte and address. Rounded down at a 16 byte boundary,
+/// recommended by flash memory datasheet.
+pub const MAX_DATA_BYTES_PER_WRITE: usize = 240;
+/// Probably the most performant chunk/program size to program the chip without crossing page
+/// boundaries without exceeding the FIFO size.
+pub const RECOMMENDED_PROGRAM_PAGE_SIZE: usize = 128;
 
 pub const QSPI_DEV_COMBINATION_REV_F: zynq7000_hal::qspi::QspiDeviceCombination =
     zynq7000_hal::qspi::QspiDeviceCombination {
@@ -13,7 +20,8 @@ pub const QSPI_DEV_COMBINATION_REV_F: zynq7000_hal::qspi::QspiDeviceCombination 
         two_devices: false,
     };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
 pub enum RegisterId {
     /// WRR
     WriteRegisters = 0x01,
@@ -160,7 +168,7 @@ impl ExtendedDeviceId {
     }
 }
 
-#[bitbybit::bitfield(u8, debug)]
+#[bitbybit::bitfield(u8, debug, forbid_overlaps)]
 pub struct StatusRegister1 {
     #[bit(7, rw)]
     status_register_write_disable: bool,
@@ -176,7 +184,7 @@ pub struct StatusRegister1 {
     write_in_progress: bool,
 }
 
-#[bitbybit::bitfield(u8, debug)]
+#[bitbybit::bitfield(u8, debug, forbid_overlaps)]
 pub struct ConfigRegister1 {
     #[bits(6..=7, rw)]
     latency_code: u2,
@@ -216,11 +224,15 @@ pub enum ProgramPageError {
     ProgrammingErrorBitSet,
     #[error("address error: {0}")]
     Addr(#[from] AddrError),
-    #[error("data is larger than page size {PAGE_SIZE}")]
-    DataLargerThanPage,
+    #[error("program data is larger than page size {PAGE_SIZE}")]
+    DataTooLarge,
+    #[error("program data is not aligned to 16 bytes")]
+    NotAligned,
+    #[error("program data crosses page boundary")]
+    CrossesPageBoundary,
 }
 
-#[derive(Default, Debug, PartialEq, Eq)]
+#[derive(Default, Debug, PartialEq, Eq, Copy, Clone)]
 pub struct Config {
     pub set_quad_bit_if_necessary: bool,
     pub latency_config: Option<u2>,
@@ -496,12 +508,9 @@ impl QspiSpansionS25Fl256SIoMode {
         if addr + data.len() as u32 > u24::MAX.as_u32() {
             return Err(AddrError::OutOfRange.into());
         }
-        if !addr.is_multiple_of(PAGE_SIZE as u32) {
-            return Err(AddrError::Alignment.into());
-        }
-        for chunk in data.chunks(PAGE_SIZE) {
+        for chunk in data.chunks(RECOMMENDED_PROGRAM_PAGE_SIZE) {
             self.program(addr, chunk)?;
-            addr += PAGE_SIZE as u32;
+            addr += chunk.len() as u32;
         }
         Ok(())
     }
@@ -509,13 +518,21 @@ impl QspiSpansionS25Fl256SIoMode {
     /// This function also takes care of enabling writes before programming the page.
     /// This function will block until the operation has completed.
     ///
-    /// The data length max not exceed the page size [PAGE_SIZE].
+    /// The data length may not exceed [MAX_DATA_BYTES_PER_WRITE]. Furthermore, the data needs
+    /// to be aligned to 16 bytes and the programming operation is not allowed to cross a page.
+    /// boundary. It is recommended to program in 128 byte chunks.
     pub fn program(&mut self, addr: u32, data: &[u8]) -> Result<(), ProgramPageError> {
         if addr + data.len() as u32 > u24::MAX.as_u32() {
             return Err(AddrError::OutOfRange.into());
         }
-        if data.len() > PAGE_SIZE {
-            return Err(ProgramPageError::DataLargerThanPage);
+        if data.len() > MAX_DATA_BYTES_PER_WRITE {
+            return Err(ProgramPageError::DataTooLarge);
+        }
+        if !data.len().is_multiple_of(16) {
+            return Err(ProgramPageError::NotAligned);
+        }
+        if (addr as usize % PAGE_SIZE) + data.len() > PAGE_SIZE {
+            return Err(ProgramPageError::CrossesPageBoundary);
         }
         self.write_enable();
         let qspi = self.0.get_mut();
@@ -529,7 +546,8 @@ impl QspiSpansionS25Fl256SIoMode {
         transfer.write_word_txd_00(u32::from_ne_bytes(raw_word));
         let mut read_index: u32 = 0;
         let mut current_byte_index = 0;
-        let fifo_writes = data.len().div_ceil(4);
+        // Full four byte writes.
+        let fifo_writes = data.len() / 4;
         // Fill the FIFO until it is full.
         for _ in 0..core::cmp::min(fifo_writes, FIFO_DEPTH - 1) {
             transfer.write_word_txd_00(u32::from_ne_bytes(
@@ -539,51 +557,10 @@ impl QspiSpansionS25Fl256SIoMode {
             ));
             current_byte_index += 4;
         }
+
         transfer.start();
 
-        let mut wait_for_tx_slot = |transfer: &mut QspiIoTransferGuard| loop {
-            let status_read = transfer.read_status();
-            // Double read to avoid RX underflows as specified in TRM.
-            if status_read.rx_above_threshold() && transfer.read_status().rx_above_threshold() {
-                transfer.read_rx_data();
-                read_index = read_index.wrapping_add(4);
-            }
-            if !status_read.tx_full() {
-                break;
-            }
-        };
-
-        while current_byte_index < data.len() {
-            // Immediately fill the FIFO again with the remaining 8 bytes.
-            wait_for_tx_slot(&mut transfer);
-
-            let word = match core::cmp::min(4, data.len() - current_byte_index) {
-                1 => {
-                    let mut bytes = [0; 4];
-                    bytes[0] = data[current_byte_index];
-                    u32::from_ne_bytes(bytes)
-                }
-                2 => {
-                    let mut bytes = [0; 4];
-                    bytes[0..2].copy_from_slice(&data[current_byte_index..current_byte_index + 2]);
-                    u32::from_ne_bytes(bytes)
-                }
-                3 => {
-                    let mut bytes = [0; 4];
-                    bytes[0..3].copy_from_slice(&data[current_byte_index..current_byte_index + 3]);
-                    u32::from_ne_bytes(bytes)
-                }
-                4 => u32::from_ne_bytes(
-                    data[current_byte_index..current_byte_index + 4]
-                        .try_into()
-                        .unwrap(),
-                ),
-                _ => unreachable!(),
-            };
-            transfer.write_word_txd_00(word);
-            current_byte_index += 4;
-        }
-
+        // Wait until the transfer is done by waiting until all RX bytes have been received.
         while read_index < data.len() as u32 {
             // Double read to avoid RX underflows as specified in TRM.
             let status_read = transfer.read_status();

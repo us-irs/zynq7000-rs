@@ -20,7 +20,7 @@ zedboard-bsp = { path = "../../zedboard-bsp" }
 num_enum = { version = "0.7", default-features = false }
 l3gd20 = { git = "https://github.com/us-irs/l3gd20.git", branch = "add-async-if" }
 embedded-io = "0.7"
-bitbybit = "1.4"
+bitbybit = "2"
 arbitrary-int = "2"
 embedded-io-async = "0.7"
 critical-section = "1"
@@ -30,7 +30,7 @@ embedded-hal = "1"
 embedded-hal-async = "1"
 fugit = "0.3"
 log = "0.4"
-rand = { version = "0.9", default-features = false, features = ["small_rng"] }
+rand = { version = "0.10", default-features = false }
 
 embassy-executor = { git = "https://github.com/us-irs/embassy.git", rev = "fd40f3e2f2efb67434a9e7d90eb35a30e30d1736", features = [
   "arch-cortex-ar",

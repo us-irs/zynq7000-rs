@@ -30,6 +30,7 @@ fn entry_point() -> ! {
 }
 
 const ERASE_PROGRAM_READ_TEST: bool = false;
+const TEST_QSPI_BASE: u32 = 0x20000;
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) -> ! {
@@ -127,17 +128,36 @@ async fn main(_spawner: Spawner) -> ! {
     if ERASE_PROGRAM_READ_TEST {
         info!("performing erase, program, read test");
         spansion_qspi
-            .erase_sector(0x10000)
+            .erase_sector(TEST_QSPI_BASE)
             .expect("erasing sector failed");
-        spansion_qspi.read_fast_read(0x10000, &mut read_buf, true);
+        spansion_qspi.read_fast_read(TEST_QSPI_BASE, &mut read_buf, true);
         for read in read_buf.iter() {
             assert_eq!(*read, 0xFF);
         }
         read_buf.fill(0);
-        spansion_qspi.write_pages(0x10000, &write_buf).unwrap();
-        spansion_qspi.read_fast_read(0x10000, &mut read_buf, true);
-        for (read, written) in read_buf.iter().zip(write_buf.iter()) {
-            assert_eq!(read, written);
+        let mut current_offset = 0_usize;
+        let mut current_qspi_offset = TEST_QSPI_BASE;
+        for (idx, chunk) in write_buf
+            .chunks(qspi_spansion::RECOMMENDED_PROGRAM_PAGE_SIZE)
+            .enumerate()
+        {
+            spansion_qspi
+                .program(current_qspi_offset, chunk)
+                .expect("programming failed");
+            spansion_qspi.read_fast_read(
+                current_qspi_offset,
+                &mut read_buf[current_offset..current_offset + chunk.len()],
+                true,
+            );
+            assert_eq!(
+                chunk,
+                &read_buf[current_offset..current_offset + chunk.len()],
+                "read and write missmatch at chunk index {}, data offset {}",
+                idx,
+                current_offset
+            );
+            current_offset += chunk.len();
+            current_qspi_offset += chunk.len() as u32;
         }
         info!("test successful");
     }
@@ -147,7 +167,7 @@ async fn main(_spawner: Spawner) -> ! {
     let guard = spansion_lqspi.read_guard();
     unsafe {
         core::ptr::copy_nonoverlapping(
-            (qspi::QSPI_START_ADDRESS + 0x10000) as *const u8,
+            (qspi::QSPI_START_ADDRESS + TEST_QSPI_BASE as usize) as *const u8,
             read_buf.as_mut_ptr(),
             256,
         );
