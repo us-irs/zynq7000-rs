@@ -11,4 +11,9 @@ The main `justfile` provides a convenience runner:
 just flash-nor-zedboard <path to my boot.bin>
 ```
 
-Please note that `xsct` must be callable for this to be usable.
+Please note that `xsct` must be callable for this to be usable which is part of a Xilinx Vitis installation.
+
+If the hardware server is running on a remote target the IP address can be specified by setting the environment variable ip_address_hw_server.
+````sh
+$ export ip_address_hw_server=<ip-address>
+````
