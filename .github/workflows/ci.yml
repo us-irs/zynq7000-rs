@@ -11,8 +11,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: "armv7a-none-eabihf"
-      - run: just check firmware
-      - run: just check host
+      - run: just check-dir firmware
+      - run: just check-dir host
 
   build:
     name: Check build
@@ -24,8 +24,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: "armv7a-none-eabihf"
-      - run: just check firmware
-      - run: just check host
+      - run: just build-dir firmware
+      - run: just build-dir host
 
   fmt:
     name: Check formatting
@@ -37,8 +37,8 @@ jobs:
         with:
           components: rustfmt
           targets: "armv7a-none-eabihf"
-      - run: just check-fmt firmware
-      - run: just check-fmt host
+      - run: just check-fmt-dir firmware
+      - run: just check-fmt-dir host
 
   docs:
     name: Check Documentation Build
@@ -62,9 +62,9 @@ jobs:
         with:
           components: clippy, rust-src
           targets: "armv7a-none-eabihf"
-      - run: just clippy firmware
+      - run: just clippy-dir firmware
 
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
-      - run: just clippy host
+      - run: just clippy-dir host

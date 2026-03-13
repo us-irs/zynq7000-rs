@@ -1,10 +1,10 @@
-all: check build check-fmt-all clippy docs-zynq
+all: check build check-fmt clippy docs-zynq
 
 check: (check-dir "firmware") (check-dir "host")
 clean: (clean-dir "firmware") (clean-dir "host")
 build: build-zynq (build-dir "host")
 fmt: (fmt-dir "firmware") (fmt-dir "host")
-check-fmt-all: (check-fmt "firmware") (check-fmt "host")
+check-fmt: (check-fmt-dir "firmware") (check-fmt-dir "host")
 clippy: (clippy-dir "firmware") (clippy-dir "host")
 
 check-dir target:
@@ -19,7 +19,7 @@ build-zynq: (build-dir "firmware")
 clean-dir target:
   cd {{target}} && cargo clean
 
-check-fmt target:
+check-fmt-dir target:
   cd {{target}} && cargo +stable fmt --all -- --check
 
 fmt-dir target:
