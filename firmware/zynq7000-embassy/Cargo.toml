@@ -1,6 +1,6 @@
 [package]
 name = "zynq7000-embassy"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Embassy-rs support for the Zynq7000 family of SoCs"
@@ -17,3 +17,7 @@ zynq7000-hal = { path = "../zynq7000-hal", version = "0.1" }
 
 embassy-time-driver = "0.2"
 embassy-time-queue-utils = "0.3"
+
+[package.metadata.docs.rs]
+targets = ["armv7a-none-eabihf"]
+rustdoc-args = ["--generate-link-to-definition"]

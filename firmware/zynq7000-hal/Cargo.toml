@@ -14,7 +14,6 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-cpu = { version = "0.2" }
 zynq7000 = { path = "../zynq7000", version = "0.1" }
 zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
-
 static_assertions = "1.1"
 bitbybit = "2"
 arbitrary-int = "2"
@@ -57,5 +56,4 @@ approx = "0.5"
 [package.metadata.docs.rs]
 features = ["alloc"]
 targets = ["armv7a-none-eabihf"]
-cargo-args = ["-Z", "build-std=core,alloc"]
 rustdoc-args = ["--generate-link-to-definition"]

@@ -17,3 +17,7 @@ log = "0.4"
 arbitrary-int = "2"
 num_enum = { version = "0.7", default-features = false }
 thiserror = { version = "2", default-features = false }
+
+[package.metadata.docs.rs]
+targets = ["armv7a-none-eabihf"]
+rustdoc-args = ["--generate-link-to-definition"]
