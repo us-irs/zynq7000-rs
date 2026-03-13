@@ -1,31 +1,31 @@
-all: check-all build-all clean-all fmt-all clippy-all docs-zynq
+all: check build check-fmt-all clippy docs-zynq
 
-check-all: (check "firmware") (check "host")
-clean-all: (clean "firmware") (clean "host")
-build-all: build-zynq (build "host")
-fmt-all: (fmt "firmware") (fmt "host")
+check: (check-dir "firmware") (check-dir "host")
+clean: (clean-dir "firmware") (clean-dir "host")
+build: build-zynq (build-dir "host")
+fmt: (fmt-dir "firmware") (fmt-dir "host")
 check-fmt-all: (check-fmt "firmware") (check-fmt "host")
-clippy-all: (clippy "firmware") (clippy "host")
+clippy: (clippy-dir "firmware") (clippy-dir "host")
 
-check target:
+check-dir target:
   cd {{target}} && cargo check
 
-build target:
+build-dir target:
   cd {{target}} && cargo build
 
-build-zynq: (build "firmware")
+build-zynq: (build-dir "firmware")
   cd "firmware/zedboard-fsbl" && cargo build --release
 
-clean target:
+clean-dir target:
   cd {{target}} && cargo clean
 
 check-fmt target:
   cd {{target}} && cargo +stable fmt --all -- --check
 
-fmt target:
+fmt-dir target:
   cd {{target}} && cargo +stable fmt
 
-clippy target:
+clippy-dir target:
   cd {{target}} && cargo clippy -- -D warnings
 
 [working-directory: 'firmware']

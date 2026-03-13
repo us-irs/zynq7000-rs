@@ -32,7 +32,7 @@ use embassy_time::{Duration, Timer};
 use embedded_io::Write;
 use embedded_io_async::Write as _;
 use log::{LevelFilter, debug, error, info, warn};
-use rand::{RngCore, SeedableRng};
+use rand::{Rng, SeedableRng};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zedboard_bsp::phy_marvell;
 use zynq7000_hal::{
