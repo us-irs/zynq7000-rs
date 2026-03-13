@@ -8,9 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.1.1] 2026-03-13
+
+- Try to fix docs build for docs.rs
+
 # [v0.1.0] 2026-02-14
 
 Initial release
 
 [unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-embassy-v0.1.0...HEAD
+[v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-embassy-v0.1.0...zynq7000-embassy-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zynq7000-embassy-v0.1.0
