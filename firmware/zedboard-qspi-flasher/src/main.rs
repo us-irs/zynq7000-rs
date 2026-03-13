@@ -145,7 +145,10 @@ fn main() -> ! {
                 }
             }
         }
-        let write_size = core::cmp::min(qspi_spansion::RECOMMENDED_PROGRAM_PAGE_SIZE, boot_bin_size - current_addr);
+        let write_size = core::cmp::min(
+            qspi_spansion::RECOMMENDED_PROGRAM_PAGE_SIZE,
+            boot_bin_size - current_addr,
+        );
         let write_slice = &boot_bin_slice[current_addr..current_addr + write_size];
         log::debug!("Programming address {:#x}", current_addr);
         match spansion_qspi.program(current_addr as u32, write_slice) {
