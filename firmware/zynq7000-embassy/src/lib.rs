@@ -1,3 +1,10 @@
+//! # Embassy time support for the AMD Zynq7000 SoC family
+//!
+//! This project contains the [embassy-rs](https://github.com/embassy-rs/embassy) time support for
+//! the AMD Zynq7000 SoC family. It currently provides one driver using the global timer peripheral
+//! provided by the Zynq7000 PS for this purpose.
+//!
+//! The [crate::init] method must be called once for the time driver to work properly.
 #![no_std]
 use core::cell::{Cell, RefCell};
 
