@@ -141,7 +141,7 @@ pub struct DivisorZero;
 macro_rules! pin_pairs {
     ($index:literal, $UartPeriph:path, ($( [$(#[$meta:meta], )? $TxMio:ident, $RxMio:ident] ),+ $(,)? )) => {
         $(
-            paste::paste! {
+            pastey::paste! {
                 $( #[$meta] )?
                 impl [<TxPin $index>] for Pin<$TxMio> {}
 
