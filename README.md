@@ -22,7 +22,7 @@ This workspace contains libraries and application which can only be run on the t
 - The [`zynq7000-hal`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/zynq7000-hal)
   HAL crate containing higher-level abstractions on top of the PAC register crate.
 - The [`zynq7000-embassy`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/zynq7000-embassy)
-  crate containing support for running the embassy-rs asynchronous run-time.
+  crate containing an embassy-rs time driver using the global timer counter peripheral.
 
 This project was developed using a Zedboard, so there are several crates available targeted towards
 this board:
