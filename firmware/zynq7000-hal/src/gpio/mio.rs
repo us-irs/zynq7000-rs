@@ -84,7 +84,7 @@ pub trait PinId {
 macro_rules! pin_id {
     ($Id:ident, $num:literal) => {
         // Need paste macro to use ident in doc attribute
-        paste::paste! {
+        pastey::paste! {
             #[doc = "Pin ID representing pin " $Id]
             #[derive(Debug)]
             pub enum $Id {}
