@@ -76,7 +76,7 @@ async fn main(spawner: Spawner) -> ! {
     info!("Boot mode: {:?}", boot_mode);
 
     let led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
-    spawner.spawn(led_task(led)).unwrap();
+    spawner.spawn(led_task(led).unwrap());
     let mut log_buf: [u8; 2048] = [0; 2048];
     let frame_queue = zynq7000_hal::log::rb::get_frame_queue();
     loop {

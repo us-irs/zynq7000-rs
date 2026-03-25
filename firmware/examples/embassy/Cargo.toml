@@ -25,9 +25,8 @@ embedded-hal = "1"
 fugit = "0.3"
 log = "0.4"
 
-embassy-executor = { version = "0.9", features = [
-  "arch-cortex-ar",
+embassy-executor = { version = "0.10", features = [
+  "platform-cortex-ar",
   "executor-thread",
 ]}
-# TODO: Remove generic-queue-16 feature as soon as upstream executor is used again.
-embassy-time = { version = "0.5", features = ["tick-hz-1_000_000", "generic-queue-16"] }
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }

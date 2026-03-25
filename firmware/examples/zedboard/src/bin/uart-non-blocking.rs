@@ -88,11 +88,11 @@ static QUEUE_UART16550: static_cell::ConstStaticCell<heapless::spsc::Queue<u8, R
 // Those are all used by the interrupt handler, so we have to do the Mutex dance.
 static RX_UART_0: Mutex<RefCell<Option<zynq7000_hal::uart::Rx>>> = Mutex::new(RefCell::new(None));
 
-static UART_0_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
+static UART_0_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
     Mutex::new(RefCell::new(None));
-static UARTLITE_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
+static UARTLITE_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
     Mutex::new(RefCell::new(None));
-static UART16550_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
+static UART16550_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
     Mutex::new(RefCell::new(None));
 
 /// Entry point which calls the embassy main method.

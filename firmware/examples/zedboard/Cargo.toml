@@ -32,15 +32,10 @@ fugit = "0.3"
 log = "0.4"
 rand = { version = "0.10", default-features = false }
 
-embassy-executor = { git = "https://github.com/us-irs/embassy.git", rev = "fd40f3e2f2efb67434a9e7d90eb35a30e30d1736", features = [
-  "arch-cortex-ar",
-  "executor-thread",
-]}
-# TODO: Remove generic-queue-16 feature as soon as upstream executor is used again.
-embassy-time = { version = "0.5", features = ["tick-hz-1_000_000", "generic-queue-16"] }
-embassy-net = { version = "0.8", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp"] }
-embassy-sync = { version = "0.7" }
-# TODO: Bump as soon as new compatible smoltcp/embassy-net version is released.
-heapless = "0.8"
+embassy-executor = { version = "0.10", features = ["platform-cortex-ar", "executor-thread"] }
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
+embassy-net = { version = "0.9", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp"] }
+embassy-sync = { version = "0.8" }
+heapless = "0.9"
 axi-uartlite = { version = "0.1" }
 axi-uart16550 = { version = "0.1" }
