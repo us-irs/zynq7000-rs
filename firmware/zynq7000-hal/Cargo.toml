@@ -34,14 +34,16 @@ fugit = "0.3"
 critical-section = "1"
 libm = "0.2"
 log = "0.4"
-embassy-sync = "0.7"
+embassy-sync = "0.8"
 embassy-net-driver = "0.2"
-smoltcp = { version = "0.12", default-features = false, features = ["proto-ipv4", "medium-ethernet", "socket-raw"] }
+smoltcp = { version = "0.13", default-features = false, features = ["proto-ipv4", "medium-ethernet", "socket-raw"] }
 vcell = "0.1"
 raw-slicee = "0.1"
 embedded-io-async = "0.7"
 serde = { version = "1", optional = true, features = ["derive"] }
 defmt = { version = "1", optional = true }
+embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
+bytemuck = "1.25"
 
 [features]
 std = ["thiserror/std", "alloc"]

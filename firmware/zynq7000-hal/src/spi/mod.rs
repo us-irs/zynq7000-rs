@@ -18,7 +18,7 @@ use crate::{clocks::IoClocks, slcr::Slcr, time::Hertz};
 use arbitrary_int::{prelude::*, u3, u4, u6};
 use embedded_hal::delay::DelayNs;
 pub use embedded_hal::spi::Mode;
-use zynq7000::slcr::reset::DualRefAndClockReset;
+use zynq7000::slcr::reset::DualRefAndClockResetSpiUart;
 use zynq7000::spi::{
     BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
     MmioRegisters, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
@@ -1113,13 +1113,13 @@ impl<Delay: DelayNs> embedded_hal::spi::SpiDevice for SpiWithHwCs<Delay> {
 #[inline]
 pub fn reset(id: SpiId) {
     let assert_reset = match id {
-        SpiId::Spi0 => DualRefAndClockReset::builder()
+        SpiId::Spi0 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        SpiId::Spi1 => DualRefAndClockReset::builder()
+        SpiId::Spi1 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -1131,10 +1131,11 @@ pub fn reset(id: SpiId) {
             regs.reset_ctrl().write_spi(assert_reset);
             // Keep it in reset for some cycles.. The TMR just mentions some small delay,
             // no idea what is meant with that.
-            for _ in 0..3 {
+            for _ in 0..5 {
                 aarch32_cpu::asm::nop();
             }
-            regs.reset_ctrl().write_spi(DualRefAndClockReset::DEFAULT);
+            regs.reset_ctrl()
+                .write_spi(DualRefAndClockResetSpiUart::ZERO);
         });
     }
 }

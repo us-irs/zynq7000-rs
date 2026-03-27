@@ -13,7 +13,7 @@ use core::convert::Infallible;
 use arbitrary_int::u3;
 use libm::round;
 use zynq7000::{
-    slcr::reset::DualRefAndClockReset,
+    slcr::reset::DualRefAndClockResetSpiUart,
     uart::{
         BaudRateDivisor, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl,
         MmioRegisters, Mode, UART_0_BASE, UART_1_BASE,
@@ -720,13 +720,13 @@ impl embedded_io::Read for Uart {
 #[inline]
 pub fn reset(id: UartId) {
     let assert_reset = match id {
-        UartId::Uart0 => DualRefAndClockReset::builder()
+        UartId::Uart0 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        UartId::Uart1 => DualRefAndClockReset::builder()
+        UartId::Uart1 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -736,9 +736,12 @@ pub fn reset(id: UartId) {
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_uart(assert_reset);
-            // Keep it in reset for one cycle.. not sure if this is necessary.
-            aarch32_cpu::asm::nop();
-            regs.reset_ctrl().write_uart(DualRefAndClockReset::DEFAULT);
+            // Keep it in reset for a few cycles.. not sure if this is necessary.
+            for _ in 0..5 {
+                aarch32_cpu::asm::nop();
+            }
+            regs.reset_ctrl()
+                .write_uart(DualRefAndClockResetSpiUart::ZERO);
         });
     }
 }

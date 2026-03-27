@@ -38,6 +38,7 @@ pub mod log;
 pub mod prelude;
 pub mod priv_tim;
 pub mod qspi;
+pub mod sd;
 pub mod slcr;
 pub mod spi;
 pub mod time;
