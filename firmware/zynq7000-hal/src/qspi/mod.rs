@@ -681,7 +681,7 @@ pub fn reset() {
                     .build(),
             );
             // Keep it in reset for some cycles.
-            for _ in 0..3 {
+            for _ in 0..10 {
                 aarch32_cpu::asm::nop();
             }
             regs.reset_ctrl().write_lqspi(ResetControlQspiSmc::DEFAULT);
