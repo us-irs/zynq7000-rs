@@ -20,7 +20,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Added
 
-Method to de-assert PL reset.
+- Method to de-assert PL reset.
+- ARM clock initialization for the `ArmClocks` structure
+- The `ArmClocks` structure now caches the CPU clock ratio
 
 # [v0.1.1] 2025-10-10
 
