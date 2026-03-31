@@ -48,7 +48,7 @@ bytemuck = "1.25"
 [features]
 std = ["thiserror/std", "alloc"]
 alloc = []
-defmt = ["dep:defmt", "fugit/defmt"]
+defmt = ["dep:defmt", "fugit/defmt", "zynq7000/defmt"]
 # These devices have a lower pin count.
 7z010-7z007s-clg225 = []
 

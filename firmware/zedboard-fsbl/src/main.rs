@@ -16,6 +16,7 @@ use embedded_io::Write as _;
 use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
 use zynq7000_boot_image::DestinationDevice;
+use zynq7000_hal::clocks::ArmClocks;
 use zynq7000_hal::priv_tim;
 use zynq7000_hal::{
     BootMode,
@@ -75,6 +76,16 @@ fn main() -> ! {
     );
 
     let mut periphs = zynq7000::Peripherals::take().unwrap();
+    l2_cache::disable();
+
+    // Initialize the ARM clock. Safety: We only run this once.
+    unsafe {
+        ArmClocks::new_with_cpu_clock_init(
+            ARM_CLK,
+            zynq7000_hal::clocks::CpuClockRatio::SixToTwoToOne,
+            u6::new(2),
+        );
+    }
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLK).unwrap();
@@ -102,6 +113,7 @@ fn main() -> ! {
             false,
         )
     };
+    //log::info!("clocks: {:?}", clocks);
 
     // Set up the global interrupt controller.
     let mut gic = gic::GicConfigurator::new_with_init(periphs.gicc, periphs.gicd);
@@ -323,6 +335,7 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
             zynq7000_hal::cache::clean_and_invalidate_data_cache();
             aarch32_cpu::register::TlbIAll::write();
             aarch32_cpu::register::BpIAll::write();
+            l2_cache::disable();
             aarch32_cpu::asm::dsb();
             aarch32_cpu::asm::isb();
 
@@ -331,6 +344,26 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
         }
         None => panic!("did not find application elf to boot inside boot binary!"),
     }
+}
+
+#[zynq7000_rt::irq]
+fn interrupt_handler() {
+    let mut gic_helper = gic::GicInterruptHelper::new();
+    let irq_info = gic_helper.acknowledge_interrupt();
+    match irq_info.interrupt() {
+        gic::Interrupt::Sgi(_) => (),
+        gic::Interrupt::Ppi(ppi_interrupt) => {
+            log::warn!("unexpected PPI interrupt: {:?}", ppi_interrupt);
+        }
+        gic::Interrupt::Spi(spi_interrupt) => {
+            log::warn!("unexpected SPI interrupt: {:?}", spi_interrupt);
+        }
+        gic::Interrupt::Invalid(_) => (),
+        gic::Interrupt::Spurious => {
+            log::warn!("spurious interrupt");
+        },
+    }
+    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

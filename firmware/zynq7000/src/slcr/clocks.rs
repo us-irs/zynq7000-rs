@@ -128,7 +128,7 @@ pub enum SrcSelArm {
     IoPll = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, default = 0x0)]
 pub struct ArmClockControl {
     #[bit(28, rw)]
     cpu_peri_clk_act: bool,
@@ -178,19 +178,26 @@ pub struct DciClockControl {
     clk_act: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, default = 0x0)]
 pub struct ClockRatioSelectReg {
     /// Reset value: 0x1 (6:2:1 clock)
     #[bit(0, rw)]
-    sel: ClockkRatioSelect,
+    sel: CpuClockRatio,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug)]
-pub enum ClockkRatioSelect {
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum CpuClockRatio {
     /// 4:2:1 clock ratio, which is an abbreviation for 4:2:2:1.
+    ///
+    /// The 4x clock is calculated by dividing the reference clock
+    /// by the divisor, the rest by dividing by 2, 2 and 4 respectively.
     FourToTwoToOne = 0b0,
     /// 6:2:1 clock ratio, which is an abbreviation for 6:3:2:1.
+    ///
+    /// The 6x clock is calculated by dividing the reference clock
+    /// by the divisor, the rest by dividing by 2, 3 and 6 respectively.
     SixToTwoToOne = 0b1,
 }
 
@@ -399,7 +406,7 @@ pub struct ClockControlRegisters {
     #[mmio(Inner)]
     fpga_3_clk_ctrl: FpgaClockControlRegisters,
     _gap1: [u32; 5],
-    clk_621_true: ClockRatioSelectReg,
+    clk_ratio_select: ClockRatioSelectReg,
 }
 
 impl ClockControlRegisters {
