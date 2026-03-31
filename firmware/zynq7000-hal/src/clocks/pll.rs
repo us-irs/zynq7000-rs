@@ -196,7 +196,7 @@ impl PllConfig {
 
 /// This function configures the ARM PLL based on the provided [PllConfig].
 pub fn configure_arm_pll(boot_mode: BootMode, pll_config: PllConfig) {
-    if ARM_PLL_INIT.swap(true, core::sync::atomic::Ordering::SeqCst) {
+    if ARM_PLL_INIT.swap(true, core::sync::atomic::Ordering::Relaxed) {
         return;
     }
     // Safety: This will only run at most once because of the atomic boolean check.
@@ -205,7 +205,7 @@ pub fn configure_arm_pll(boot_mode: BootMode, pll_config: PllConfig) {
 
 /// This function configures the IO PLL based on the provided [PllConfig].
 pub fn configure_io_pll(boot_mode: BootMode, pll_config: PllConfig) {
-    if IO_PLL_INIT.swap(true, core::sync::atomic::Ordering::SeqCst) {
+    if IO_PLL_INIT.swap(true, core::sync::atomic::Ordering::Relaxed) {
         return;
     }
     // Safety: This will only run at most once because of the atomic boolean check.
@@ -214,7 +214,7 @@ pub fn configure_io_pll(boot_mode: BootMode, pll_config: PllConfig) {
 
 /// This function configures the DDR PLL based on the provided [PllConfig].
 pub fn configure_ddr_pll(boot_mode: BootMode, pll_config: PllConfig) {
-    if DDR_PLL_INIT.swap(true, core::sync::atomic::Ordering::SeqCst) {
+    if DDR_PLL_INIT.swap(true, core::sync::atomic::Ordering::Relaxed) {
         return;
     }
     // Safety: This will only run at most once because of the atomic boolean check.
