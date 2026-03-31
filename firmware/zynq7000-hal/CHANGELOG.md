@@ -10,12 +10,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- `devcfg` moved to `pl` module
 - Added division by zero check in gtc frequency_to_ticks to avoid runtime panic
 - Increased UART type safety by providing dedicated MIO constructors for UART 0 and UART 1
   respectively.
 - Several bugfixes and improvements for GIC module. Some of the registers previously were
   completely overwritten instead of only modifying their own bit portions. Also allow targeting
   interrupts without clearing other CPU target.
+
+## Added
+
+Method to de-assert PL reset.
 
 # [v0.1.1] 2025-10-10
 

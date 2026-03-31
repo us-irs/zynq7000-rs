@@ -1,4 +1,33 @@
-//! # Device Configuration Module
+//! # Programmable Logic (PL) support module.
+//!
+//! Provides the [configure_bitstream_non_secure] method to program the PL using the device
+//! configuration (`devcfg`) peripheral.
+use arbitrary_int::{traits::Integer as _, u17};
+use zynq7000::slcr::reset::FpgaResetControl;
+
+use crate::slcr::Slcr;
+
+/// Put the PL out of reset.
+///
+/// The PL is in reset state after power-up. This method should be called in the first-stage
+/// bootloader to put it out of reset.
+pub fn deassert_reset() {
+    // Safety: We only touch the PL reset register here.
+    unsafe {
+        Slcr::with(|slcr| {
+            slcr.reset_ctrl().write_fpga(
+                FpgaResetControl::builder()
+                    .with_zero_block_0(u17::ZERO)
+                    .with_fpga_3(false)
+                    .with_fpga_2(false)
+                    .with_fpga_1(false)
+                    .with_fpga_0(false)
+                    .build(),
+            );
+        })
+    };
+}
+
 #[derive(Debug, thiserror::Error)]
 #[error("unaligned address: {0}")]
 pub struct UnalignedAddrError(usize);
