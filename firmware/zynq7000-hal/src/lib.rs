@@ -27,7 +27,6 @@ use zynq7000::{
 pub mod cache;
 pub mod clocks;
 pub mod ddr;
-pub mod devcfg;
 pub mod eth;
 pub mod gic;
 pub mod gpio;
@@ -35,6 +34,7 @@ pub mod gtc;
 pub mod i2c;
 pub mod l2_cache;
 pub mod log;
+pub mod pl;
 pub mod prelude;
 pub mod priv_tim;
 pub mod qspi;

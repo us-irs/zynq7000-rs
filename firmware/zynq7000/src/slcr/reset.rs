@@ -77,7 +77,7 @@ pub struct ResetControlQspiSmc {
 #[bitbybit::bitfield(u32, default = 0x0, debug)]
 pub struct FpgaResetControl {
     /// This block always needs to be written with 0. I think it contains some other hidden
-    /// reset lines.
+    /// reset lines. This field makes this explicit.
     #[bits(8..=24, rw)]
     zero_block_0: u17,
     #[bit(3, rw)]

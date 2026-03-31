@@ -24,7 +24,7 @@ use zynq7000_hal::{
         pll::{PllConfig, configure_arm_pll, configure_io_pll},
     },
     ddr::{DdrClockSetupConfig, configure_ddr_for_ddr3, memtest},
-    devcfg, gic, gpio, l2_cache,
+    gic, gpio, l2_cache,
     prelude::*,
     qspi::{self, QSPI_START_ADDRESS},
     time::Hertz,
@@ -264,7 +264,7 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
                     };
                     // The DMA will read from the linear mapped QSPI directly, so it
                     // has to be configured for reads using the guard!
-                    devcfg::configure_bitstream_non_secure(true, boot_bin_slice)
+                    zynq7000_hal::pl::configure_bitstream_non_secure(true, boot_bin_slice)
                         .expect("unexpected unaligned address");
                     log::info!("loaded bitstream successfully");
                 }
@@ -311,6 +311,8 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
             }
         }
     }
+
+    zynq7000_hal::pl::deassert_reset();
 
     match opt_jump_addr {
         Some(jump_addr) => {

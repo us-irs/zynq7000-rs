@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - QSPI constructor can now optionally clear block protection and set latency configuration.
 
+## Changed
+
+- Alignment rules of Spansion QSPI page program now only require 4 byte aligned size.
+
 # [v0.1.0]
 
 Initial release

@@ -60,4 +60,4 @@ run binary:
 
 flash-nor-zedboard boot_binary:
   cd {{justfile_directory()}}/firmware/zedboard-qspi-flasher && cargo build --release
-  xsct firmware/zedboard-qspi-flasher/qspi-flasher.tcl scripts/ps7_init.tcl -b {{boot_binary}}
+  xsct firmware/zedboard-qspi-flasher/qspi-flasher.tcl scripts/ps7_init.tcl -b {{invocation_directory()}}/{{boot_binary}}
