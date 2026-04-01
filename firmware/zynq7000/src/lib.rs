@@ -115,6 +115,7 @@ impl Peripherals {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiClockPhase {
     ActiveOutsideOfWord = 0,
     InactiveOutsideOfWord = 1,
@@ -122,6 +123,7 @@ pub enum SpiClockPhase {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiClockPolarity {
     QuiescentLow = 0,
     QuiescentHigh = 1,

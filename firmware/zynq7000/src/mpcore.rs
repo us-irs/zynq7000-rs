@@ -19,7 +19,7 @@ pub const GICD_BASE_ADDR: usize = MPCORE_BASE_ADDR + 0x1000;
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct SnoopControlUnit {
-    ctrl: u32,
+    control: u32,
     config: u32,
     cpu_power_status: u32,
     invalidate_all_regs_in_secure_state: u32,

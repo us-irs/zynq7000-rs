@@ -5,6 +5,7 @@ pub const SDIO_BASE_ADDR_1: usize = 0xE010_1000;
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BufferSize {
     _4kB = 0b000,
     _8kB = 0b001,
@@ -16,7 +17,13 @@ pub enum BufferSize {
     _512kB = 0b111,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    debug,
+    default = 0x0,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct BlockParams {
     #[bits(16..=31, rw)]
     blocks_count: u16,
@@ -28,6 +35,7 @@ pub struct BlockParams {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum CommandType {
     #[default]
     Normal = 0b00,
@@ -38,6 +46,7 @@ pub enum CommandType {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ResponseType {
     // No response.
     None = 0b00,
@@ -48,6 +57,7 @@ pub enum ResponseType {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BlockSelect {
     SingleBlock = 0,
     MultiBlock = 1,
@@ -55,6 +65,7 @@ pub enum BlockSelect {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TransferDirection {
     /// Host to card.
     Write = 0,
@@ -62,7 +73,13 @@ pub enum TransferDirection {
     Read = 1,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct CommandRegister {
     /// Set to command number (CMD0-63, ACMD0-63)
     #[bits(24..=29, rw)]
@@ -100,7 +117,7 @@ pub struct CommandRegister {
     dma_enable: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct PresentState {
     #[bit(24, r)]
     cmd_line_signal_level: bool,
@@ -196,6 +213,7 @@ pub struct PresentState {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BusWidth {
     _1bit = 0,
     _4bits = 1,
@@ -203,6 +221,7 @@ pub enum BusWidth {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum DmaSelect {
     Sdma = 0b00,
     Adma1_32bits = 0b01,
@@ -212,6 +231,7 @@ pub enum DmaSelect {
 
 #[bitbybit::bitenum(u3, exhaustive = false)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SdBusVoltageSelect {
     Off = 0b000,
     _1_8V = 0b101,
@@ -219,7 +239,13 @@ pub enum SdBusVoltageSelect {
     _3_3V = 0b111,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct HostPowerBlockgapWakeupControl {
     #[bit(26, rw)]
     wakeup_event_enable_on_sd_card_removal: bool,
@@ -255,6 +281,7 @@ pub struct HostPowerBlockgapWakeupControl {
 
 #[bitbybit::bitenum(u8, exhaustive = false)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SdClockDivisor {
     Div256 = 0x80,
     Div128 = 0x40,
@@ -267,7 +294,13 @@ pub enum SdClockDivisor {
     Div1 = 0x00,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct ClockAndTimeoutAndSwResetControl {
     #[bit(26, rw)]
     software_reset_for_dat_line: bool,
@@ -290,7 +323,7 @@ pub struct ClockAndTimeoutAndSwResetControl {
     internal_clock_enable: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct InterruptStatus {
     #[bit(29, rw)]
     ceata_error_status: bool,
@@ -346,7 +379,7 @@ impl InterruptStatus {
     pub const ALL_BITS: u32 = 0x33FF06FF;
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct InterruptMask {
     #[bit(29, rw)]
     ceata_error_status: bool,
@@ -398,7 +431,7 @@ pub struct InterruptMask {
     command_complete: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Capabilities {
     #[bit(30, rw)]
     spi_block_mode: bool,
@@ -430,7 +463,7 @@ pub struct Capabilities {
     timeout_clock_unit: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct BlockSizeRegister {
     /// Enabled when block count enable in the transfer mode register is set to 1 and only
     /// valid for multiple block transfers.

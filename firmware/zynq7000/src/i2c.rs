@@ -5,20 +5,22 @@ pub const I2C_0_BASE_ADDR: usize = 0xE000_4000;
 pub const I2C_1_BASE_ADDR: usize = 0xE000_5000;
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Direction {
     Receiver = 0b1,
     Transmitter = 0b0,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Mode {
     Slave = 0b0,
     Master = 0b1,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_fields(feature = "defmt"))]
 pub struct Control {
     /// Divides the input PCLK frequency by this value + 1
     #[bits(14..=15, rw)]
@@ -47,7 +49,7 @@ pub struct Control {
     dir: Direction,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Status {
     #[bit(8, r)]
     bus_active: bool,
@@ -65,19 +67,19 @@ pub struct Status {
     rx_rw: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Address {
     #[bits(0..=9, rw)]
     addr: u10,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Fifo {
     #[bits(0..=7, rw)]
     data: u8,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"))]
 pub struct InterruptStatus {
     #[bit(9, rw)]
     arbitration_lost: bool,
@@ -99,7 +101,7 @@ pub struct InterruptStatus {
     complete: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct InterruptMask {
     #[bit(9, r)]
     arbitration_lost: bool,
@@ -121,7 +123,7 @@ pub struct InterruptMask {
     complete: bool,
 }
 
-#[bitbybit::bitfield(u32)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct InterruptControl {
     #[bit(9, w)]
     arbitration_lost: bool,
@@ -143,14 +145,14 @@ pub struct InterruptControl {
     complete: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Timeout {
     /// Reset value: 0x1F.
     #[bits(0..=7, rw)]
     timeout: u8,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct TransferSize {
     #[bits(0..=7, rw)]
     size: u8,

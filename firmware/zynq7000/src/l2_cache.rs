@@ -9,13 +9,13 @@ pub struct LockdownRegisters {
     instruction: u32,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"))]
 pub struct CacheSync {
     #[bit(0, r)]
     busy: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct DebugControl {
     #[bit(2, rw)]
     spniden: bool,
@@ -25,7 +25,7 @@ pub struct DebugControl {
     disable_cache_linefill: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"))]
 pub struct CacheId {
     #[bits(24..=31, r)]
     implementer: u8,
@@ -56,14 +56,16 @@ impl Control {
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ReplacementPolicy {
     PseudoRandomWithLfsr = 0,
     RoundRobin = 1,
 }
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum WaySize {
     __Reserved0 = 0b000,
     _16kB = 0b001,
@@ -77,14 +79,21 @@ pub enum WaySize {
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Default, Debug)]
+#[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Associativity {
     #[default]
     _8Way = 0,
     _16Way = 1,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct AuxControl {
     #[bit(30, rw)]
     early_bresp_enable: bool,
@@ -123,7 +132,13 @@ pub struct AuxControl {
     full_line_zero_enable: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 #[derive(PartialEq, Eq)]
 pub struct LatencyConfig {
     /// Latency is the numerical value + 1 cycles.
@@ -137,7 +152,7 @@ pub struct LatencyConfig {
     setup_latency: u3,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct InterruptStatus {
     #[bit(8, r)]
     dec_error_l3: bool,
@@ -160,7 +175,12 @@ pub struct InterruptStatus {
     event_counter_overflow_increment: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 #[derive(Debug)]
 pub struct InterruptControl {
     #[bit(8, w)]

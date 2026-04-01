@@ -1,5 +1,10 @@
 //! # GPIO register module.
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 #[derive(Debug)]
 pub struct MaskedOutput {
     #[bits(16..=31, w)]
