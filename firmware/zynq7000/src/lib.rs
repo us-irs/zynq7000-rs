@@ -8,6 +8,10 @@
 //! on top of it.
 //! [The Zynq7000 HAL library](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zynq7000-hal)
 //! contains such a HAL which builds on this PAC.
+//!
+//! ## Features
+//!
+//! * `defmt` - Add support for the [`defmt`](https://github.com/knurling-rs/defmt) logging library.
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

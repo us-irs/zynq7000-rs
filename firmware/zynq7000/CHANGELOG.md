@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added SDIO registers.
 - Fixed wrong position in QSPI reset register in SLCR Module
 - Added some missing reset register definitions.
+- Added `defmt` support
+- Some other minor renaming of registers (e.g. `ctrl` replaced by `control`)
 
 # [v0.1.1] 2025-10-09
 
