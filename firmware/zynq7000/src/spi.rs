@@ -9,6 +9,7 @@ pub const SPI_1_BASE_ADDR: usize = 0xE000_7000;
 /// The SPI reference block will be divided by a divisor value.
 #[bitbybit::bitenum(u3)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BaudDivSel {
     By4 = 0b001,
     By8 = 0b010,
@@ -33,8 +34,13 @@ impl BaudDivSel {
     }
 }
 
-// TODO: Use bitbybit debug support as soon as it was added.
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct Config {
     #[bit(17, rw)]
     modefail_gen_en: bool,
@@ -67,7 +73,13 @@ pub struct Config {
     master_ern: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterruptStatus {
     #[bit(6, rw)]
     tx_underflow: bool,
@@ -86,7 +98,12 @@ pub struct InterruptStatus {
     rx_ovr: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 #[derive(Debug)]
 pub struct InterruptControl {
     #[bit(6, w)]
@@ -106,7 +123,7 @@ pub struct InterruptControl {
     rx_ovr: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct InterruptMask {
     #[bit(6, r)]
     tx_underflow: bool,
@@ -126,6 +143,7 @@ pub struct InterruptMask {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoWrite(arbitrary_int::UInt<u32, 8>);
 
 impl FifoWrite {
@@ -146,6 +164,7 @@ impl FifoWrite {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoRead(arbitrary_int::UInt<u32, 8>);
 
 impl FifoRead {
@@ -161,7 +180,13 @@ impl FifoRead {
 }
 
 /// The numbers specified in the register fields are always specified in number of
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct DelayControl {
     /// Number of cycles the chip select is de-asserted between words when CPHA = 0
     #[bits(24..=31, rw)]

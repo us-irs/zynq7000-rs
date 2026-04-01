@@ -4,14 +4,16 @@
 use arbitrary_int::{u2, u3};
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Speed {
     SlowCmosEdge = 0b0,
     FastCmosEdge = 0b1,
 }
 
 #[bitbybit::bitenum(u3)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum IoType {
     LvCmos18 = 0b001,
     LvCmos25 = 0b010,
@@ -19,7 +21,7 @@ pub enum IoType {
     Hstl = 0b100,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_fields(feature = "defmt"))]
 #[derive(PartialEq, Eq)]
 pub struct Config {
     #[bit(13, rw)]

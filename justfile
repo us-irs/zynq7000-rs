@@ -13,8 +13,10 @@ check-dir target:
 build-dir target:
   cd {{target}} && cargo build
 
+[working-directory: 'firmware']
 build-zynq: (build-dir "firmware")
-  cd "firmware/zedboard-fsbl" && cargo build --release
+  cd "zynq7000" && cargo build --all-features
+  cd "zedboard-fsbl" && cargo build --release
 
 clean-dir target:
   cd {{target}} && cargo clean

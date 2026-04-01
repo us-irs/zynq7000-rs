@@ -20,6 +20,9 @@ thiserror = { version = "2", default-features = false }
 once_cell = { version = "1", default-features = false, features = ["critical-section"] }
 defmt = { version = "1", optional = true }
 
+[features]
+defmt = ["dep:defmt", "arbitrary-int/defmt"]
+
 [dev-dependencies]
 approx = "0.5"
 

@@ -5,7 +5,8 @@ pub const UART_0_BASE: usize = 0xE000_0000;
 pub const UART_1_BASE: usize = 0xE000_1000;
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Parity {
     Even = 0b000,
     Odd = 0b001,
@@ -21,6 +22,7 @@ pub enum Parity {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum CharLen {
     SixBits = 0b11,
     SevenBits = 0b10,
@@ -31,6 +33,7 @@ pub enum CharLen {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockSelect {
     #[default]
     UartRefClk = 0b0,
@@ -39,6 +42,7 @@ pub enum ClockSelect {
 
 #[bitbybit::bitenum(u2)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Stopbits {
     #[default]
     One = 0b00,
@@ -48,6 +52,7 @@ pub enum Stopbits {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ChMode {
     #[default]
     Normal = 0b00,
@@ -56,7 +61,13 @@ pub enum ChMode {
     RemoteLoopback = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct Control {
     /// Stop transmitter break.
     #[bit(8, rw)]
@@ -87,7 +98,13 @@ pub struct Control {
     rx_rst: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct Mode {
     #[bits(8..=9, rw)]
     chmode: ChMode,
@@ -102,32 +119,45 @@ pub struct Mode {
     clksel: ClockSelect,
 }
 
-#[bitbybit::bitfield(u32, default = 0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct Baudgen {
     #[bits(0..=15, rw)]
     cd: u16,
 }
 
-#[bitbybit::bitfield(u32, default = 0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct BaudRateDivisor {
     #[bits(0..=7, rw)]
     bdiv: u8,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_fields(feature = "defmt"))]
 pub struct Fifo {
     #[bits(0..=7, rw)]
     fifo: u8,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Ttrig {
     LessThanTTrig = 0b0,
     GreaterEqualTTrig = 0b1,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct Status {
     #[bit(14, r)]
     tx_near_full: bool,
@@ -154,8 +184,13 @@ pub struct Status {
     rx_trg: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0)]
-#[derive(Debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct InterruptControl {
     #[bit(12, w)]
     tx_over: bool,
@@ -188,13 +223,14 @@ pub struct InterruptControl {
 
 #[bitbybit::bitfield(u32)]
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoTrigger {
     #[bits(0..=5, rw)]
     trig: u6,
 }
 
-#[bitbybit::bitfield(u32)]
-#[derive(Debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"))]
+#[derive(PartialEq, Eq)]
 pub struct InterruptMask {
     #[bit(12, r)]
     tx_over: bool,
@@ -226,7 +262,13 @@ pub struct InterruptMask {
     rx_trg: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterruptStatus {
     #[bit(12, rw)]
     tx_over: bool,

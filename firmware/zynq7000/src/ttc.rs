@@ -4,8 +4,9 @@ use arbitrary_int::u4;
 pub const TTC_0_BASE_ADDR: usize = 0xF800_1000;
 pub const TTC_1_BASE_ADDR: usize = 0xF800_2000;
 
-#[derive(Debug, Default)]
 #[bitbybit::bitenum(u1, exhaustive = true)]
+#[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockSource {
     /// PS internal bus clock.
     #[default]
@@ -13,7 +14,13 @@ pub enum ClockSource {
     External = 0b1,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct ClockControl {
     /// When this bit is set and the external clock is selected, the counter clocks on the
     /// negative edge of the external clock input.
@@ -28,14 +35,16 @@ pub struct ClockControl {
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Mode {
     Overflow = 0b0,
     Interval = 0b1,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum WavePolarity {
     /// The waveform output goes from high to low on a match 0 interrupt and returns high on
     /// overflow or interval interrupt.
@@ -47,13 +56,20 @@ pub enum WavePolarity {
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum WaveEnable {
     Enable = 0b0,
     Disable = 0b1,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct CounterControl {
     #[bit(6, rw)]
     wave_polarity: WavePolarity,
@@ -76,19 +92,25 @@ pub struct CounterControl {
     disable: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
 pub struct Counter {
     #[bits(0..=15, r)]
     count: u16,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct RwValue {
     #[bits(0..=15, rw)]
     value: u16,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct InterruptStatus {
     /// Even timer overflow interrupt.
     #[bit(5, r)]
@@ -105,7 +127,13 @@ pub struct InterruptStatus {
     interval: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterruptControl {
     /// Even timer overflow interrupt.
     #[bit(5, rw)]
@@ -122,7 +150,13 @@ pub struct InterruptControl {
     interval: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct EventControl {
     /// E_Ov bit. When set to 0, the event timer is disabled and set to 0 when an event timer
     /// register overflow occurs. Otherwise, continue counting on overflow.
@@ -136,7 +170,7 @@ pub struct EventControl {
     enable: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct EventCount {
     #[bits(0..=15, r)]
     count: u16,

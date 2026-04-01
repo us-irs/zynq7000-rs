@@ -4,7 +4,13 @@ use arbitrary_int::{u2, u3, u5, u10};
 use static_assertions::const_assert_eq;
 
 /// Distributor Control Register
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DistributorControlRegister {
     #[bit(1, rw)]
     enable_non_secure: bool,
@@ -13,7 +19,7 @@ pub struct DistributorControlRegister {
 }
 
 /// Read only bit. This register only returns fixed constants.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct TypeRegister {
     #[bits(11..=15, r)]
     lspi: u5,
@@ -40,10 +46,9 @@ impl TypeRegister {
 
 pub type Typer = TypeRegister;
 
-// TODO: Use bitbybit debug derive if new release was released.
-/// Interrupt processor target register (IPTR).
-#[bitbybit::bitfield(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[bitbybit::bitfield(u32, debug)]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InterruptProcessorTargetRegister {
     /// Target array. Every register holds the information for 4 interrupts.
     #[bits(0..=1, rw, stride = 8)]
@@ -141,7 +146,13 @@ impl DistributorRegisters {
 }
 
 /// CPU interface control register.
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterfaceControl {
     #[bit(4, rw)]
     sbpr: bool,
@@ -156,14 +167,14 @@ pub struct InterfaceControl {
 }
 
 /// Priority Mask Register
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct PriorityRegister {
     #[bits(0..=7, rw)]
     priority: u8,
 }
 
 /// Interrupt acknowledge register.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct InterruptSignalRegister {
     #[bits(10..=12, rw)]
     cpu_id: u3,

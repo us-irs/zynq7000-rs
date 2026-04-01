@@ -17,14 +17,14 @@ pub mod mio;
 pub mod reset;
 
 #[bitbybit::bitenum(u3, exhaustive = false)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum VrefSel {
     Disabled = 0b000,
     Vref0_9V = 0b001,
 }
 
-#[bitbybit::bitfield(u32)]
-#[derive(Debug)]
+#[bitbybit::bitfield(u32, default = 0, debug, defmt_fields(feature = "defmt"))]
 pub struct GpiobControl {
     #[bit(11, rw)]
     vref_sw_en: bool,
@@ -62,14 +62,14 @@ impl GpiobRegisters {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BootPllConfig {
     Enabled = 0,
     /// Disabled and bypassed.
     Bypassed = 1,
 }
 
-#[bitbybit::bitfield(u32)]
-#[derive(Debug)]
+#[bitbybit::bitfield(u32, default = 0, debug, defmt_fields(feature = "defmt"))]
 pub struct BootModeRegister {
     #[bit(4, r)]
     pll_config: BootPllConfig,
@@ -79,13 +79,20 @@ pub struct BootModeRegister {
 
 #[bitbybit::bitenum(u4)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum LevelShifterConfig {
     DisableAll = 0x00,
     EnablePsToPl = 0xA,
     EnableAll = 0xF,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct LevelShifterRegister {
     #[bits(0..=3, rw)]
     user_lvl_shftr_en: Option<LevelShifterConfig>,

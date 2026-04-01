@@ -2,7 +2,7 @@
 
 pub const GTC_BASE_ADDR: usize = super::mpcore::MPCORE_BASE_ADDR + 0x0000_0200;
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct GtcControl {
     #[bits(8..=15, rw)]
     prescaler: u8,
@@ -16,7 +16,7 @@ pub struct GtcControl {
     enable: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct InterruptStatus {
     #[bit(0, rw)]
     event_flag: bool,

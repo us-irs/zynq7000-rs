@@ -4,6 +4,7 @@ pub const DEVCFG_BASE_ADDR: usize = 0xF8007000;
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PlConfigAccess {
     /// Used for JTAG access
     TapController = 0,
@@ -13,6 +14,7 @@ pub enum PlConfigAccess {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ConfigAccessPortSelect {
     /// Internal Configuration Access Port (ICAP), using PL or PS-based software.
     Icap = 0,
@@ -22,6 +24,7 @@ pub enum ConfigAccessPortSelect {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum TimerSelect {
     _64kTimer = 0,
     _4kTimer = 1,
@@ -29,6 +32,7 @@ pub enum TimerSelect {
 
 #[bitbybit::bitenum(u3, exhaustive = false)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum AesEnable {
     Disable = 0b000,
     Enable = 0b111,
@@ -36,6 +40,7 @@ pub enum AesEnable {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PsBootMode {
     NonSecure = 0,
     Secure = 1,
@@ -43,11 +48,18 @@ pub enum PsBootMode {
 
 #[bitbybit::bitenum(u3, exhaustive = false)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ArmDapEnable {
     Enabled = 0b111,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct Control {
     #[bit(31, rw)]
     force_reset: bool,
@@ -95,7 +107,7 @@ pub struct Control {
 
 /// The bits in this register and read/write, set-only, which means that only a PS_POR_B reset
 /// can clear the bits.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
 pub struct Lock {
     #[bit(4, rw)]
     aes_fuse: bool,
@@ -113,6 +125,7 @@ pub struct Lock {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum EdgeConfig {
     Falling = 0,
     Rising = 1,
@@ -121,6 +134,7 @@ pub enum EdgeConfig {
 /// Related to the full level for reads, and the empty level for writes.
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum FifoThresholdConfig {
     OneFourth = 0b00,
     HalfEmpty = 0b01,
@@ -128,7 +142,7 @@ pub enum FifoThresholdConfig {
     EmptyOrFull = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
 pub struct Config {
     #[bits(10..=11, rw)]
     read_fifo_threshhold: FifoThresholdConfig,
@@ -144,7 +158,7 @@ pub struct Config {
     disable_dst_incremenet: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
 pub struct Interrupt {
     /// Tri-state PL IO during HIZ.
     #[bit(31, rw)]
@@ -199,7 +213,7 @@ pub struct Interrupt {
     negative_edge_pl_init: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct MiscControl {
     #[bits(28..=31, r)]
     ps_version: u4,
@@ -213,6 +227,7 @@ pub struct MiscControl {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum UnacknowledgedDmaTransfers {
     None = 0b00,
     One = 0b01,
@@ -220,7 +235,7 @@ pub enum UnacknowledgedDmaTransfers {
     ThreeOrMore = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
 pub struct Status {
     #[bit(31, rw)]
     dma_command_queue_full: bool,

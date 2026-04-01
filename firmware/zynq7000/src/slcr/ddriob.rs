@@ -1,7 +1,8 @@
 use arbitrary_int::{u2, u3};
 
 #[bitbybit::bitenum(u4, exhaustive = false)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum VRefSel {
     /// VREF = 0.6 V
     Lpddr2 = 0b0001,
@@ -13,7 +14,13 @@ pub enum VRefSel {
     Ddr2 = 0b1000,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DdrControl {
     /// Enables VRP/VRN.
     #[bit(9, rw)]
@@ -28,7 +35,13 @@ pub struct DdrControl {
     vref_int_en: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x00, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x00,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DciControl {
     #[bit(20, rw)]
     update_control: bool,
@@ -49,7 +62,13 @@ pub struct DciControl {
     reset: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DciStatus {
     #[bit(13, rw)]
     done: bool,
@@ -58,7 +77,8 @@ pub struct DciStatus {
 }
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum OutputEnable {
     IBuf = 0b00,
     __Reserved0 = 0b01,
@@ -67,7 +87,8 @@ pub enum OutputEnable {
 }
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum InputType {
     Off = 0b00,
     VRefBasedDifferentialReceiverForSstlHstl = 0b01,
@@ -76,7 +97,8 @@ pub enum InputType {
 }
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum DciType {
     Disabled = 0b00,
     DciDrive = 0b01,
@@ -84,7 +106,13 @@ pub enum DciType {
     DciTermination = 0b11,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DdriobConfig {
     #[bit(11, rw)]
     pullup_enable: bool,
