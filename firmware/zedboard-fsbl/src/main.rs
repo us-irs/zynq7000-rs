@@ -85,6 +85,10 @@ fn main() -> ! {
             zynq7000_hal::clocks::CpuClockRatio::SixToTwoToOne,
             u6::new(2),
         );
+        // This is done by the AMD FSBL.
+        zynq7000_hal::Slcr::with(|val| {
+            val.gpiob().modify_ctrl(|val| val.with_vref_en(true));
+        });
     }
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
@@ -113,7 +117,6 @@ fn main() -> ! {
             false,
         )
     };
-    //log::info!("clocks: {:?}", clocks);
 
     // Set up the global interrupt controller.
     let mut gic = gic::GicConfigurator::new_with_init(periphs.gicc, periphs.gicd);
@@ -187,6 +190,7 @@ fn main() -> ! {
             spansion_qspi.into_linear_addressed(qspi_spansion::QSPI_DEV_COMBINATION_REV_F.into());
         qspi_boot(spansion_lqspi, priv_tim);
     }
+
     loop {
         aarch32_cpu::asm::nop();
     }
@@ -324,6 +328,8 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
         }
     }
 
+    // The PL is in reset state after power-up. This method needs to be called in the first-stage
+    // bootloader to put it out of reset.
     zynq7000_hal::pl::deassert_reset();
 
     match opt_jump_addr {
@@ -361,7 +367,7 @@ fn interrupt_handler() {
         gic::Interrupt::Invalid(_) => (),
         gic::Interrupt::Spurious => {
             log::warn!("spurious interrupt");
-        },
+        }
     }
     gic_helper.end_of_interrupt(irq_info);
 }

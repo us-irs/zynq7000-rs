@@ -118,8 +118,8 @@ pub struct DdrIobRegisters {
     ddriob_drive_slew_data: u32,
     ddriob_drive_slew_diff: u32,
     ddriob_drive_slew_clock: u32,
-    ddr_ctrl: DdrControl,
-    dci_ctrl: DciControl,
+    ddr_control: DdrControl,
+    dci_control: DciControl,
     dci_status: DciStatus,
 }
 
