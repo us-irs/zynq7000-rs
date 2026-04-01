@@ -18,7 +18,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-use slcr::Slcr;
+pub use slcr::Slcr;
 use zynq7000::{
     SpiClockPhase, SpiClockPolarity,
     slcr::{BootModeRegister, BootPllConfig, LevelShifterRegister},

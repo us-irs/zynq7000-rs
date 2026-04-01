@@ -86,17 +86,39 @@ pub unsafe fn configure_dci(ddr_clk: &DdrClocks) {
 ///
 /// This function writes to the DDR IOB related registers. It should only be called once during
 /// DDR initialization.
-pub unsafe fn calibrate_iob_impedance_for_ddr3(dci_clk_cfg: DciClkConfig, poll_for_done: bool) {
+pub unsafe fn calibrate_iob_impedance_for_ddr3(
+    ddr_control: zynq7000::slcr::ddriob::DdrControl,
+    dci_clk_cfg: DciClkConfig,
+    poll_for_done: bool,
+) {
     unsafe {
         calibrate_iob_impedance(
+            ddr_control,
             dci_clk_cfg,
-            u3::new(0),
-            u2::new(0),
-            u3::new(0b001),
-            u3::new(0),
-            u2::new(0),
+            CalibrationParams::new_ddr3(),
             poll_for_done,
         );
+    }
+}
+
+/// DDR IOB impedance calibration parameters.
+pub struct CalibrationParams {
+    pub pref_opt2: u3,
+    pub pref_opt1: u2,
+    pub nref_opt4: u3,
+    pub nref_opt2: u3,
+    pub nref_opt1: u2,
+}
+
+impl CalibrationParams {
+    pub const fn new_ddr3() -> Self {
+        Self {
+            pref_opt2: u3::new(0),
+            pref_opt1: u2::new(0),
+            nref_opt4: u3::new(0b001),
+            nref_opt2: u3::new(0),
+            nref_opt1: u2::new(0),
+        }
     }
 }
 
@@ -115,12 +137,9 @@ pub unsafe fn calibrate_iob_impedance_for_ddr3(dci_clk_cfg: DciClkConfig, poll_f
 /// This function writes to the DDR IOB related registers. It should only be called once during
 /// DDR initialization.
 pub unsafe fn calibrate_iob_impedance(
+    ddr_control: zynq7000::slcr::ddriob::DdrControl,
     dci_clk_cfg: DciClkConfig,
-    pref_opt2: u3,
-    pref_opt1: u2,
-    nref_opt4: u3,
-    nref_opt2: u3,
-    nref_opt1: u2,
+    calibration_params: CalibrationParams,
     poll_for_done: bool,
 ) {
     // Safety: Only writes to DDR IOB related registers.
@@ -134,31 +153,23 @@ pub unsafe fn calibrate_iob_impedance(
                 .build(),
         );
         let mut ddriob = slcr.ddriob();
-        ddriob.modify_dci_ctrl(|mut val| {
-            val.set_reset(true);
+        ddriob.write_ddr_control(ddr_control);
+        ddriob.modify_dci_control(|val| val.with_reset(true));
+        ddriob.modify_dci_control(|val| val.with_reset(false));
+        ddriob.modify_dci_control(|val| val.with_reset(true));
+        ddriob.modify_dci_control(|mut val| {
+            val.set_pref_opt2(calibration_params.pref_opt2);
+            val.set_pref_opt1(calibration_params.pref_opt1);
+            val.set_nref_opt4(calibration_params.nref_opt4);
+            val.set_nref_opt2(calibration_params.nref_opt2);
+            val.set_nref_opt1(calibration_params.nref_opt1);
             val
         });
-        ddriob.modify_dci_ctrl(|mut val| {
-            val.set_reset(false);
-            val
-        });
-        ddriob.modify_dci_ctrl(|mut val| {
-            val.set_reset(true);
-            val
-        });
-        ddriob.modify_dci_ctrl(|mut val| {
-            val.set_pref_opt2(pref_opt2);
-            val.set_pref_opt1(pref_opt1);
-            val.set_nref_opt4(nref_opt4);
-            val.set_nref_opt2(nref_opt2);
-            val.set_nref_opt1(nref_opt1);
-            val
-        });
-        ddriob.modify_dci_ctrl(|mut val| {
+        ddriob.modify_dci_control(|mut val| {
             val.set_update_control(false);
             val
         });
-        ddriob.modify_dci_ctrl(|mut val| {
+        ddriob.modify_dci_control(|mut val| {
             val.set_enable(true);
             val
         });
@@ -170,6 +181,7 @@ pub unsafe fn calibrate_iob_impedance(
 
 /// Static configuration for DDR IOBs.
 pub struct DdriobConfigSet {
+    pub ddr_control: zynq7000::slcr::ddriob::DdrControl,
     pub addr0: DdriobConfig,
     pub addr1: DdriobConfig,
     pub data0: DdriobConfig,

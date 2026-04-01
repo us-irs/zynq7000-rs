@@ -76,7 +76,7 @@ pub fn configure_ddr_for_ddr3(
         ll::configure_iob(ddriob_cfg);
         // Do not wait for completion, it takes a bit of time. We can set all the DDR config registers
         // before polling for completion.
-        ll::calibrate_iob_impedance_for_ddr3(dci_clk_cfg, false);
+        ll::calibrate_iob_impedance_for_ddr3(ddriob_cfg.ddr_control, dci_clk_cfg, false);
     }
     ll::configure_ddr_config(&mut ddrc_regs, ddr_cfg);
     // Safety: This is only called once during DDR initialization, and we only modify DDR related
