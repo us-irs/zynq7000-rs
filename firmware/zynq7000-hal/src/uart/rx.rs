@@ -2,7 +2,7 @@
 use core::convert::Infallible;
 
 use arbitrary_int::prelude::*;
-use zynq7000::uart::{InterruptControl, InterruptStatus, MmioRegisters};
+use zynq7000::uart::{InterruptControl, InterruptStatus, MmioRegisters, FifoTrigger};
 
 use super::FIFO_DEPTH;
 
@@ -118,6 +118,13 @@ impl Rx {
         self.soft_reset();
         self.clear_interrupts();
         self.enable_interrupts();
+    }
+
+    /// Sets the RX FIFO trigger level.
+    pub fn set_rx_fifo_trigger_level(&mut self, level: u8) {
+        self.regs.write_rx_fifo_trigger(FifoTrigger::new_with_raw_value(
+            level as u32,
+        ));
     }
 
     /// Enables all interrupts relevant for the RX side of the UART.
