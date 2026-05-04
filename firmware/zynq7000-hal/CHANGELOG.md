@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added division by zero check in gtc frequency_to_ticks to avoid runtime panic
 - Increased UART type safety by providing dedicated MIO constructors for UART 0 and UART 1
   respectively.
+- `log::rb` module replaced by `log::asynch` module which uses an asynchronous embassy pipe
+  for logging.
 
 ## Added
 

@@ -5,8 +5,10 @@
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
+use embedded_hal_async::delay::DelayNs as _;
 use embedded_io::Write;
 use log::{error, info};
 use zynq7000::Peripherals;
@@ -66,32 +68,60 @@ async fn main(spawner: Spawner) -> ! {
     uart.write_all(b"-- Zynq 7000 Logging example --\n\r")
         .unwrap();
     uart.flush().unwrap();
+    // Small delay to avoid logging glitches when creating an async UART.
+    embassy_time::Delay.delay_us(500).await;
 
     let (tx, _rx) = uart.split();
     let mut logger = TxAsync::new(tx);
 
-    zynq7000_hal::log::rb::init(log::LevelFilter::Trace);
+    static LOG_PIPE: static_cell::ConstStaticCell<
+        embassy_sync::pipe::Pipe<CriticalSectionRawMutex, 4096>,
+    > = static_cell::ConstStaticCell::new(embassy_sync::pipe::Pipe::new());
+    let (log_reader, log_writer) = LOG_PIPE.take().split();
+    zynq7000_hal::log::asynch::init(log::LevelFilter::Trace, log_writer);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     let led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
     spawner.spawn(led_task(led).unwrap());
+    spawner.spawn(hello_task().unwrap());
+
     let mut log_buf: [u8; 2048] = [0; 2048];
-    let frame_queue = zynq7000_hal::log::rb::get_frame_queue();
     loop {
-        let next_frame_len = frame_queue.receive().await;
-        zynq7000_hal::log::rb::read_next_frame(next_frame_len, &mut log_buf);
-        logger.write(&log_buf[0..next_frame_len]).await;
+        let read_bytes = log_reader.read(&mut log_buf).await;
+        if read_bytes > 0 {
+            logger.write(&log_buf[0..read_bytes]).await;
+        }
     }
 }
 
 #[embassy_executor::task]
 async fn led_task(mut mio_led: Output) {
+    static ATOMIC_COUNTER: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     loop {
         mio_led.toggle().unwrap();
-        info!("Toggling LED");
+        info!(
+            "Toggling LED ({})",
+            ATOMIC_COUNTER.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
+        );
+        ticker.next().await;
+    }
+}
+#[embassy_executor::task]
+async fn hello_task() {
+    static ATOMIC_COUNTER: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
+    let mut ticker = Ticker::every(Duration::from_millis(1000));
+    loop {
+        info!(
+            "Hello from another task ({})",
+            ATOMIC_COUNTER.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
+        );
         ticker.next().await;
     }
 }
