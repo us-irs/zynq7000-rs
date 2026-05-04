@@ -27,9 +27,14 @@ critical-section = "1"
 static_cell = "2"
 embedded-alloc = "0.7"
 embedded-hal = "1"
+embedded-hal-bus = "0.3"
 embedded-hal-async = "1"
+dummy-pin = "1"
 fugit = "0.3"
+embedded-graphics = "0.8"
 log = "0.4"
+ssd1306 = { version = "0.10" }
+tinybmp = "0.7"
 rand = { version = "0.10", default-features = false }
 
 embassy-executor = { version = "0.10", features = ["platform-cortex-ar", "executor-thread"] }

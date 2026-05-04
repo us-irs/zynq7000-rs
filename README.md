@@ -4,6 +4,10 @@ Zynq 7000 Bare-Metal Rust Support
 This crate collection provides support to write bare-metal Rust applications for the AMD Zynq 7000
 family of SoCs.
 
+<p align="center">
+  <img src="./ferris-zedboard.jpeg" alt="Ferris on the Zedboard" width="400" />
+</p>
+
 # List of crates
 
 This project contains the following crates:

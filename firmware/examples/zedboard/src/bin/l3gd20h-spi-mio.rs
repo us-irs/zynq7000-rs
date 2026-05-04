@@ -57,12 +57,17 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let mut clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    // SPI reference clock must be larger than the CPU 1x clock.
-    let spi_ref_clk_div = spi::calculate_largest_allowed_spi_ref_clk_divisor(&clocks)
-        .unwrap()
-        .value()
-        - 1;
-    spi::configure_spi_ref_clk(&mut clocks, arbitrary_int::u6::new(spi_ref_clk_div as u8));
+    let target_spi_ref_clock = clocks.arm_clocks().cpu_1x_clk() * 2;
+    // SPI reference clock must be larger than the CPU 1x clock. Also, taking the largest value
+    // actually seems to be problematic. We take 200 MHz here, which is significantly larger than
+    // the CPU 1x clock which is around 110 MHz.
+    spi::configure_spi_ref_clock(&mut clocks, target_spi_ref_clock);
+
+    assert!(
+        clocks.io_clocks().spi_clk().raw()
+            > (clocks.arm_clocks().cpu_1x_clk().raw() as f32 * 1.2) as u32,
+        "SPI reference clock must be larger than CPU 1x clock"
+    );
 
     // Set up the global interrupt controller.
     let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
@@ -99,23 +104,21 @@ async fn main(spawner: Spawner) -> ! {
 
     if DEBUG_SPI_CLK_CONFIG {
         info!(
-            "SPI Clock Information: CPU 1x: {:?}, IO Ref Clk: {:?}, SPI Ref Clk: {:?}, DIV: {:?}",
+            "SPI Clock Information: CPU 1x: {:?}, IO Ref Clk: {:?}, SPI Ref Clk: {:?}",
             clocks.arm_clocks().cpu_1x_clk(),
             clocks.io_clocks().ref_clk(),
             clocks.io_clocks().spi_clk(),
-            spi_ref_clk_div
         );
     }
 
     let mut spi = spi::Spi::new_one_hw_cs(
         dp.spi_1,
-        clocks.io_clocks(),
         spi::Config::new(
             // 10 MHz maximum rating of the sensor.
             zynq7000::spi::BaudDivSel::By64,
             //l3gd20::MODE,
             embedded_hal::spi::MODE_3,
-            spi::SlaveSelectConfig::AutoWithAutoStart,
+            spi::SlaveSelectConfig::AutoCsAutoStart,
         ),
         (
             gpio_pins.mio.mio12,
@@ -125,10 +128,13 @@ async fn main(spawner: Spawner) -> ! {
         gpio_pins.mio.mio13,
     )
     .unwrap();
+    let sclk = Hertz::from_raw(
+        clocks.io_clocks().spi_clk().raw() / zynq7000::spi::BaudDivSel::By64.div_value() as u32,
+    );
     let mod_id = spi.regs().read_mod_id();
     assert_eq!(mod_id, spi::MODULE_ID);
-    assert!(spi.sclk() <= Hertz::from_raw(10_000_000));
-    let min_delay = (spi.sclk().raw() * 5) / 1_000_000_000;
+    assert!(sclk <= Hertz::from_raw(10_000_000));
+    let min_delay = (sclk.raw() * 5) / 1_000_000_000;
     spi.inner().configure_delays(
         DelayControl::builder()
             .with_inter_word_cs_deassert(0)
