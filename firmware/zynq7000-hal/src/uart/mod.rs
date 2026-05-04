@@ -573,7 +573,7 @@ impl Uart {
             v
         });
         // Disable all interrupts.
-        reg_block.write_idr(InterruptControl::new_with_raw_value(0xFFFF_FFFF));
+        reg_block.write_interrupt_disable(InterruptControl::new_with_raw_value(0xFFFF_FFFF));
         let mode = Mode::builder()
             .with_chmode(cfg.chmode)
             .with_nbstop(match cfg.stopbits {

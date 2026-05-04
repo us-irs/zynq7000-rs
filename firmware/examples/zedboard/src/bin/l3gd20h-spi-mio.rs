@@ -92,12 +92,7 @@ async fn main(spawner: Spawner) -> ! {
     uart.write_all(b"-- Zynq 7000 Zedboard SPI L3GD20H example --\n\r")
         .unwrap();
 
-    static LOG_PIPE: static_cell::ConstStaticCell<
-        embassy_sync::pipe::Pipe<CriticalSectionRawMutex, 4096>,
-    > = static_cell::ConstStaticCell::new(embassy_sync::pipe::Pipe::new());
-    let (log_reader, log_writer) = LOG_PIPE.take().split();
-
-    zynq7000_hal::log::asynch::init(log::LevelFilter::Trace, log_writer);
+    let log_reader = zynq7000_hal::log::asynch::init(log::LevelFilter::Trace).unwrap();
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -180,7 +175,9 @@ pub async fn logger_task(
     let mut log_buf: [u8; 2048] = [0; 2048];
     loop {
         let read_bytes = reader.read(&mut log_buf).await;
-        tx_async.write(&log_buf[0..read_bytes]).await;
+        if read_bytes > 0 {
+            tx_async.write(&log_buf[0..read_bytes]).unwrap().await;
+        }
     }
 }
 
