@@ -210,15 +210,12 @@ pub mod asynch {
 
                 let pipe_writer_ref = self.pipe.borrow();
                 let pipe_writer = pipe_writer_ref.as_ref().unwrap();
-                loop {
-                    match pipe_writer.try_write(&buf.as_bytes()[written..]) {
-                        Ok(written_in_this_call) => {
-                            written += written_in_this_call;
-                            if written >= buf.len() {
-                                break;
-                            }
-                        }
-                        Err(_) => break,
+                while let Ok(written_in_this_call) =
+                    pipe_writer.try_write(&buf.as_bytes()[written..])
+                {
+                    written += written_in_this_call;
+                    if written >= buf.len() {
+                        break;
                     }
                 }
             });
