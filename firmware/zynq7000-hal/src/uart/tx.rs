@@ -105,12 +105,12 @@ impl Tx {
 
     /// Enables interrupts relevant for the TX side of the UART except the TX trigger interrupt.
     #[inline]
-    pub fn enable_interrupts(&mut self) {
-        self.regs.write_ier(
+    pub fn enable_interrupts(&mut self, tx_trig: bool) {
+        self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_over(true)
-                .with_tx_near_full(true)
-                .with_tx_trig(false)
+                .with_tx_near_full(false)
+                .with_tx_trig(tx_trig)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -128,11 +128,11 @@ impl Tx {
     /// Disable interrupts relevant for the TX side of the UART except the TX trigger interrupt.
     #[inline]
     pub fn disable_interrupts(&mut self) {
-        self.regs.write_idr(
+        self.regs.write_interrupt_disable(
             InterruptControl::builder()
                 .with_tx_over(true)
-                .with_tx_near_full(true)
-                .with_tx_trig(false)
+                .with_tx_near_full(false)
+                .with_tx_trig(true)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -150,11 +150,11 @@ impl Tx {
     /// Clears interrupts relevant for the TX side of the UART except the TX trigger interrupt.
     #[inline]
     pub fn clear_interrupts(&mut self) {
-        self.regs.write_isr(
+        self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_over(true)
                 .with_tx_near_full(true)
-                .with_tx_trig(false)
+                .with_tx_trig(true)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)

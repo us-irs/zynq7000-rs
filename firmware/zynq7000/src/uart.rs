@@ -221,7 +221,7 @@ pub struct InterruptControl {
     rx_trg: bool,
 }
 
-#[bitbybit::bitfield(u32)]
+#[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoTrigger {
@@ -330,16 +330,16 @@ pub struct Registers {
     mr: Mode,
     /// Interrupt enable register
     #[mmio(Write)]
-    ier: InterruptControl,
+    interrupt_enable: InterruptControl,
     /// Interrupt disable register
     #[mmio(Write)]
-    idr: InterruptControl,
+    interrupt_disable: InterruptControl,
     /// Interrupt mask register, showing enabled interrupts.
     #[mmio(PureRead)]
-    imr: InterruptMask,
+    enabled_interrupts: InterruptMask,
     /// Interrupt status register
     #[mmio(PureRead, Write)]
-    isr: InterruptStatus,
+    interrupt_status: InterruptStatus,
     /// Baudgen register
     baudgen: Baudgen,
     /// RX timeout register

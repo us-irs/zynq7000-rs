@@ -5,10 +5,8 @@
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
-use embedded_hal_async::delay::DelayNs as _;
 use embedded_io::Write;
 use log::{error, info};
 use zynq7000::Peripherals;
@@ -68,17 +66,11 @@ async fn main(spawner: Spawner) -> ! {
     uart.write_all(b"-- Zynq 7000 Logging example --\n\r")
         .unwrap();
     uart.flush().unwrap();
-    // Small delay to avoid logging glitches when creating an async UART.
-    embassy_time::Delay.delay_us(500).await;
 
     let (tx, _rx) = uart.split();
     let mut logger = TxAsync::new(tx);
 
-    static LOG_PIPE: static_cell::ConstStaticCell<
-        embassy_sync::pipe::Pipe<CriticalSectionRawMutex, 4096>,
-    > = static_cell::ConstStaticCell::new(embassy_sync::pipe::Pipe::new());
-    let (log_reader, log_writer) = LOG_PIPE.take().split();
-    zynq7000_hal::log::asynch::init(log::LevelFilter::Trace, log_writer);
+    let log_reader = zynq7000_hal::log::asynch::init(log::LevelFilter::Trace).unwrap();
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -91,7 +83,8 @@ async fn main(spawner: Spawner) -> ! {
     loop {
         let read_bytes = log_reader.read(&mut log_buf).await;
         if read_bytes > 0 {
-            logger.write(&log_buf[0..read_bytes]).await;
+            // Unwrap okay, checked that size is larger than 0.
+            logger.write(&log_buf[0..read_bytes]).unwrap().await;
         }
     }
 }

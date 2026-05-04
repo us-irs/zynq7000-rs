@@ -396,7 +396,7 @@ async fn uart_0_task(uart_tx: zynq7000_hal::uart::Tx) {
     let mut idx = 0;
     let print_strs = [str0.as_bytes(), str1.as_bytes()];
     loop {
-        tx_async.write(print_strs[idx]).await;
+        tx_async.write(print_strs[idx]).unwrap().await;
         idx += 1;
         if idx == 2 {
             idx = 0;

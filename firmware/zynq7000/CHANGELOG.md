@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+- Better names for interrupt registers for UART and SPI
+
 # [v0.2.0] 2026-04-01
 
 - Renamed all register blocks to `Registers` to subblocks to `<Subblock>Registers`.

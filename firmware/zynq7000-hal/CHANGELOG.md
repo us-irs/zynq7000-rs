@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Several bugfixes and improvements for GIC module. Some of the registers previously were
   completely overwritten instead of only modifying their own bit portions. Also allow targeting
   interrupts without clearing other CPU target.
+- Do not reset the UART on TX future creation anymore, which lead to glitches and invalid data.
+- Robustness improvements for the asynchronous UART TX module.
 
 ## Changed
 

@@ -187,10 +187,14 @@ pub mod asynch {
     unsafe impl Send for Logger {}
     unsafe impl Sync for Logger {}
 
-    static LOGGER_PIPE: Logger = Logger {
+    static LOGGER: Logger = Logger {
         pipe: core::cell::RefCell::new(None),
         buf: critical_section::Mutex::new(core::cell::RefCell::new(heapless::String::new())),
     };
+
+    static PIPE: static_cell::ConstStaticCell<
+        embassy_sync::pipe::Pipe<CriticalSectionRawMutex, 4096>,
+    > = static_cell::ConstStaticCell::new(embassy_sync::pipe::Pipe::new());
 
     impl log::Log for Logger {
         fn enabled(&self, _metadata: &log::Metadata) -> bool {
@@ -226,13 +230,15 @@ pub mod asynch {
 
     pub fn init(
         level: LevelFilter,
-        writer: embassy_sync::pipe::Writer<'static, CriticalSectionRawMutex, 4096>,
-    ) {
+        //writer: embassy_sync::pipe::Writer<'static, CriticalSectionRawMutex, 4096>,
+    ) -> Option<embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>> {
         if super::LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
-            return;
+            return None;
         }
-        LOGGER_PIPE.pipe.borrow_mut().replace(writer);
-        set_logger(&LOGGER_PIPE).unwrap();
+        let (reader, writer) = PIPE.take().split();
+        LOGGER.pipe.borrow_mut().replace(writer);
+        set_logger(&LOGGER).unwrap();
         set_max_level(level); // Adjust as needed
+        Some(reader)
     }
 }

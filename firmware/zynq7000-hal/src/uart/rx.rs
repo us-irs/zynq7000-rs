@@ -131,7 +131,7 @@ impl Rx {
     /// It is recommended to also clear all interrupts immediately after enabling them.
     #[inline]
     pub fn enable_interrupts(&mut self) {
-        self.regs.write_ier(
+        self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_over(false)
                 .with_tx_near_full(false)
@@ -159,7 +159,7 @@ impl Rx {
         reset_rx_timeout: bool,
     ) -> RxInterruptResult {
         let mut result = RxInterruptResult::default();
-        let imr = self.regs.read_imr();
+        let imr = self.regs.read_enabled_interrupts();
         if !imr.rx_full()
             && !imr.rx_trg()
             && !imr.rx_parity()
@@ -169,7 +169,7 @@ impl Rx {
         {
             return result;
         }
-        let isr = self.regs.read_isr();
+        let isr = self.regs.read_interrupt_status();
         if isr.rx_full() {
             // Read all bytes in the full RX fifo.
             for byte in buf.iter_mut() {
@@ -215,7 +215,7 @@ impl Rx {
     /// This clears all RX related interrupts.
     #[inline]
     pub fn clear_interrupts(&mut self) {
-        self.regs.write_isr(
+        self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_over(false)
                 .with_tx_near_full(false)
