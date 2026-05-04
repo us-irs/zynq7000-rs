@@ -87,15 +87,18 @@ pub struct InterruptStatus {
     rx_full: bool,
     #[bit(4, rw)]
     rx_not_empty: bool,
+    /// Switches to 1 when the FIFO becomes full and then remains asserted until the FIFO falls
+    /// below the configured threshold level.
     #[bit(3, rw)]
     tx_full: bool,
+    /// TX FIFO level below configured threshold.
     #[bit(2, rw)]
-    tx_not_full: bool,
+    tx_below_threshold: bool,
     #[bit(1, rw)]
     mode_fault: bool,
     /// Receiver overflow interrupt.
     #[bit(0, rw)]
-    rx_ovr: bool,
+    rx_overrun: bool,
 }
 
 #[bitbybit::bitfield(
@@ -114,8 +117,9 @@ pub struct InterruptControl {
     rx_not_empty: bool,
     #[bit(3, w)]
     tx_full: bool,
+    /// Interrupt when TX FIFO level below configured threshold.
     #[bit(2, w)]
-    tx_trig: bool,
+    tx_below_threshold: bool,
     #[bit(1, w)]
     mode_fault: bool,
     /// Receiver overflow interrupt.
@@ -124,17 +128,20 @@ pub struct InterruptControl {
 }
 
 #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct InterruptMask {
+pub struct InterruptEnabled {
     #[bit(6, r)]
     tx_underflow: bool,
     #[bit(5, r)]
     rx_full: bool,
     #[bit(4, r)]
     rx_not_empty: bool,
+    /// Switches to 1 when the FIFO becomes full and then remains asserted until the FIFO falls
+    /// below the configured threshold level.
     #[bit(3, r)]
     tx_full: bool,
+    /// Interrupt when TX FIFO level below configured threshold.
     #[bit(2, r)]
-    tx_trig: bool,
+    tx_below_threshold: bool,
     #[bit(1, r)]
     mode_fault: bool,
     /// Receiver overflow interrupt.
@@ -208,16 +215,16 @@ pub struct DelayControl {
 pub struct Registers {
     cr: Config,
     #[mmio(PureRead, Write)]
-    isr: InterruptStatus,
+    interrupt_status: InterruptStatus,
     /// Interrupt Enable Register.
     #[mmio(Write)]
-    ier: InterruptControl,
+    interrupt_enable: InterruptControl,
     /// Interrupt Disable Register.
     #[mmio(Write)]
-    idr: InterruptControl,
+    interupt_disable: InterruptControl,
     /// Interrupt Mask Register.
     #[mmio(PureRead)]
-    imr: InterruptMask,
+    enabled_interrupts: InterruptEnabled,
     enable: u32,
     delay_control: DelayControl,
     #[mmio(Write)]
