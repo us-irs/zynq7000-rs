@@ -12,6 +12,7 @@
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::{Delay, Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs;
@@ -90,7 +91,13 @@ async fn main(spawner: Spawner) -> ! {
     .unwrap();
     uart.write_all(b"-- Zynq 7000 Zedboard SPI L3GD20H example --\n\r")
         .unwrap();
-    zynq7000_hal::log::rb::init(log::LevelFilter::Trace);
+
+    static LOG_PIPE: static_cell::ConstStaticCell<
+        embassy_sync::pipe::Pipe<CriticalSectionRawMutex, 4096>,
+    > = static_cell::ConstStaticCell::new(embassy_sync::pipe::Pipe::new());
+    let (log_reader, log_writer) = LOG_PIPE.take().split();
+
+    zynq7000_hal::log::asynch::init(log::LevelFilter::Trace, log_writer);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -155,7 +162,7 @@ async fn main(spawner: Spawner) -> ! {
         }
     }
 
-    spawner.spawn(logger_task(uart).unwrap());
+    spawner.spawn(logger_task(uart, log_reader).unwrap());
     if BLOCKING {
         blocking_application(mio_led, emio_leds, spi).await;
     } else {
@@ -164,15 +171,16 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-pub async fn logger_task(uart: uart::Uart) {
+pub async fn logger_task(
+    uart: uart::Uart,
+    reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
+) -> ! {
     let (tx, _) = uart.split();
     let mut tx_async = TxAsync::new(tx);
-    let frame_queue = zynq7000_hal::log::rb::get_frame_queue();
     let mut log_buf: [u8; 2048] = [0; 2048];
     loop {
-        let next_frame_len = frame_queue.receive().await;
-        zynq7000_hal::log::rb::read_next_frame(next_frame_len, &mut log_buf);
-        tx_async.write(&log_buf[0..next_frame_len]).await;
+        let read_bytes = reader.read(&mut log_buf).await;
+        tx_async.write(&log_buf[0..read_bytes]).await;
     }
 }
 

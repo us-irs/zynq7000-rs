@@ -165,36 +165,31 @@ pub mod uart_blocking {
     }
 }
 
-/// Logger module which logs into a ring buffer to allow asynchronous logging handling.
-pub mod rb {
-    use core::cell::RefCell;
+/// Logger module which logs into a pipe to allow asynchronous logging handling.
+pub mod asynch {
     use core::fmt::Write as _;
 
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
     use log::{LevelFilter, set_logger, set_max_level};
-    use ringbuf::{
-        StaticRb,
-        traits::{Consumer, Producer},
-    };
 
     /// Logger implementation which logs frames via a ring buffer and sends the frame sizes
     /// as messages.
     ///
-    /// The logger does not require allocation and reserved a generous amount of 4096 bytes for
-    /// both data buffer and ring buffer. This should be sufficient for most logging needs.
+    /// The logger does not require allocation and reserves a generous amount of 4096 bytes for
+    /// log data. This should be sufficient for most logging needs.
     pub struct Logger {
-        frame_queue: embassy_sync::channel::Channel<CriticalSectionRawMutex, usize, 32>,
-        data_buf: critical_section::Mutex<RefCell<heapless::String<4096>>>,
-        ring_buf: critical_section::Mutex<RefCell<Option<StaticRb<u8, 4096>>>>,
+        pipe: core::cell::RefCell<
+            Option<embassy_sync::pipe::Writer<'static, CriticalSectionRawMutex, 4096>>,
+        >,
+        buf: critical_section::Mutex<core::cell::RefCell<heapless::String<4096>>>,
     }
 
     unsafe impl Send for Logger {}
     unsafe impl Sync for Logger {}
 
-    static LOGGER_RB: Logger = Logger {
-        frame_queue: embassy_sync::channel::Channel::new(),
-        data_buf: critical_section::Mutex::new(RefCell::new(heapless::String::new())),
-        ring_buf: critical_section::Mutex::new(RefCell::new(None)),
+    static LOGGER_PIPE: Logger = Logger {
+        pipe: core::cell::RefCell::new(None),
+        buf: critical_section::Mutex::new(core::cell::RefCell::new(heapless::String::new())),
     };
 
     impl log::Log for Logger {
@@ -203,58 +198,44 @@ pub mod rb {
         }
 
         fn log(&self, record: &log::Record) {
+            if self.pipe.borrow().is_none() {
+                return;
+            }
             critical_section::with(|cs| {
-                let ref_buf = self.data_buf.borrow(cs);
-                let mut buf = ref_buf.borrow_mut();
+                let mut buf = self.buf.borrow(cs).borrow_mut();
                 buf.clear();
                 let _ = writeln!(buf, "{} - {}\r", record.level(), record.args());
-                let rb_ref = self.ring_buf.borrow(cs);
-                let mut rb_opt = rb_ref.borrow_mut();
-                if rb_opt.is_none() {
-                    panic!("log call on uninitialized logger");
+
+                let mut written = 0;
+
+                let pipe_writer_ref = self.pipe.borrow();
+                let pipe_writer = pipe_writer_ref.as_ref().unwrap();
+                loop {
+                    match pipe_writer.try_write(&buf.as_bytes()[written..]) {
+                        Ok(written_in_this_call) => {
+                            written += written_in_this_call;
+                            if written >= buf.len() {
+                                break;
+                            }
+                        }
+                        Err(_) => break,
+                    }
                 }
-                rb_opt.as_mut().unwrap().push_slice(buf.as_bytes());
-                let _ = self.frame_queue.try_send(buf.len());
             });
         }
 
-        fn flush(&self) {
-            while !self.frame_queue().is_empty() {}
-        }
+        fn flush(&self) {}
     }
 
-    impl Logger {
-        pub fn frame_queue(
-            &self,
-        ) -> &embassy_sync::channel::Channel<CriticalSectionRawMutex, usize, 32> {
-            &self.frame_queue
-        }
-    }
-
-    pub fn init(level: LevelFilter) {
+    pub fn init(
+        level: LevelFilter,
+        writer: embassy_sync::pipe::Writer<'static, CriticalSectionRawMutex, 4096>,
+    ) {
         if super::LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
             return;
         }
-        critical_section::with(|cs| {
-            let rb = StaticRb::<u8, 4096>::default();
-            let rb_ref = LOGGER_RB.ring_buf.borrow(cs);
-            rb_ref.borrow_mut().replace(rb);
-        });
-        set_logger(&LOGGER_RB).unwrap();
+        LOGGER_PIPE.pipe.borrow_mut().replace(writer);
+        set_logger(&LOGGER_PIPE).unwrap();
         set_max_level(level); // Adjust as needed
-    }
-
-    pub fn read_next_frame(frame_len: usize, buf: &mut [u8]) {
-        let read_len = core::cmp::min(frame_len, buf.len());
-        critical_section::with(|cs| {
-            let rb_ref = LOGGER_RB.ring_buf.borrow(cs);
-            let mut rb = rb_ref.borrow_mut();
-            rb.as_mut().unwrap().pop_slice(&mut buf[0..read_len]);
-        })
-    }
-
-    pub fn get_frame_queue()
-    -> &'static embassy_sync::channel::Channel<CriticalSectionRawMutex, usize, 32> {
-        LOGGER_RB.frame_queue()
     }
 }
