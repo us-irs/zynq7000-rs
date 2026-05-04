@@ -70,6 +70,12 @@ set_property IOSTANDARD LVCMOS33 [get_ports UART_rxd]
 set_property PACKAGE_PIN AA11 [get_ports UART_txd]
 set_property IOSTANDARD LVCMOS33 [get_ports UART_txd]
 
+# OLED SPI
+set_property PACKAGE_PIN AB12 [get_ports OLED_SCLK]
+set_property IOSTANDARD LVCMOS33 [get_ports OLED_SCLK]
+set_property PACKAGE_PIN AA12 [get_ports OLED_SDIN]
+set_property IOSTANDARD LVCMOS33 [get_ports OLED_SDIN]
+
 # TTC0 Wave Out
 set_property PACKAGE_PIN W12 [get_ports {TTC0_WAVEOUT}]
 set_property IOSTANDARD LVCMOS33 [get_ports {TTC0_WAVEOUT}]
