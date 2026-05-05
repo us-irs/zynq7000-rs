@@ -75,7 +75,7 @@ set_property PACKAGE_PIN AB12 [get_ports OLED_SCLK]
 set_property IOSTANDARD LVCMOS33 [get_ports OLED_SCLK]
 set_property PACKAGE_PIN AA12 [get_ports OLED_SDIN]
 set_property IOSTANDARD LVCMOS33 [get_ports OLED_SDIN]
-set_property PULLTYPE PULLUP [get_ports OLED_SDIN]
+set_property PULLUP TRUE [get_ports OLED_SDIN]
 
 # TTC0 Wave Out
 set_property PACKAGE_PIN W12 [get_ports {TTC0_WAVEOUT}]
