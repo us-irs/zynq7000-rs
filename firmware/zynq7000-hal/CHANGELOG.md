@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   interrupts without clearing other CPU target.
 - Do not reset the UART on TX future creation anymore, which lead to glitches and invalid data.
 - Robustness improvements for the asynchronous UART TX module.
+- SPI1 AMBA clock control bits are now enabled and disabled properly
 
 ## Changed
 
