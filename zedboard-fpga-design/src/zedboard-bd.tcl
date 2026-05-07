@@ -246,6 +246,10 @@ proc create_root_design { parentCell } {
   set TTC0_WAVEOUT [ create_bd_port -dir O TTC0_WAVEOUT ]
   set OLED_SCLK [ create_bd_port -dir O OLED_SCLK ]
   set OLED_SDIN [ create_bd_port -dir O OLED_SDIN ]
+  set OLED_DC [ create_bd_port -dir O -from 0 -to 0 OLED_DC ]
+  set OLED_RESET [ create_bd_port -dir O -from 0 -to 0 OLED_RESET ]
+  set OLED_VDD [ create_bd_port -dir O -from 0 -to 0 OLED_VDD ]
+  set OLED_VBAT [ create_bd_port -dir O -from 0 -to 0 OLED_VBAT ]
 
   # Create instance: processing_system7_0, and set properties
   set processing_system7_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:processing_system7:5.5 processing_system7_0 ]
@@ -283,25 +287,27 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_DDR_RAM_HIGHADDR {0x1FFFFFFF} \
     CONFIG.PCW_ENET0_ENET0_IO {MIO 16 .. 27} \
     CONFIG.PCW_ENET0_GRP_MDIO_ENABLE {1} \
-    CONFIG.PCW_ENET0_GRP_MDIO_IO {EMIO} \
+    CONFIG.PCW_ENET0_GRP_MDIO_IO {MIO 52 .. 53} \
+    CONFIG.PCW_ENET0_PERIPHERAL_CLKSRC {IO PLL} \
     CONFIG.PCW_ENET0_PERIPHERAL_ENABLE {1} \
     CONFIG.PCW_ENET0_PERIPHERAL_FREQMHZ {1000 Mbps} \
     CONFIG.PCW_ENET0_RESET_ENABLE {0} \
     CONFIG.PCW_ENET_RESET_ENABLE {1} \
     CONFIG.PCW_ENET_RESET_SELECT {Share reset pin} \
+    CONFIG.PCW_EN_EMIO_ENET0 {0} \
     CONFIG.PCW_EN_EMIO_GPIO {1} \
-    CONFIG.PCW_EN_EMIO_SPI0 {0} \
-    CONFIG.PCW_EN_EMIO_SPI1 {1} \
+    CONFIG.PCW_EN_EMIO_SPI0 {1} \
+    CONFIG.PCW_EN_EMIO_SPI1 {0} \
     CONFIG.PCW_EN_EMIO_TTC0 {1} \
     CONFIG.PCW_EN_EMIO_TTC1 {0} \
     CONFIG.PCW_EN_EMIO_UART0 {1} \
-    CONFIG.PCW_EN_EMIO_WP_SDIO0 {1} \
+    CONFIG.PCW_EN_EMIO_WP_SDIO0 {0} \
     CONFIG.PCW_EN_ENET0 {1} \
     CONFIG.PCW_EN_GPIO {1} \
     CONFIG.PCW_EN_QSPI {1} \
     CONFIG.PCW_EN_SDIO0 {1} \
-    CONFIG.PCW_EN_SPI0 {0} \
-    CONFIG.PCW_EN_SPI1 {1} \
+    CONFIG.PCW_EN_SPI0 {1} \
+    CONFIG.PCW_EN_SPI1 {0} \
     CONFIG.PCW_EN_TTC0 {1} \
     CONFIG.PCW_EN_TTC1 {0} \
     CONFIG.PCW_EN_UART0 {1} \
@@ -472,9 +478,9 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_MIO_9_PULLUP {enabled} \
     CONFIG.PCW_MIO_9_SLEW {slow} \
     CONFIG.PCW_MIO_TREE_PERIPHERALS {GPIO#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#Quad SPI Flash#GPIO#Quad SPI Flash#GPIO#GPIO#GPIO#GPIO#GPIO#GPIO#GPIO#Enet 0#Enet 0#Enet\
-0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#USB Reset#SD 0#UART 1#UART 1#GPIO#GPIO#GPIO#GPIO}\
-\
-    CONFIG.PCW_MIO_TREE_SIGNALS {gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]/HOLD_B#qspi0_sclk#gpio[7]#qspi_fbclk#gpio[9]#gpio[10]#gpio[11]#gpio[12]#gpio[13]#gpio[14]#gpio[15]#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#reset#cd#tx#rx#gpio[50]#gpio[51]#gpio[52]#gpio[53]}\
+0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#Enet 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#USB 0#SD 0#SD 0#SD 0#SD 0#SD 0#SD 0#USB Reset#GPIO#UART 1#UART 1#GPIO#GPIO#Enet\
+0#Enet 0} \
+    CONFIG.PCW_MIO_TREE_SIGNALS {gpio[0]#qspi0_ss_b#qspi0_io[0]#qspi0_io[1]#qspi0_io[2]#qspi0_io[3]/HOLD_B#qspi0_sclk#gpio[7]#qspi_fbclk#gpio[9]#gpio[10]#gpio[11]#gpio[12]#gpio[13]#gpio[14]#gpio[15]#tx_clk#txd[0]#txd[1]#txd[2]#txd[3]#tx_ctl#rx_clk#rxd[0]#rxd[1]#rxd[2]#rxd[3]#rx_ctl#data[4]#dir#stp#nxt#data[0]#data[1]#data[2]#data[3]#clk#data[5]#data[6]#data[7]#clk#cmd#data[0]#data[1]#data[2]#data[3]#reset#gpio[47]#tx#rx#gpio[50]#gpio[51]#mdc#mdio}\
 \
     CONFIG.PCW_PRESET_BANK1_VOLTAGE {LVCMOS 1.8V} \
     CONFIG.PCW_QSPI_GRP_FBCLK_ENABLE {1} \
@@ -486,19 +492,17 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_QSPI_PERIPHERAL_ENABLE {1} \
     CONFIG.PCW_QSPI_PERIPHERAL_FREQMHZ {200} \
     CONFIG.PCW_QSPI_QSPI_IO {MIO 1 .. 6} \
-    CONFIG.PCW_SD0_GRP_CD_ENABLE {1} \
-    CONFIG.PCW_SD0_GRP_CD_IO {MIO 47} \
+    CONFIG.PCW_SD0_GRP_CD_ENABLE {0} \
     CONFIG.PCW_SD0_GRP_POW_ENABLE {0} \
-    CONFIG.PCW_SD0_GRP_WP_ENABLE {1} \
-    CONFIG.PCW_SD0_GRP_WP_IO {EMIO} \
+    CONFIG.PCW_SD0_GRP_WP_ENABLE {0} \
     CONFIG.PCW_SD0_PERIPHERAL_ENABLE {1} \
     CONFIG.PCW_SD0_SD0_IO {MIO 40 .. 45} \
     CONFIG.PCW_SDIO_PERIPHERAL_FREQMHZ {50} \
     CONFIG.PCW_SDIO_PERIPHERAL_VALID {1} \
     CONFIG.PCW_SINGLE_QSPI_DATA_MODE {x4} \
-    CONFIG.PCW_SPI0_PERIPHERAL_ENABLE {0} \
-    CONFIG.PCW_SPI1_PERIPHERAL_ENABLE {1} \
-    CONFIG.PCW_SPI1_SPI1_IO {EMIO} \
+    CONFIG.PCW_SPI0_PERIPHERAL_ENABLE {1} \
+    CONFIG.PCW_SPI0_SPI0_IO {EMIO} \
+    CONFIG.PCW_SPI1_PERIPHERAL_ENABLE {0} \
     CONFIG.PCW_SPI_PERIPHERAL_FREQMHZ {166.666666} \
     CONFIG.PCW_SPI_PERIPHERAL_VALID {1} \
     CONFIG.PCW_TTC0_PERIPHERAL_ENABLE {1} \
@@ -654,6 +658,50 @@ proc create_root_design { parentCell } {
   # Create instance: IRQ_F2P, and set properties
   set IRQ_F2P [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconcat:1.0 IRQ_F2P ]
 
+  # Create instance: OLED_DC, and set properties
+  set OLED_DC [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 OLED_DC ]
+  set_property -dict [list \
+    CONFIG.DIN_FROM {11} \
+    CONFIG.DIN_TO {11} \
+    CONFIG.DIN_WIDTH {16} \
+  ] $OLED_DC
+
+
+  # Create instance: OLED_RESET, and set properties
+  set OLED_RESET [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 OLED_RESET ]
+  set_property -dict [list \
+    CONFIG.DIN_FROM {12} \
+    CONFIG.DIN_TO {12} \
+    CONFIG.DIN_WIDTH {16} \
+  ] $OLED_RESET
+
+
+  # Create instance: OLED_VDD, and set properties
+  set OLED_VDD [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 OLED_VDD ]
+  set_property -dict [list \
+    CONFIG.DIN_FROM {13} \
+    CONFIG.DIN_TO {13} \
+    CONFIG.DIN_WIDTH {16} \
+  ] $OLED_VDD
+
+
+  # Create instance: OLED_VBAT, and set properties
+  set OLED_VBAT [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 OLED_VBAT ]
+  set_property -dict [list \
+    CONFIG.DIN_FROM {14} \
+    CONFIG.DIN_TO {14} \
+    CONFIG.DIN_WIDTH {16} \
+  ] $OLED_VBAT
+
+
+  # Create instance: ilconstant_2, and set properties
+  set ilconstant_2 [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconstant:1.0 ilconstant_2 ]
+
+  # Create instance: ilconstant_3, and set properties
+  set ilconstant_3 [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconstant:1.0 ilconstant_3 ]
+  set_property CONFIG.CONST_VAL {0} $ilconstant_3
+
+
   # Create interface connections
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
@@ -668,6 +716,12 @@ proc create_root_design { parentCell } {
   [get_bd_pins EMIO_I/In3]
   connect_bd_net -net EMIO_O_1_Dout  [get_bd_pins EMIO_O_1/Dout] \
   [get_bd_pins EMIO_I/In2]
+  connect_bd_net -net OLED_RESET_Dout  [get_bd_pins OLED_RESET/Dout] \
+  [get_bd_ports OLED_RESET]
+  connect_bd_net -net OLED_VBAT_Dout  [get_bd_pins OLED_VBAT/Dout] \
+  [get_bd_ports OLED_VBAT]
+  connect_bd_net -net OLED_VDD_Dout  [get_bd_pins OLED_VDD/Dout] \
+  [get_bd_ports OLED_VDD]
   connect_bd_net -net SWITCHES_1  [get_bd_ports SWITCHES] \
   [get_bd_pins EMIO_I_0/In0]
   connect_bd_net -net axi_uart16550_0_ip2intc_irpt  [get_bd_pins axi_uart16550_0/ip2intc_irpt] \
@@ -686,10 +740,18 @@ proc create_root_design { parentCell } {
   [get_bd_pins processing_system7_0/IRQ_F2P]
   connect_bd_net -net ilconstant_0_dout  [get_bd_pins ilconstant_0/dout] \
   [get_bd_pins EMIO_I_0/In2]
+  connect_bd_net -net ilconstant_2_dout  [get_bd_pins ilconstant_2/dout] \
+  [get_bd_pins processing_system7_0/SPI0_MISO_I] \
+  [get_bd_pins processing_system7_0/SPI0_SS_I]
+  connect_bd_net -net ilconstant_3_dout  [get_bd_pins ilconstant_3/dout] \
+  [get_bd_pins processing_system7_0/SPI0_MOSI_I] \
+  [get_bd_pins processing_system7_0/SPI0_SCLK_I]
   connect_bd_net -net ilslice_0_Dout  [get_bd_pins UART_MUX/Dout] \
   [get_bd_pins uart_mux_0/sel]
   connect_bd_net -net ilslice_0_Dout1  [get_bd_pins LEDS/Dout] \
   [get_bd_ports LEDS]
+  connect_bd_net -net ilslice_0_Dout2  [get_bd_pins OLED_DC/Dout] \
+  [get_bd_ports OLED_DC]
   connect_bd_net -net processing_system7_0_FCLK_CLK0  [get_bd_pins processing_system7_0/FCLK_CLK0] \
   [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] \
   [get_bd_pins rst_ps7_0_100M/slowest_sync_clk] \
@@ -702,9 +764,9 @@ proc create_root_design { parentCell } {
   connect_bd_net -net processing_system7_0_GPIO_O  [get_bd_pins processing_system7_0/GPIO_O] \
   [get_bd_pins EMIO_O_0/Din] \
   [get_bd_pins EMIO_O_1/Din]
-  connect_bd_net -net processing_system7_0_SPI1_MOSI_O  [get_bd_pins processing_system7_0/SPI1_MOSI_O] \
+  connect_bd_net -net processing_system7_0_SPI0_MOSI_O  [get_bd_pins processing_system7_0/SPI0_MOSI_O] \
   [get_bd_ports OLED_SDIN]
-  connect_bd_net -net processing_system7_0_SPI1_SCLK_O  [get_bd_pins processing_system7_0/SPI1_SCLK_O] \
+  connect_bd_net -net processing_system7_0_SPI0_SCLK_O  [get_bd_pins processing_system7_0/SPI0_SCLK_O] \
   [get_bd_ports OLED_SCLK]
   connect_bd_net -net processing_system7_0_TTC0_WAVE0_OUT  [get_bd_pins processing_system7_0/TTC0_WAVE0_OUT] \
   [get_bd_ports TTC0_WAVEOUT]
@@ -732,7 +794,11 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xlslice_1_Dout  [get_bd_pins EMIO_O_0/Dout] \
   [get_bd_pins EMIO_I/In0] \
   [get_bd_pins UART_MUX/Din] \
-  [get_bd_pins LEDS/Din]
+  [get_bd_pins LEDS/Din] \
+  [get_bd_pins OLED_DC/Din] \
+  [get_bd_pins OLED_RESET/Din] \
+  [get_bd_pins OLED_VDD/Din] \
+  [get_bd_pins OLED_VBAT/Din]
 
   # Create address segments
   assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_uart16550_0/S_AXI/Reg] -force

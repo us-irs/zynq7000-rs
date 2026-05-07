@@ -39,6 +39,12 @@ vivado zedboard-rust.xpr
 You can perform all the steps specified in the Vivado GUI as well using `Execute TCL script` and
 `Load Project`.
 
+# Updating the project
+
+If you add custom RTL code, you might have to edit the `zedboard-rust.tcl` project file and
+add the source files there. This file was created using the `write_project_tcl` but was
+optimized, so it might be easier to manually update the file.
+
 # Generating the SDT folder from a hardware description
 
 You can generate a hardware description by building the block design by using `Generate Bitstream`

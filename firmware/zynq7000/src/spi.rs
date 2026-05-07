@@ -6,7 +6,7 @@ pub use crate::{SpiClockPhase, SpiClockPolarity};
 pub const SPI_0_BASE_ADDR: usize = 0xE000_6000;
 pub const SPI_1_BASE_ADDR: usize = 0xE000_7000;
 
-/// The SPI reference block will be divided by a divisor value.
+/// The SPI reference clock will be divided by a divisor value.
 #[bitbybit::bitenum(u3)]
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]

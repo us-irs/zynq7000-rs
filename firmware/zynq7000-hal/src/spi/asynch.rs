@@ -37,7 +37,7 @@ pub fn on_interrupt(peripheral: SpiId) {
     let enabled_irqs = spi.read_enabled_interrupts();
     // Prevent spurious interrupts from messing with out logic here.
     spi.disable_interrupts();
-    let interrupt_status = spi.read_isr();
+    let interrupt_status = spi.read_interrupt_status();
     spi.clear_interrupts();
     // IRQ is not related.
     if !enabled_irqs.tx_below_threshold()
