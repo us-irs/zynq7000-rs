@@ -20,7 +20,7 @@ use embedded_hal::delay::DelayNs;
 pub use embedded_hal::spi::Mode;
 use zynq7000::slcr::reset::DualRefAndClockResetSpiUart;
 use zynq7000::spi::{
-    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
+    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptEnabled, InterruptStatus,
     MmioRegisters, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
@@ -538,12 +538,12 @@ impl SpiLowLevel {
 
     #[inline]
     pub fn read_isr(&self) -> InterruptStatus {
-        self.regs.read_isr()
+        self.regs.read_interrupt_status()
     }
 
     #[inline]
-    pub fn read_imr(&self) -> InterruptMask {
-        self.regs.read_imr()
+    pub fn read_enabled_interrupts(&self) -> InterruptEnabled {
+        self.regs.read_enabled_interrupts()
     }
 
     #[inline]
@@ -573,13 +573,13 @@ impl SpiLowLevel {
     /// in SPI master mode.
     #[inline]
     pub fn disable_interrupts(&mut self) {
-        self.regs.write_idr(
+        self.regs.write_interupt_disable(
             InterruptControl::builder()
                 .with_tx_underflow(true)
                 .with_rx_full(true)
                 .with_rx_not_empty(true)
                 .with_tx_full(false)
-                .with_tx_trig(true)
+                .with_tx_below_threshold(true)
                 .with_mode_fault(false)
                 .with_rx_ovr(true)
                 .build(),
@@ -589,14 +589,14 @@ impl SpiLowLevel {
     /// This enables all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn enable_interrupts(&mut self) {
-        self.regs.write_ier(
+    pub fn enable_interrupts(&mut self, tx_below_threshold: bool) {
+        self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_underflow(true)
                 .with_rx_full(true)
                 .with_rx_not_empty(true)
                 .with_tx_full(false)
-                .with_tx_trig(true)
+                .with_tx_below_threshold(tx_below_threshold)
                 .with_mode_fault(false)
                 .with_rx_ovr(true)
                 .build(),
@@ -607,17 +607,31 @@ impl SpiLowLevel {
     /// in SPI master mode.
     #[inline]
     pub fn clear_interrupts(&mut self) {
-        self.regs.write_isr(
+        self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_underflow(true)
                 .with_rx_full(true)
                 .with_rx_not_empty(true)
                 .with_tx_full(false)
-                .with_tx_not_full(true)
+                .with_tx_below_threshold(true)
                 .with_mode_fault(false)
-                .with_rx_ovr(true)
+                .with_rx_overrun(true)
                 .build(),
         );
+    }
+}
+
+impl core::ops::Deref for SpiLowLevel {
+    type Target = MmioRegisters<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.regs
+    }
+}
+
+impl core::ops::DerefMut for SpiLowLevel {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.regs
     }
 }
 
@@ -908,7 +922,7 @@ impl Spi {
 
         let mut read_idx = 0;
         while read_idx < words.len() {
-            let status = self.regs().read_isr();
+            let status = self.regs().read_interrupt_status();
             if status.rx_not_empty() {
                 words[read_idx] = self.inner.read_fifo_unchecked();
                 read_idx += 1;
@@ -929,7 +943,7 @@ impl Spi {
         let mut read_idx = 0;
 
         while written < words.len() {
-            let status = self.regs().read_isr();
+            let status = self.regs().read_interrupt_status();
             // We empty the FIFO to prevent it filling up completely, as long as we have to write
             // bytes
             if status.rx_not_empty() {
@@ -958,7 +972,7 @@ impl Spi {
         let mut writes_finished = write_idx == max_idx;
         let mut reads_finished = false;
         while !writes_finished || !reads_finished {
-            let status = self.regs().read_isr();
+            let status = self.regs().read_interrupt_status();
             if status.rx_not_empty() && !reads_finished {
                 if read_idx < read.len() {
                     read[read_idx] = self.inner.read_fifo_unchecked();
