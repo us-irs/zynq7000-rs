@@ -11,7 +11,7 @@ keywords = ["no-std", "hal", "amd", "zynq7000", "bare-metal"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-aarch32-cpu = { version = "0.2" }
+aarch32-cpu = { version = "0.3" }
 zynq7000 = { path = "../zynq7000", version = "0.2" }
 zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
 static_assertions = "1.1"
@@ -29,7 +29,7 @@ static_cell = "2"
 delegate = "0.13"
 pastey = "0.2.1"
 nb = "1"
-fugit = "0.3"
+fugit = "0.4"
 critical-section = "1"
 libm = "0.2"
 log = "0.4"

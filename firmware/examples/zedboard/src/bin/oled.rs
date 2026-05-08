@@ -52,8 +52,8 @@ async fn main(spawner: Spawner) -> ! {
     spi::configure_spi_ref_clock(&mut clocks, target_spi_ref_clock);
 
     assert!(
-        clocks.io_clocks().spi_clk().raw()
-            > (clocks.arm_clocks().cpu_1x_clk().raw() as f32 * 1.2) as u32,
+        clocks.io_clocks().spi_clk().to_raw()
+            > (clocks.arm_clocks().cpu_1x_clk().to_raw() as f32 * 1.2) as u32,
         "SPI reference clock must be larger than CPU 1x clock"
     );
 

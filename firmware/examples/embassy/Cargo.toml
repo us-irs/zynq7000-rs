@@ -11,7 +11,7 @@ keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-aarch32-cpu = { version = "0.2", features = ["critical-section-single-core"] }
+aarch32-cpu = { version = "0.3", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal" }
@@ -24,7 +24,7 @@ critical-section = "1"
 heapless = "0.9"
 embedded-io = "0.7"
 embedded-hal = "1"
-fugit = "0.3"
+fugit = "0.4"
 log = "0.4"
 
 embassy-executor = { version = "0.10", features = [

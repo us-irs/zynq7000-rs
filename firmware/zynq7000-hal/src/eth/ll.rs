@@ -69,8 +69,8 @@ impl ClockDivisors {
         let mut best_div_1 = u6::new(0);
         for div_1 in 1..=u6::MAX.as_usize() {
             for div_0 in 1..=u6::MAX.as_usize() {
-                let clk_rate = ref_clk.raw() / div_0 as u32 / div_1 as u32;
-                let diff = (target_speed.raw() as i64 - clk_rate as i64).unsigned_abs() as u32;
+                let clk_rate = ref_clk.to_raw() / div_0 as u32 / div_1 as u32;
+                let diff = (target_speed.to_raw() as i64 - clk_rate as i64).unsigned_abs() as u32;
                 if diff < smallest_diff {
                     smallest_diff = diff;
                     best_div_0 = u6::new(div_0 as u8);

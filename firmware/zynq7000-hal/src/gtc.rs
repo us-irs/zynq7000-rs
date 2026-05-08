@@ -18,8 +18,8 @@ unsafe impl Send for GlobalTimerCounter {}
 
 /// Convert a frequency to GTC ticks given a clock frequency.
 pub const fn frequency_to_ticks(clock: Hertz, frequency: Hertz) -> u32 {
-    if frequency.raw() != 0 {
-        clock.raw().div_ceil(frequency.raw())
+    if frequency.to_raw() != 0 {
+        clock.to_raw().div_ceil(frequency.to_raw())
     } else {
         0
     }
@@ -171,7 +171,7 @@ impl embedded_hal::delay::DelayNs for GlobalTimerCounter {
             return;
         }
         let end_of_delay = self.read_timer()
-            + (((ns as u64) * self.cpu_3x2x_clock.unwrap().raw() as u64) / 1_000_000_000);
+            + (((ns as u64) * self.cpu_3x2x_clock.unwrap().to_raw() as u64) / 1_000_000_000);
         while self.read_timer() < end_of_delay {}
     }
 }

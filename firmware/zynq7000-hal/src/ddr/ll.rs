@@ -28,7 +28,7 @@ pub fn calculate_dci_divisors(ddr_clks: &DdrClocks) -> DciClkConfig {
 
 /// Calculate the required DCI divisors for the given DDR clock frequency.
 pub fn calculate_dci_divisors_with_ddr_clk(ddr_clk: Hertz) -> DciClkConfig {
-    let target_div = ddr_clk.raw().div_ceil(DCI_MAX_FREQ.raw());
+    let target_div = ddr_clk.to_raw().div_ceil(DCI_MAX_FREQ.to_raw());
     let mut config = DciClkConfig {
         div0: u6::new(u6::MAX.value()),
         div1: u6::new(u6::MAX.value()),

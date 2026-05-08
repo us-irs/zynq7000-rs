@@ -1,8 +1,71 @@
 use std::fs::File;
 use std::io::Write;
 use std::process::Command;
-use zynq7000_rt::mmu::ONE_MB;
-pub use zynq7000_rt::mmu::segments::*;
+//use zynq7000_rt::mmu::ONE_MB;
+//pub use zynq7000_rt::mmu::segments::*;
+
+pub const MAX_DDR_SIZE: usize = 0x4000_0000;
+pub const ONE_MB: usize = 0x10_0000;
+
+pub mod offsets {
+    pub const OFFSET_DDR: usize = 0;
+    pub const OFFSET_DDR_ALL_ACCESSIBLE: usize = 0x10_0000;
+
+    pub const OFFSET_FPGA_SLAVE_0: usize = 0x4000_0000;
+    pub const OFFSET_FPGA_SLAVE_1_START: usize = 0x8000_0000;
+    pub const OFFSET_FPGA_SLAVE_1_END: usize = 0xC000_0000;
+
+    pub const OFFSET_IO_PERIPHERALS_START: usize = 0xE000_0000;
+    pub const OFFSET_IO_PERIPHERALS_END: usize = 0xE030_0000;
+
+    pub const OFFSET_NAND_MEMORY: usize = 0xE100_0000;
+    pub const OFFSET_NOR_MEMORY: usize = 0xE200_0000;
+    pub const OFFSET_SRAM_MEMORY: usize = 0xE400_0000;
+    pub const OFFSET_SMC_MEMORIES_END: usize = 0xE600_0000;
+
+    /// 0xf8000c00 to 0xf8000fff, 0xf8010000 to 0xf88fffff and
+    /// 0xf8f03000 to 0xf8ffffff are reserved  but due to granual size of
+    /// 1MB, it is not possible to define separate regions for them.
+    pub const OFFSET_AMBA_APB_START: usize = 0xF800_0000;
+    pub const OFFSET_AMBA_APB_END: usize = 0xF900_0000;
+
+    pub const OFFSET_QSPI_XIP_START: usize = 0xFC00_0000;
+    pub const OFFSET_QSPI_XIP_END: usize = 0xFE00_0000;
+
+    /// 0xfff00000 to 0xfffb0000 is reserved but due to granual size of
+    /// 1MB, it is not possible to define separate region for it
+    pub const OFFSET_OCM_MAPPED_HIGH_START: usize = 0xFFF0_0000;
+    pub const OFFSET_OCM_MAPPED_HIGH_END: u64 = 0x1_0000_0000;
+}
+
+pub mod segments {
+    pub use super::offsets::*;
+    use super::{MAX_DDR_SIZE, ONE_MB};
+
+    /// First 1 MB of DDR has special treatment, access is dependant on SCU/OCM state.
+    /// Refer to Zynq TRM UG585 p.106 for more details.
+    pub const DDR_FULL_ACCESSIBLE: usize = (MAX_DDR_SIZE - ONE_MB) / ONE_MB;
+    pub const FPGA_SLAVE: usize = (OFFSET_FPGA_SLAVE_1_START - OFFSET_FPGA_SLAVE_0) / ONE_MB;
+    pub const UNASSIGNED_0: usize =
+        (OFFSET_IO_PERIPHERALS_START - OFFSET_FPGA_SLAVE_1_END) / ONE_MB;
+    pub const IO_PERIPHS: usize =
+        (OFFSET_IO_PERIPHERALS_END - OFFSET_IO_PERIPHERALS_START) / ONE_MB;
+    pub const UNASSIGNED_1: usize = (OFFSET_NAND_MEMORY - OFFSET_IO_PERIPHERALS_END) / ONE_MB;
+    pub const NAND: usize = (OFFSET_NOR_MEMORY - OFFSET_NAND_MEMORY) / ONE_MB;
+    pub const NOR: usize = (OFFSET_SRAM_MEMORY - OFFSET_NOR_MEMORY) / ONE_MB;
+    pub const SRAM: usize = (OFFSET_SMC_MEMORIES_END - OFFSET_SRAM_MEMORY) / ONE_MB;
+    pub const SEGMENTS_UNASSIGNED_2: usize =
+        (OFFSET_AMBA_APB_START - OFFSET_SMC_MEMORIES_END) / ONE_MB;
+    pub const AMBA_APB: usize = (OFFSET_AMBA_APB_END - OFFSET_AMBA_APB_START) / ONE_MB;
+    pub const UNASSIGNED_3: usize = (OFFSET_QSPI_XIP_START - OFFSET_AMBA_APB_END) / ONE_MB;
+    pub const QSPI_XIP: usize = (OFFSET_QSPI_XIP_END - OFFSET_QSPI_XIP_START) / ONE_MB;
+    pub const UNASSIGNED_4: usize = (OFFSET_OCM_MAPPED_HIGH_START - OFFSET_QSPI_XIP_END) / ONE_MB;
+    pub const OCM_MAPPED_HIGH: usize = ((OFFSET_OCM_MAPPED_HIGH_END
+        - OFFSET_OCM_MAPPED_HIGH_START as u64)
+        / ONE_MB as u64) as usize;
+}
+
+use segments::*;
 
 macro_rules! write_l1_section {
     ($writer:expr, $offset:expr, $attr:expr) => {

@@ -94,6 +94,8 @@ initialize:
     bic     r0, r0, #0x1      /* clear bit 0 */
     mcr     p15, 0, r0, c1, c0, 0   /* write value back */
 
+    /* We must set the core number for this function */
+    mov     r0,#0
     bl      _stack_setup_preallocated
 
     // set scu enable bit in scu

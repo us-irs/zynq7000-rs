@@ -179,7 +179,10 @@ impl Eth1RxData3Pin for Pin<Mio38> {}
 /// Calculate the CPU 1x clock divisor required to achieve a clock speed which is below
 /// 2.5 MHz, as specified by the 802.3 standard.
 pub fn calculate_mdc_clk_div(arm_clks: &ArmClocks) -> Option<MdcClockDivisor> {
-    let div = arm_clks.cpu_1x_clk().raw().div_ceil(MAX_MDC_SPEED.raw());
+    let div = arm_clks
+        .cpu_1x_clk()
+        .to_raw()
+        .div_ceil(MAX_MDC_SPEED.to_raw());
     match div {
         0..8 => Some(MdcClockDivisor::Div8),
         8..16 => Some(MdcClockDivisor::Div16),

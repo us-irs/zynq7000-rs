@@ -44,7 +44,7 @@ const IO_CLK: Hertz = Hertz::from_raw(1_000_000_000);
 const DDR_FREQUENCY: Hertz = Hertz::from_raw(533_333_333);
 
 /// 1067 MHz.
-const DDR_CLK: Hertz = Hertz::from_raw(2 * DDR_FREQUENCY.raw());
+const DDR_CLK: Hertz = Hertz::from_raw(2 * DDR_FREQUENCY.to_raw());
 
 const PERFORM_DDR_MEMTEST: bool = false;
 

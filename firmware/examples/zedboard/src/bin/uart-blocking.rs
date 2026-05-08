@@ -9,7 +9,6 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
-use fugit::RateExtU32;
 use log::{error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
@@ -147,7 +146,8 @@ async fn main(_spawner: Spawner) -> ! {
 
     // TODO: Can we determine/read the clock frequency to the FPGAs as well?
     let (clk_config, error) =
-        axi_uart16550::ClockConfig::new_autocalc_with_error(100.MHz(), 115200).unwrap();
+        axi_uart16550::ClockConfig::new_autocalc_with_error(fugit_03::HertzU32::MHz(100), 115200)
+            .unwrap();
     assert!(error < 0.02);
     let mut uart_16550 = unsafe {
         AxiUart16550::new(
