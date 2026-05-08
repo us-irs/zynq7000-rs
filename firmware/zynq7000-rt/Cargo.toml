@@ -1,6 +1,6 @@
 [package]
 name = "zynq7000-rt"
-version = "0.2.0"
+version = "0.3.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Run-time support for the Zynq7000 family of SoCs for running bare-metal applications"
@@ -14,7 +14,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-rt = { version = "0.3", optional = true, features = ["fpu-d32"] }
 aarch32-cpu = { version = "0.3" }
 arbitrary-int = "2"
-zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.1" }
+zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.2" }
 
 [build-dependencies]
 arm-targets = { version = "0.4" }
