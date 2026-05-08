@@ -61,7 +61,7 @@ impl Tx {
         if with_reset {
             self.soft_reset();
         }
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_control(|mut val| {
             val.set_tx_en(true);
             val.set_tx_dis(false);
             val
@@ -71,7 +71,7 @@ impl Tx {
     /// Disables TX side of the UART.
     #[inline]
     pub fn disable(&mut self) {
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_control(|mut val| {
             val.set_tx_en(false);
             val.set_tx_dis(true);
             val
@@ -81,12 +81,12 @@ impl Tx {
     /// Performs a soft-reset of the TX side of the UART.
     #[inline]
     pub fn soft_reset(&mut self) {
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_control(|mut val| {
             val.set_tx_rst(true);
             val
         });
         loop {
-            if !self.regs.read_cr().tx_rst() {
+            if !self.regs.read_control().tx_rst() {
                 break;
             }
         }

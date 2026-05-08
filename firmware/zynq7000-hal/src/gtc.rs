@@ -75,13 +75,13 @@ impl GlobalTimerCounter {
     /// Set the comparator which can be used to trigger an interrupt in the future.
     #[inline]
     pub fn set_comparator(&mut self, comparator: u64) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_comparator_enable(false);
             ctrl
         });
         self.regs.write_comparator_upper((comparator >> 32) as u32);
         self.regs.write_comparator_lower(comparator as u32);
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_comparator_enable(true);
             ctrl
         });
@@ -112,7 +112,7 @@ impl GlobalTimerCounter {
     /// Enable the GTC.
     #[inline]
     pub fn enable(&mut self) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_enable(true);
             ctrl
         });
@@ -121,7 +121,7 @@ impl GlobalTimerCounter {
     /// Enable auto-increment.
     #[inline]
     pub fn enable_auto_increment(&mut self) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_auto_increment(true);
             ctrl
         });
@@ -130,7 +130,7 @@ impl GlobalTimerCounter {
     /// Set a pre-scaler.
     #[inline]
     pub fn set_prescaler(&mut self, prescaler: u8) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_prescaler(prescaler);
             ctrl
         });
@@ -139,7 +139,7 @@ impl GlobalTimerCounter {
     /// Disable the GTC.
     #[inline]
     pub fn disable(&mut self) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_enable(false);
             ctrl
         });
@@ -148,7 +148,7 @@ impl GlobalTimerCounter {
     /// Enable the comparator interrupt.
     #[inline]
     pub fn enable_interrupt(&mut self) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_irq_enable(true);
             ctrl
         });
@@ -157,7 +157,7 @@ impl GlobalTimerCounter {
     /// Disable the comparator interrupt.
     #[inline]
     pub fn disable_interrupt(&mut self) {
-        self.regs.modify_ctrl(|mut ctrl| {
+        self.regs.modify_control(|mut ctrl| {
             ctrl.set_irq_enable(false);
             ctrl
         });

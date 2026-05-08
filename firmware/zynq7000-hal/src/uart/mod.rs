@@ -567,7 +567,7 @@ impl Uart {
         };
         enable_amba_peripheral_clock(periph_sel);
         reset(uart_id);
-        reg_block.modify_cr(|mut v| {
+        reg_block.modify_control(|mut v| {
             v.set_tx_dis(true);
             v.set_rx_dis(true);
             v
@@ -593,7 +593,7 @@ impl Uart {
             })
             .with_clksel(cfg.clk_sel)
             .build();
-        reg_block.write_mr(mode);
+        reg_block.write_mode(mode);
         reg_block.write_baudgen(
             Baudgen::builder()
                 .with_cd(cfg.raw_clk_config().cd())
@@ -605,7 +605,7 @@ impl Uart {
                 .build(),
         );
         // Soft reset for both TX and RX.
-        reg_block.modify_cr(|mut v| {
+        reg_block.modify_control(|mut v| {
             v.set_tx_rst(true);
             v.set_rx_rst(true);
             v
@@ -617,7 +617,7 @@ impl Uart {
         ));
 
         // Enable TX and RX.
-        reg_block.modify_cr(|mut v| {
+        reg_block.modify_control(|mut v| {
             v.set_tx_dis(false);
             v.set_rx_dis(false);
             v.set_tx_en(true);
@@ -640,7 +640,7 @@ impl Uart {
     /// Set character mode.
     #[inline]
     pub fn set_mode(&mut self, mode: ChMode) {
-        self.regs().modify_mr(|mut mr| {
+        self.regs().modify_mode(|mut mr| {
             mr.set_chmode(mode);
             mr
         });
