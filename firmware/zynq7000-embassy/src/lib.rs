@@ -68,7 +68,7 @@ impl GtcTimerDriver {
     pub unsafe fn init(&'static self, arm_clock: &ArmClocks, mut gtc: GlobalTimerCounter) {
         CPU_3X2X_CLK.set(arm_clock.cpu_3x2x_clk()).unwrap();
         SCALE
-            .set(arm_clock.cpu_3x2x_clk().raw() as u64 / TICK_HZ)
+            .set(arm_clock.cpu_3x2x_clk().to_raw() as u64 / TICK_HZ)
             .unwrap();
         gtc.set_cpu_3x2x_clock(arm_clock.cpu_3x2x_clk());
         gtc.set_prescaler(0);

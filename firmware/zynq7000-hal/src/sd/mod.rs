@@ -308,8 +308,10 @@ impl SdioDivisors {
             129.. => SdClockDivisor::Div256,
         };
         Self {
-            divisor_init_phase: divisor_select_from_value(ref_clk.raw().div_ceil(INIT_CLOCK_HZ)),
-            divisor_normal: divisor_select_from_value(ref_clk.raw().div_ceil(target_speed.raw())),
+            divisor_init_phase: divisor_select_from_value(ref_clk.to_raw().div_ceil(INIT_CLOCK_HZ)),
+            divisor_normal: divisor_select_from_value(
+                ref_clk.to_raw().div_ceil(target_speed.to_raw()),
+            ),
         }
     }
 
@@ -354,7 +356,7 @@ impl SdClockConfig {
         target_sd_speed: Hertz,
     ) -> Option<Self> {
         let ref_clk = io_clocks.ref_clk();
-        let io_ref_clock_divisor = ref_clk.raw().div_ceil(target_ref_clock.raw());
+        let io_ref_clock_divisor = ref_clk.to_raw().div_ceil(target_ref_clock.to_raw());
         if io_ref_clock_divisor > u6::MAX.as_u32() {
             return None;
         }

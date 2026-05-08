@@ -389,7 +389,7 @@ impl Config {
         init_mode: Mode,
         ss_config: SlaveSelectConfig,
     ) -> Self {
-        let divisor_raw = io_clock.spi_clk().raw().div_ceil(target_clock.raw());
+        let divisor_raw = io_clock.spi_clk().to_raw().div_ceil(target_clock.to_raw());
         let baud_div_sel = match divisor_raw {
             0..=4 => BaudDivSel::By4,
             5..=8 => BaudDivSel::By8,
@@ -1181,24 +1181,14 @@ pub fn reset(id: SpiId) {
 pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6> {
     let slcr = unsafe { Slcr::steal() };
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
-    let div = match spi_clk_ctrl.srcsel() {
+    let ref_clock = match spi_clk_ctrl.srcsel() {
         zynq7000::slcr::clocks::SrcSelIo::IoPll | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
-            clks.io_clocks()
-                .ref_clk()
-                .raw()
-                .div_ceil(clks.arm_clocks().cpu_1x_clk().raw())
+            clks.io_clocks().ref_clk().to_raw()
         }
-        zynq7000::slcr::clocks::SrcSelIo::ArmPll => clks
-            .arm_clocks()
-            .ref_clk()
-            .raw()
-            .div_ceil(clks.arm_clocks().cpu_1x_clk().raw()),
-        zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks
-            .ddr_clocks()
-            .ref_clk()
-            .raw()
-            .div_ceil(clks.arm_clocks().cpu_1x_clk().raw()),
+        zynq7000::slcr::clocks::SrcSelIo::ArmPll => clks.arm_clocks().ref_clk().to_raw(),
+        zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks.ddr_clocks().ref_clk().to_raw(),
     };
+    let div = ref_clock.div_ceil(clks.arm_clocks().cpu_1x_clk().to_raw());
     if div > u6::MAX.value() as u32 {
         return None;
     }
@@ -1216,12 +1206,12 @@ pub fn configure_spi_ref_clock(clks: &mut Clocks, target_clock: Hertz) {
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     let ref_clk = match spi_clk_ctrl.srcsel() {
         zynq7000::slcr::clocks::SrcSelIo::IoPll | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
-            clks.io_clocks().ref_clk().raw()
+            clks.io_clocks().ref_clk().to_raw()
         }
-        zynq7000::slcr::clocks::SrcSelIo::ArmPll => clks.arm_clocks().ref_clk().raw(),
-        zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks.ddr_clocks().ref_clk().raw(),
+        zynq7000::slcr::clocks::SrcSelIo::ArmPll => clks.arm_clocks().ref_clk().to_raw(),
+        zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks.ddr_clocks().ref_clk().to_raw(),
     };
-    let div = ref_clk.div_ceil(target_clock.raw());
+    let div = ref_clk.div_ceil(target_clock.to_raw());
     if div > u6::MAX.value() as u32 {
         configure_spi_ref_clock_with_divisor(clks, u6::new(div as u8));
     }

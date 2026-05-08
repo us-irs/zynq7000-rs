@@ -3,19 +3,6 @@
 version = 4
 
 [[package]]
-name = "aarch32-cpu"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1417bbf608824a44cb2fa2ad74b5ec28c0ae4c83df62a4bd2b532bf04c241ade"
-dependencies = [
- "arbitrary-int 2.0.0",
- "arm-targets",
- "bitbybit 1.4.0",
- "num_enum",
- "thiserror",
-]
-
-[[package]]
 name = "aho-corasick"
 version = "1.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -85,12 +72,6 @@ name = "arbitrary-int"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c858caffa49edfc4ecc45a4bec37abd3e88041a2903816f10f990b7b41abc281"
-
-[[package]]
-name = "arm-targets"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8d29a37f252452446b67d5e50dee82a6ce12781218b915244bb6507c10b72812"
 
 [[package]]
 name = "bitbybit"
@@ -254,37 +235,12 @@ checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 [[package]]
 name = "mmu-table-gen"
 version = "0.1.0"
-dependencies = [
- "zynq7000-mmu",
- "zynq7000-rt",
-]
 
 [[package]]
 name = "num-conv"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "51d515d32fb182ee37cda2ccdcb92950d6a3c2893aa280e540671c2cd0f3b1d9"
-
-[[package]]
-name = "num_enum"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1207a7e20ad57b847bbddc6776b968420d38292bbfe2089accff5e19e82454c"
-dependencies = [
- "num_enum_derive",
- "rustversion",
-]
-
-[[package]]
-name = "num_enum_derive"
-version = "0.7.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff32365de1b6743cb203b710788263c44a03de03802daf96092f2da4fe6ba4d7"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
 
 [[package]]
 name = "num_threads"
@@ -712,15 +668,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zynq7000-mmu"
-version = "0.1.2"
-dependencies = [
- "aarch32-cpu",
- "arm-targets",
- "thiserror",
-]
-
-[[package]]
 name = "zynq7000-ps7init-extract"
 version = "0.1.0"
 dependencies = [
@@ -732,14 +679,4 @@ dependencies = [
  "simple_logger",
  "syn",
  "zynq7000",
-]
-
-[[package]]
-name = "zynq7000-rt"
-version = "0.2.0"
-dependencies = [
- "aarch32-cpu",
- "arbitrary-int 2.0.0",
- "arm-targets",
- "zynq7000-mmu",
 ]

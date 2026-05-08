@@ -254,8 +254,8 @@ pub fn calculate_viable_configs(
     }
     let mut current_clk_config = ClockConfig::default();
     for bdiv in 4..u8::MAX {
-        let cd =
-            round(uart_clk.raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64)) as u64;
+        let cd = round(uart_clk.to_raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64))
+            as u64;
         if cd > u16::MAX as u64 {
             continue;
         }
@@ -290,8 +290,8 @@ pub fn calculate_raw_baud_cfg_smallest_error(
     let mut best_clk_config = ClockConfig::default();
     let mut smallest_error: f64 = 100.0;
     for bdiv in 4..u8::MAX {
-        let cd =
-            round(uart_clk.raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64)) as u64;
+        let cd = round(uart_clk.to_raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64))
+            as u64;
         if cd > u16::MAX as u64 {
             continue;
         }
@@ -369,7 +369,7 @@ impl ClockConfig {
     /// Actual baudrate.
     #[inline]
     pub fn actual_baud(&self, sel_clk: Hertz) -> f64 {
-        sel_clk.raw() as f64 / (self.cd as f64 * (self.bdiv + 1) as f64)
+        sel_clk.to_raw() as f64 / (self.cd as f64 * (self.bdiv + 1) as f64)
     }
 }
 

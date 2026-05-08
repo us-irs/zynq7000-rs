@@ -240,8 +240,11 @@ async fn main(spawner: Spawner) -> ! {
     // used for both TX and RX, so the API is only exposed for this structure.
     uartlite.enable_interrupt();
 
-    let (clk_config, error) =
-        axi_uart16550::ClockConfig::new_autocalc_with_error(clocks.pl_clocks()[0], 115200).unwrap();
+    let (clk_config, error) = axi_uart16550::ClockConfig::new_autocalc_with_error(
+        fugit_03::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
+        115200,
+    )
+    .unwrap();
     assert!(error < 0.02);
     let _uart_16550 = unsafe {
         AxiUart16550::new(

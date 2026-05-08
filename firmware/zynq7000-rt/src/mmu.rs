@@ -85,7 +85,7 @@ pub mod segments {
 
 pub mod section_attrs {
     use aarch32_cpu::mmu::{
-        AccessPermissions, CacheableMemoryAttribute, MemoryRegionAttributes, SectionAttributes,
+        AccessPermissions, CachePolicy, MemoryRegionAttributes, SectionAttributes,
     };
     use arbitrary_int::u4;
 
@@ -103,8 +103,8 @@ pub mod section_attrs {
         domain: DDR_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::CacheableMemory {
-            inner: CacheableMemoryAttribute::WriteBackWriteAlloc,
-            outer: CacheableMemoryAttribute::WriteBackWriteAlloc,
+            inner: CachePolicy::WriteBackWriteAlloc,
+            outer: CachePolicy::WriteBackWriteAlloc,
         }
         .as_raw(),
     };
@@ -157,8 +157,8 @@ pub mod section_attrs {
         domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::CacheableMemory {
-            inner: CacheableMemoryAttribute::WriteThroughNoWriteAlloc,
-            outer: CacheableMemoryAttribute::NonCacheable,
+            inner: CachePolicy::WriteThroughNoWriteAlloc,
+            outer: CachePolicy::NonCacheable,
         }
         .as_raw(),
     };

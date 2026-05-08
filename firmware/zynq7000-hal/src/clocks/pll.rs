@@ -38,7 +38,7 @@ impl PllConfig {
         ps_clk: Hertz,
         target_clk: Hertz,
     ) -> Result<Self, PllConfigCtorError> {
-        if ps_clk.raw() == 0 {
+        if ps_clk.to_raw() == 0 {
             return Err(PllConfigCtorError::InvalidInput);
         }
         let mul = target_clk / ps_clk;

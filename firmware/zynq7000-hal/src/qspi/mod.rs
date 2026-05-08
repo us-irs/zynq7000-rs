@@ -212,7 +212,7 @@ impl ClockConfig {
             SrcSelIo::ArmPll => clocks.arm_clocks().ref_clk(),
             SrcSelIo::DdrPll => clocks.ddr_clocks().ref_clk(),
         };
-        let ref_clk_div = ref_clk.raw().div_ceil(target_ref_clock.raw());
+        let ref_clk_div = ref_clk.to_raw().div_ceil(target_ref_clock.to_raw());
         if ref_clk_div > u6::MAX.as_u32() {
             return Err(ClockCalculationError::RefDivOutOfRange);
         }
@@ -239,24 +239,24 @@ impl ClockConfig {
                 clocks
                     .io_clocks()
                     .ref_clk()
-                    .raw()
-                    .div_ceil(target_qspi_ref_clock.raw()),
+                    .to_raw()
+                    .div_ceil(target_qspi_ref_clock.to_raw()),
                 clocks.io_clocks().ref_clk(),
             ),
             SrcSelIo::ArmPll => (
                 clocks
                     .arm_clocks()
                     .ref_clk()
-                    .raw()
-                    .div_ceil(target_qspi_ref_clock.raw()),
+                    .to_raw()
+                    .div_ceil(target_qspi_ref_clock.to_raw()),
                 clocks.arm_clocks().ref_clk(),
             ),
             SrcSelIo::DdrPll => (
                 clocks
                     .ddr_clocks()
                     .ref_clk()
-                    .raw()
-                    .div_ceil(target_qspi_ref_clock.raw()),
+                    .to_raw()
+                    .div_ceil(target_qspi_ref_clock.to_raw()),
                 clocks.ddr_clocks().ref_clk(),
             ),
         };
@@ -268,8 +268,8 @@ impl ClockConfig {
             return Err(ClockCalculationError::RefClockSmallerThanCpu1xClock);
         }
         let qspi_baud_rate_div = qspi_ref_clk
-            .raw()
-            .div_ceil(target_qspi_interface_clock.raw());
+            .to_raw()
+            .div_ceil(target_qspi_interface_clock.to_raw());
         let baud_rate_div = match qspi_baud_rate_div {
             0..=2 => BaudRateDivisor::_2,
             3..=4 => BaudRateDivisor::_4,

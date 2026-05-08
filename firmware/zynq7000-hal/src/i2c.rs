@@ -266,7 +266,8 @@ pub fn calculate_divisors(
     for divisor_a in 1..=4 {
         for divisor_b in 1..=64 {
             let i2c_clock = cpu_1x_clk / (22 * divisor_a * divisor_b);
-            let deviation = (target_speed.raw() as i32 - i2c_clock.raw() as i32).unsigned_abs();
+            let deviation =
+                (target_speed.to_raw() as i32 - i2c_clock.to_raw() as i32).unsigned_abs();
             if deviation < smallest_deviation {
                 smallest_deviation = deviation;
                 best_div_a = divisor_a;
@@ -678,8 +679,8 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 0);
         assert_eq!(clk_cfg.div_b(), 55);
         let speed = calculate_i2c_speed(111.MHz(), clk_cfg);
-        assert!(speed.raw() < 100_000);
-        assert!(speed.raw() > 85_000);
+        assert!(speed.to_raw() < 100_000);
+        assert!(speed.to_raw() > 85_000);
     }
 
     #[test]
@@ -688,8 +689,8 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 0);
         assert_eq!(clk_cfg.div_b(), 12);
         let speed = calculate_i2c_speed(111.MHz(), clk_cfg);
-        assert!(speed.raw() < 400_000);
-        assert!(speed.raw() > 360_000);
+        assert!(speed.to_raw() < 400_000);
+        assert!(speed.to_raw() > 360_000);
     }
 
     #[test]
@@ -698,8 +699,8 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 1);
         assert_eq!(clk_cfg.div_b(), 33);
         let speed = calculate_i2c_speed(133.MHz(), clk_cfg);
-        assert!(speed.raw() < 100_000);
-        assert!(speed.raw() > 85_000);
+        assert!(speed.to_raw() < 100_000);
+        assert!(speed.to_raw() > 85_000);
     }
 
     #[test]
@@ -708,7 +709,7 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 0);
         assert_eq!(clk_cfg.div_b(), 15);
         let speed = calculate_i2c_speed(133.MHz(), clk_cfg);
-        assert!(speed.raw() < 400_000);
-        assert!(speed.raw() > 360_000);
+        assert!(speed.to_raw() < 400_000);
+        assert!(speed.to_raw() > 360_000);
     }
 }

@@ -64,8 +64,8 @@ async fn main(spawner: Spawner) -> ! {
     spi::configure_spi_ref_clock(&mut clocks, target_spi_ref_clock);
 
     assert!(
-        clocks.io_clocks().spi_clk().raw()
-            > (clocks.arm_clocks().cpu_1x_clk().raw() as f32 * 1.2) as u32,
+        clocks.io_clocks().spi_clk().to_raw()
+            > (clocks.arm_clocks().cpu_1x_clk().to_raw() as f32 * 1.2) as u32,
         "SPI reference clock must be larger than CPU 1x clock"
     );
 
@@ -129,12 +129,12 @@ async fn main(spawner: Spawner) -> ! {
     )
     .unwrap();
     let sclk = Hertz::from_raw(
-        clocks.io_clocks().spi_clk().raw() / zynq7000::spi::BaudDivSel::By64.div_value() as u32,
+        clocks.io_clocks().spi_clk().to_raw() / zynq7000::spi::BaudDivSel::By64.div_value() as u32,
     );
     let mod_id = spi.regs().read_mod_id();
     assert_eq!(mod_id, spi::MODULE_ID);
     assert!(sclk <= Hertz::from_raw(10_000_000));
-    let min_delay = (sclk.raw() * 5) / 1_000_000_000;
+    let min_delay = (sclk.to_raw() * 5) / 1_000_000_000;
     spi.inner().configure_delays(
         DelayControl::builder()
             .with_inter_word_cs_deassert(0)
