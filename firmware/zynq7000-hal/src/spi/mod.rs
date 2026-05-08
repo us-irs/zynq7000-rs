@@ -451,6 +451,18 @@ impl SpiLowLevel {
         }
     }
 
+    pub fn enable_ref_clock(&mut self) {
+        // Safety: We only touch register bits of the specified peripheral to enable the clock.
+        unsafe {
+            Slcr::with(|slcr| {
+                slcr.clk_ctrl().modify_spi_clk_ctrl(|val| match self.id {
+                    SpiId::Spi0 => val.with_clk_0_act(true),
+                    SpiId::Spi1 => val.with_clk_1_act(true),
+                });
+            });
+        }
+    }
+
     pub fn id(&self) -> SpiId {
         self.id
     }
@@ -838,11 +850,11 @@ impl Spi {
             SpiId::Spi0 => crate::PeriphSelect::Spi0,
             SpiId::Spi1 => crate::PeriphSelect::Spi1,
         };
+
+        let mut ll = SpiLowLevel { id, regs };
+        ll.enable_ref_clock();
         enable_amba_peripheral_clock(periph_sel);
-        let mut spi = Self {
-            inner: SpiLowLevel { regs, id },
-            config,
-        };
+        let mut spi = Self { inner: ll, config };
         spi.reset_and_reconfigure();
         spi
     }
