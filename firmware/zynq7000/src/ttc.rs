@@ -189,9 +189,9 @@ pub struct Registers {
     match_value_1: [RwValue; 3],
     match_value_2: [RwValue; 3],
     #[mmio(Read)]
-    isr: [InterruptStatus; 3],
-    ier: [InterruptControl; 3],
-    event_cntrl: [EventControl; 3],
+    interrupt_status: [InterruptStatus; 3],
+    interrupt_enable: [InterruptControl; 3],
+    event_control: [EventControl; 3],
     #[mmio(PureRead)]
     event_reg: [EventCount; 3],
 }

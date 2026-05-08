@@ -99,11 +99,11 @@ impl Rx {
     /// Perform a soft-reset of the RX side of the UART.
     #[inline]
     pub fn soft_reset(&mut self) {
-        self.regs.modify_cr(|mut cr| {
+        self.regs.modify_control(|mut cr| {
             cr.set_rx_rst(true);
             cr
         });
-        while self.regs.read_cr().rx_rst() {}
+        while self.regs.read_control().rx_rst() {}
     }
 
     /// Helper function to start the interrupt driven reception of data.
@@ -203,7 +203,7 @@ impl Rx {
         }
         // Handle timeout event.
         if isr.rx_timeout() && reset_rx_timeout {
-            self.regs.modify_cr(|mut cr| {
+            self.regs.modify_control(|mut cr| {
                 cr.set_rstto(true);
                 cr
             });

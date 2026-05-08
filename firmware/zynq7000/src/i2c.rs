@@ -162,23 +162,23 @@ pub struct TransferSize {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Registers {
-    cr: Control,
+    control: Control,
     #[mmio(PureRead)]
-    sr: Status,
+    status: Status,
     addr: Address,
     #[mmio(Read, Write)]
     data: Fifo,
     #[mmio(PureRead, Write, Modify)]
-    isr: InterruptStatus,
+    interrupt_status: InterruptStatus,
     transfer_size: TransferSize,
     slave_pause: u32,
     timeout: Timeout,
     #[mmio(PureRead)]
-    imr: InterruptMask,
+    enabled_interrupts: InterruptMask,
     #[mmio(Write)]
-    ier: InterruptControl,
+    interrupt_enable: InterruptControl,
     #[mmio(Write)]
-    idr: InterruptControl,
+    interrupt_disable: InterruptControl,
 }
 
 static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x2C);

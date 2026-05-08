@@ -325,9 +325,9 @@ impl InterruptStatus {
 #[repr(C)]
 pub struct Registers {
     /// Control Register
-    cr: Control,
+    control: Control,
     /// Mode register
-    mr: Mode,
+    mode: Mode,
     /// Interrupt enable register
     #[mmio(Write)]
     interrupt_enable: InterruptControl,

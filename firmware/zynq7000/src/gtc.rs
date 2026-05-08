@@ -3,7 +3,7 @@
 pub const GTC_BASE_ADDR: usize = super::mpcore::MPCORE_BASE_ADDR + 0x0000_0200;
 
 #[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
-pub struct GtcControl {
+pub struct Control {
     #[bits(8..=15, rw)]
     prescaler: u8,
     #[bit(3, rw)]
@@ -31,10 +31,10 @@ pub struct Registers {
     /// Count register 1, upper 32 bits
     count_upper: u32,
     /// Control register
-    ctrl: GtcControl,
+    control: Control,
     /// Interrupt status register
     #[mmio(PureRead, Write)]
-    isr: InterruptStatus,
+    interrupt_status: InterruptStatus,
     /// Comparator 0, lower 32 bits
     comparator_lower: u32,
     /// Comparator 1, upper 32 bits

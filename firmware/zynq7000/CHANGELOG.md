@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
-- Better names for interrupt registers for UART and SPI
+- Better names for various registers. Replaced abbreviations like SR, MR, CR, IER, IMR etc.
 
 # [v0.2.0] 2026-04-01
 
