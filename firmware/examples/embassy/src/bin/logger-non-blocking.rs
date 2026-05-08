@@ -13,12 +13,13 @@ use zynq7000::Peripherals;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    generic_interrupt_handler,
+    gic::Configurator,
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClockConfig, Config, TxAsync, Uart, on_interrupt_tx},
+    uart::{ClockConfig, Config, TxAsync, Uart},
 };
 
 use zynq7000_rt as _;
@@ -40,7 +41,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -68,7 +69,7 @@ async fn main(spawner: Spawner) -> ! {
     uart.flush().unwrap();
 
     let (tx, _rx) = uart.split();
-    let mut logger = TxAsync::new(tx);
+    let mut logger = TxAsync::new(tx, true);
 
     let log_reader = zynq7000_hal::log::asynch::init(log::LevelFilter::Trace).unwrap();
 
@@ -119,28 +120,13 @@ async fn hello_task() {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => {
-            if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Uart1 {
-                on_interrupt_tx(zynq7000_hal::uart::UartId::Uart1);
-            }
-        }
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

@@ -28,12 +28,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   respectively.
 - `log::rb` module replaced by `log::asynch` module which uses an asynchronous embassy pipe
   for logging.
+- GIC data structures: Removed the `Gic` prefix which already is part of the module name.
+- Renamed `GicInterruptHelper` to `InterruptGuard`. It acknowledges the end of interrupts on drop.
 
 ## Added
 
 - Method to de-assert PL reset.
 - ARM clock initialization for the `ArmClocks` structure
 - The `ArmClocks` structure now caches the CPU clock ratio
+- New generic interrupt registry and generic interrupt handler which uses the registry.
+  Primary interface is the `crate::generic_interrupt_handler` function and the
+  `crate::register_interrupt` function.
 
 # [v0.1.1] 2025-10-10
 

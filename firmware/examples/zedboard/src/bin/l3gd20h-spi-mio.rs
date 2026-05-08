@@ -21,14 +21,14 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    configure_level_shifter, generic_interrupt_handler,
+    gic::Configurator,
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
-    spi::{self, SpiAsync, SpiId, SpiWithHwCs, SpiWithHwCsAsync, on_interrupt},
+    spi::{self, SpiAsync, SpiWithHwCs, SpiWithHwCsAsync},
     time::Hertz,
-    uart::{self, TxAsync, on_interrupt_tx},
+    uart::{self, TxAsync},
 };
 
 use zynq7000::{Peripherals, slcr::LevelShifterConfig, spi::DelayControl};
@@ -70,7 +70,7 @@ async fn main(spawner: Spawner) -> ! {
     );
 
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -177,7 +177,7 @@ pub async fn logger_task(
     reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
 ) -> ! {
     let (tx, _) = uart.split();
-    let mut tx_async = TxAsync::new(tx);
+    let mut tx_async = TxAsync::new(tx, true);
     let mut log_buf: [u8; 2048] = [0; 2048];
     loop {
         let read_bytes = reader.read(&mut log_buf).await;
@@ -248,30 +248,13 @@ pub async fn non_blocking_application(
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => {
-            if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Spi1 {
-                on_interrupt(SpiId::Spi1);
-            } else if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Uart1 {
-                on_interrupt_tx(zynq7000_hal::uart::UartId::Uart1);
-            }
-        }
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[unsafe(no_mangle)]

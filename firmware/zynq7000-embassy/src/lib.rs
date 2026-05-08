@@ -66,6 +66,16 @@ impl GtcTimerDriver {
     ///
     /// This has to be called ONCE at system initialization.
     pub unsafe fn init(&'static self, arm_clock: &ArmClocks, mut gtc: GlobalTimerCounter) {
+        fn safe_interrupt_handler() {
+            // Safety: See safety notes of [zynq7000_hal::generic_interrupt_handler].
+            unsafe {
+                on_interrupt();
+            }
+        }
+        zynq7000_hal::register_interrupt(
+            zynq7000_hal::gic::Interrupt::Ppi(zynq7000_hal::gic::PpiInterrupt::GlobalTimer),
+            safe_interrupt_handler,
+        );
         CPU_3X2X_CLK.set(arm_clock.cpu_3x2x_clk()).unwrap();
         SCALE
             .set(arm_clock.cpu_3x2x_clk().to_raw() as u64 / TICK_HZ)

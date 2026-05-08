@@ -8,8 +8,9 @@ use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
 use log::{error, info};
 use zynq7000_hal::{
+    Interrupt,
     clocks::Clocks,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    gic,
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -31,7 +32,7 @@ fn main() -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = gic::Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -83,8 +84,8 @@ fn main() -> ! {
 
 #[zynq7000_rt::irq]
 fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
+    let mut gic_helper = gic::InterruptGuard::new();
+    let irq_info = gic_helper.interrupt_info();
     match irq_info.interrupt() {
         Interrupt::Sgi(_) => (),
         Interrupt::Ppi(ppi_interrupt) => {

@@ -10,9 +10,9 @@ use embedded_io::Write;
 use log::error;
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::gpio::Input;
-use zynq7000_hal::prelude::*;
 use zynq7000_hal::sd::SdClockConfig;
-use zynq7000_hal::{BootMode, clocks, gic, gpio, gtc, sd::SdCardUninit, uart};
+use zynq7000_hal::{BootMode, clocks, gpio, gtc, sd::SdCardUninit, uart};
+use zynq7000_hal::{generic_interrupt_handler, prelude::*};
 
 use zynq7000_rt as _;
 
@@ -227,23 +227,12 @@ async fn main(_spawner: Spawner) -> ! {
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = gic::GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        gic::Interrupt::Sgi(_) => (),
-        gic::Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        gic::Interrupt::Spi(_spi_interrupt) => (),
-        gic::Interrupt::Invalid(_) => (),
-        gic::Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

@@ -19,9 +19,11 @@ static TX_DONE: [AtomicBool; 2] = [const { AtomicBool::new(false) }; 2];
 /// This is a generic interrupt handler to handle asynchronous UART TX operations for a given
 /// UART peripheral.
 ///
+/// # Safety
+///
 /// The user has to call this once in the interrupt handler responsible for the TX interrupts on
 /// the given UART bank.
-pub fn on_interrupt_tx(peripheral: UartId) {
+pub unsafe fn on_interrupt_tx(peripheral: UartId) {
     let mut tx_with_irq = unsafe { Tx::steal(peripheral) };
     let idx = peripheral as usize;
     let enabled_irqs = tx_with_irq.regs().read_enabled_interrupts();
@@ -126,7 +128,7 @@ impl<'uart> TxFuture<'uart> {
     /// This function stores the raw pointer of the passed data slice. The user MUST ensure
     /// that the slice outlives the data structure.
     pub unsafe fn new(tx_with_irq: &'uart mut Tx, data: &[u8]) -> TxFuture<'uart> {
-        let idx = tx_with_irq.uart_idx() as usize;
+        let idx = tx_with_irq.uart_id() as usize;
         TX_DONE[idx].store(false, core::sync::atomic::Ordering::Relaxed);
         tx_with_irq.disable_interrupts();
         tx_with_irq.disable();
@@ -156,7 +158,7 @@ impl<'uart> TxFuture<'uart> {
         tx_with_irq.enable_interrupts(data.len() > FIFO_DEPTH);
 
         Self {
-            id: tx_with_irq.uart_idx(),
+            id: tx_with_irq.uart_id(),
             marker: PhantomData,
         }
     }
@@ -196,7 +198,38 @@ pub struct TxAsync {
 
 impl TxAsync {
     /// Constructor.
-    pub fn new(tx: Tx) -> Self {
+    ///
+    /// The second argument specifies whether the [on_interrupt_tx] function will be registered
+    /// in the HAL interrupt map. You might need to skip this in case you have your own
+    /// interrupt handler which also handles RX interrupts.
+    pub fn new(tx: Tx, register_interrupt_handler: bool) -> Self {
+        if register_interrupt_handler {
+            match tx.uart_id() {
+                UartId::Uart0 => {
+                    unsafe fn uart0_interrupt_handler() {
+                        unsafe {
+                            on_interrupt_tx(UartId::Uart0);
+                        }
+                    }
+                    crate::register_interrupt(
+                        crate::gic::Interrupt::Spi(crate::gic::SpiInterrupt::Uart0),
+                        uart0_interrupt_handler,
+                    )
+                }
+                UartId::Uart1 => {
+                    unsafe fn uart1_interrupt_handler() {
+                        unsafe {
+                            on_interrupt_tx(UartId::Uart1);
+                        }
+                    }
+                    crate::register_interrupt(
+                        crate::gic::Interrupt::Spi(crate::gic::SpiInterrupt::Uart1),
+                        uart1_interrupt_handler,
+                    )
+                }
+            }
+        }
+
         Self { tx }
     }
 

@@ -631,7 +631,7 @@ impl Uart {
             },
             tx: Tx {
                 regs: reg_block,
-                idx: uart_id,
+                id: uart_id,
             },
             cfg,
         }
