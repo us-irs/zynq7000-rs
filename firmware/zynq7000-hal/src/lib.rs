@@ -10,7 +10,7 @@
 //!
 //! ## Examples
 //!
-//! All exaples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/examples)
+//! All examples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/examples)
 //! and [firmware folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware) of the project
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -32,6 +32,7 @@ pub mod gic;
 pub mod gpio;
 pub mod gtc;
 pub mod i2c;
+pub mod interrupt;
 pub mod l2_cache;
 pub mod log;
 pub mod pl;
@@ -45,6 +46,8 @@ pub mod time;
 pub mod ttc;
 pub mod uart;
 
+pub use gic::{Interrupt, PpiInterrupt, SpiInterrupt};
+pub use interrupt::{generic_interrupt_handler, register_interrupt};
 pub use zynq7000 as pac;
 pub use zynq7000::slcr::LevelShifterConfig;
 
@@ -80,7 +83,7 @@ pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
         configure_level_shifter(config);
     }
     if let Some(interrupt_config) = config.interrupt_config {
-        let mut gic = gic::GicConfigurator::new_with_init(periphs.gicc, periphs.gicd);
+        let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
         match interrupt_config {
             InteruptConfig::AllInterruptsToCpu0 => {
                 gic.enable_all_interrupts();

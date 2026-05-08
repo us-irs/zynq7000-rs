@@ -18,7 +18,8 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    generic_interrupt_handler,
+    gic::Configurator,
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -46,7 +47,7 @@ async fn main(_spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -107,23 +108,12 @@ async fn main(_spawner: Spawner) -> ! {
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(_spi_interrupt) => (),
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

@@ -42,7 +42,8 @@ use zynq7000_hal::{
     eth::{
         AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, embassy_net::InterruptResult,
     },
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    generic_interrupt_handler,
+    gic::{Configurator, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -216,7 +217,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -278,6 +279,12 @@ async fn main(spawner: Spawner) -> ! {
         "Calculated RGMII clock configuration: {:?}, errors (missmatch from ideal rate in hertz): {:?}",
         clk_divs, clk_errors
     );
+
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Eth0),
+        custom_eth_interupt_handler,
+    );
+
     // Unwrap okay, we use a standard clock config, and the clock config should never fail.
     let eth_cfg = EthernetConfig::new(
         zynq7000_hal::eth::ClockConfig::new(clk_divs.cfg_1000_mbps),
@@ -461,36 +468,24 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-#[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => {
-            if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Eth0 {
-                // This generic library provided interrupt handler takes care of waking
-                // the driver on received or sent frames while also reporting anomalies
-                // and errors.
-                let result = zynq7000_hal::eth::embassy_net::on_interrupt(
-                    zynq7000_hal::eth::EthernetId::Eth0,
-                );
-                if result.has_errors() {
-                    ETH_ERR_QUEUE.try_send(result).ok();
-                }
-            }
-        }
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+// Safety: Only called by interrupt handler, registered in global interrupt handler map.
+unsafe fn custom_eth_interupt_handler() {
+    // This generic library provided interrupt handler takes care of waking
+    // the driver on received or sent frames while also reporting anomalies
+    // and errors.
+    let result = zynq7000_hal::eth::embassy_net::on_interrupt(zynq7000_hal::eth::EthernetId::Eth0);
+    if result.has_errors() {
+        ETH_ERR_QUEUE.try_send(result).ok();
     }
-    gic_helper.end_of_interrupt(irq_info);
+}
+
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
+    }
 }
 
 #[zynq7000_rt::exception(DataAbort)]

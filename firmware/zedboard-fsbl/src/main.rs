@@ -17,7 +17,7 @@ use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
 use zynq7000_boot_image::DestinationDevice;
 use zynq7000_hal::clocks::ArmClocks;
-use zynq7000_hal::priv_tim;
+use zynq7000_hal::{generic_interrupt_handler, priv_tim};
 use zynq7000_hal::{
     BootMode,
     clocks::{
@@ -119,7 +119,7 @@ fn main() -> ! {
     };
 
     // Set up the global interrupt controller.
-    let mut gic = gic::GicConfigurator::new_with_init(periphs.gicc, periphs.gicd);
+    let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -353,23 +353,12 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
 }
 
 #[zynq7000_rt::irq]
-fn interrupt_handler() {
-    let mut gic_helper = gic::GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        gic::Interrupt::Sgi(_) => (),
-        gic::Interrupt::Ppi(ppi_interrupt) => {
-            log::warn!("unexpected PPI interrupt: {:?}", ppi_interrupt);
-        }
-        gic::Interrupt::Spi(spi_interrupt) => {
-            log::warn!("unexpected SPI interrupt: {:?}", spi_interrupt);
-        }
-        gic::Interrupt::Invalid(_) => (),
-        gic::Interrupt::Spurious => {
-            log::warn!("spurious interrupt");
-        }
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        log::warn!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

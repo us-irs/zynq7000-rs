@@ -1172,7 +1172,7 @@ pub fn reset(id: SpiId) {
 /// The Zynq7000 SPI peripheral has the following requirement for the SPI reference clock:
 /// It must be larger than the CPU 1X clock. Therefore, the divisor used to calculate the reference
 /// clock has a maximum value, which can be calculated with this function.
-/// [configure_spi_ref_clk_with_divisor] can be used to configure the SPI reference clock with a
+/// [configure_spi_ref_clock_with_divisor] can be used to configure the SPI reference clock with a
 /// divisor.
 ///
 /// *NOTE* - It is recommended to avoid the largest theoretical value which was proven to be

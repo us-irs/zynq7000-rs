@@ -41,8 +41,8 @@ use log::{error, info, warn};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    configure_level_shifter, generic_interrupt_handler,
+    gic::{Configurator, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -171,7 +171,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     // AXI UARTLite documentation mentions that a rising-edge sensitive interrupt is generated,
@@ -209,6 +209,20 @@ async fn main(spawner: Spawner) -> ! {
         static mut HEAP_MEM: [MaybeUninit<u8>; HEAP_SIZE] = [MaybeUninit::uninit(); HEAP_SIZE];
         unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
     }
+
+    // Register the interrupts for the PL.
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Pl0),
+        on_interrupt_axi_uartlite,
+    );
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Pl1),
+        on_interrupt_axi_16550,
+    );
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Uart0),
+        on_interrupt_uart_0,
+    );
 
     // Safety: We are not multi-threaded yet.
     unsafe {
@@ -390,7 +404,8 @@ async fn uartlite_task(uartlite: axi_uartlite::Tx) {
 #[embassy_executor::task]
 async fn uart_0_task(uart_tx: zynq7000_hal::uart::Tx) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    let mut tx_async = zynq7000_hal::uart::TxAsync::new(uart_tx);
+    let mut tx_async = zynq7000_hal::uart::TxAsync::new(uart_tx, false);
+
     let str0 = build_print_string("UART0:", "Hello World");
     let str1 = build_print_string(
         "UART0:",
@@ -432,36 +447,12 @@ async fn uart_16550_task(uart_tx: axi_uart16550::Tx) {
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => match spi_interrupt {
-            zynq7000_hal::gic::SpiInterrupt::Pl0 => {
-                on_interrupt_axi_uartlite();
-            }
-            zynq7000_hal::gic::SpiInterrupt::Pl1 => {
-                on_interrupt_axi_16550();
-            }
-            zynq7000_hal::gic::SpiInterrupt::Uart0 => {
-                on_interrupt_uart_0();
-            }
-
-            _ => (),
-        },
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 fn on_interrupt_axi_uartlite() {
@@ -530,8 +521,9 @@ fn on_interrupt_uart_0() {
             .on_interrupt(&mut buf, true)
             .read_bytes();
     });
+    // Safety: This function is only called once inside the interrupt handler.
     // Handle TX next: Handle pending asynchronous TX operations.
-    zynq7000_hal::uart::on_interrupt_tx(zynq7000_hal::uart::UartId::Uart0);
+    unsafe { zynq7000_hal::uart::on_interrupt_tx(zynq7000_hal::uart::UartId::Uart0) };
     // Send received RX data to main task.
     if read_bytes > 0 {
         critical_section::with(|cs| {

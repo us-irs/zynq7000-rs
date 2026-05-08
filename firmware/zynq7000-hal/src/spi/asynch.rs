@@ -29,9 +29,11 @@ impl embedded_hal_async::spi::Error for RxOverrunError {
 /// This is a generic interrupt handler to handle asynchronous SPI  operations for a given
 /// SPI peripheral.
 ///
-/// The user has to call this once in the interrupt handler responsible for the SPI interrupts on
+/// # Safety
+///
+/// This needs to be called once in the interrupt handler responsible for the SPI interrupts on
 /// the given SPI bank.
-pub fn on_interrupt(peripheral: SpiId) {
+pub unsafe fn on_interrupt(peripheral: SpiId) {
     let mut spi = unsafe { SpiLowLevel::steal(peripheral) };
     let index = peripheral as usize;
     let enabled_irqs = spi.read_enabled_interrupts();
@@ -513,6 +515,30 @@ pub struct SpiAsync(pub Spi);
 
 impl SpiAsync {
     pub fn new(spi: Spi) -> Self {
+        match spi.inner.id {
+            SpiId::Spi0 => {
+                unsafe fn spi0_interrupt_handler() {
+                    unsafe {
+                        on_interrupt(SpiId::Spi0);
+                    }
+                }
+                crate::register_interrupt(
+                    crate::gic::Interrupt::Spi(crate::gic::SpiInterrupt::Spi0),
+                    spi0_interrupt_handler,
+                )
+            }
+            SpiId::Spi1 => {
+                unsafe fn spi1_interrupt_handler() {
+                    unsafe {
+                        on_interrupt(SpiId::Spi1);
+                    }
+                }
+                crate::register_interrupt(
+                    crate::gic::Interrupt::Spi(crate::gic::SpiInterrupt::Spi1),
+                    spi1_interrupt_handler,
+                )
+            }
+        }
         Self(spi)
     }
 

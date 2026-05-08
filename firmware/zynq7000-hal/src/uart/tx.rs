@@ -8,12 +8,12 @@ use super::UartId;
 /// Transmitter (TX) driver.
 pub struct Tx {
     pub(crate) regs: MmioRegisters<'static>,
-    pub(crate) idx: UartId,
+    pub(crate) id: UartId,
 }
 
 impl core::fmt::Debug for Tx {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Tx").field("idx", &self.idx).finish()
+        f.debug_struct("Tx").field("idx", &self.id).finish()
     }
 }
 
@@ -24,17 +24,17 @@ impl Tx {
     ///
     /// Circumvents safety guarantees provided by the compiler.
     #[inline]
-    pub const unsafe fn steal(idx: UartId) -> Self {
+    pub const unsafe fn steal(id: UartId) -> Self {
         Tx {
-            regs: unsafe { idx.regs() },
-            idx,
+            regs: unsafe { id.regs() },
+            id,
         }
     }
 
-    /// UART index.
+    /// UART ID.
     #[inline]
-    pub const fn uart_idx(&self) -> UartId {
-        self.idx
+    pub const fn uart_id(&self) -> UartId {
+        self.id
     }
 
     /// Direct access to the UART MMIO registers.

@@ -16,7 +16,7 @@ use log::{error, info};
 use ssd1306::{Ssd1306, prelude::*};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
-    BootMode, clocks, gic, gpio, gtc, spi,
+    BootMode, clocks, generic_interrupt_handler, gpio, gtc, spi,
     time::Hertz,
     uart::{self, TxAsync},
 };
@@ -216,7 +216,7 @@ pub async fn logger_task(
     reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
 ) -> ! {
     let (tx, _) = uart.split();
-    let mut tx_async = TxAsync::new(tx);
+    let mut tx_async = TxAsync::new(tx, true);
     let mut log_buf: [u8; 2048] = [0; 2048];
     loop {
         let read_bytes = reader.read(&mut log_buf).await;
@@ -242,30 +242,12 @@ pub async fn blinky_task(mut mio_led: gpio::Output, mut emio_leds: [gpio::Output
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = gic::GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        gic::Interrupt::Sgi(_) => (),
-        gic::Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        gic::Interrupt::Spi(spi_interrupt) => match spi_interrupt {
-            gic::SpiInterrupt::Uart1 => {
-                zynq7000_hal::uart::tx_async::on_interrupt_tx(uart::UartId::Uart1);
-            }
-            _ => {
-                log::warn!("Unhandled SPI interrupt: {:?}", spi_interrupt);
-            }
-        },
-        gic::Interrupt::Invalid(_) => (),
-        gic::Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]
