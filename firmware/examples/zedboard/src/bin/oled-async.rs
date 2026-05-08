@@ -13,10 +13,11 @@ use embedded_hal_async::delay::DelayNs as _;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use embedded_io::Write;
 use log::{error, info};
-use ssd1306::{Ssd1306, prelude::*};
+use ssd1306::{Ssd1306Async, prelude::*};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
-    BootMode, clocks, gic, gpio, gtc, spi,
+    BootMode, clocks, gic, gpio, gtc,
+    spi::{self, SpiAsync},
     time::Hertz,
     uart::{self, TxAsync},
 };
@@ -122,42 +123,46 @@ async fn main(spawner: Spawner) -> ! {
         ),
     )
     .expect("Failed to initialize SPI");
-    let exclusive_device = ExclusiveDevice::new(spi, DummyPin::new_high(), NoDelay)
+    let spi_asynch = SpiAsync::new(spi);
+    let exclusive_device = ExclusiveDevice::new(spi_asynch, DummyPin::new_high(), NoDelay)
         .expect("Failed to create exclusive SPI device");
     let spi_if = SPIInterface::new(exclusive_device, dc_pin);
-    let mut ssd1306 = Ssd1306::new(spi_if, DisplaySize128x32, DisplayRotation::Rotate180);
+    let mut ssd1306 = Ssd1306Async::new(spi_if, DisplaySize128x32, DisplayRotation::Rotate180);
 
     oled_vdd_switch.set_low();
     oled_vbat_switch.set_low();
     Delay.delay_ms(100).await;
 
-    ssd1306.reset(&mut reset_pin, &mut embassy_time::Delay {});
+    ssd1306
+        .reset(&mut reset_pin, &mut embassy_time::Delay {})
+        .await
+        .expect("display reset error");
     let mut display = ssd1306.into_buffered_graphics_mode();
-    display.init().expect("display init error");
+    display.init().await.expect("display init error");
 
     // Include the BMP file data.
     let ferris_data = include_bytes!("../../assets/ferris-flat-happy-small.bmp");
     let rust_logo_data = include_bytes!("../../assets/rust-logo-single-path.bmp");
     // Parse the BMP file.
-    let bmp_rust = Bmp::from_slice(rust_logo_data).unwrap();
-    let bmp_ferris = Bmp::from_slice(ferris_data).unwrap();
+    let bmp_rust = Bmp::from_slice(rust_logo_data).expect("BMP loading error");
+    let bmp_ferris = Bmp::from_slice(ferris_data).expect("BMP loading error");
     // Draw the image with the top left corner at (10, 20) by wrapping it in
     // an embedded-graphics `Image`.
     Image::new(&bmp_rust, Point::new(0, 0))
         .draw(&mut display)
-        .expect("image draw error");
+        .expect("image drawing error");
     Image::new(&bmp_ferris, Point::new(32, 0))
         .draw(&mut display)
-        .expect("image draw error");
-    display.flush().expect("display flush error");
+        .expect("image drawing error");
+    display.flush().await.unwrap();
     let mut ticker = Ticker::every(Duration::from_millis(50));
     let mut ferris = FerrisMovement::new(32, Direction::Right, 32, 76);
 
     loop {
         Image::new(&bmp_ferris, Point::new(ferris.pos as i32, 0))
             .draw(&mut display)
-            .expect("image draw error");
-        display.flush().expect("display flush error");
+            .expect("image drawing error");
+        display.flush().await.expect("flush error");
         ferris.step();
         ticker.next().await;
     }
@@ -257,6 +262,9 @@ fn irq_handler() {
         gic::Interrupt::Spi(spi_interrupt) => match spi_interrupt {
             gic::SpiInterrupt::Uart1 => {
                 zynq7000_hal::uart::tx_async::on_interrupt_tx(uart::UartId::Uart1);
+            }
+            gic::SpiInterrupt::Spi0 => {
+                zynq7000_hal::spi::asynch::on_interrupt(spi::SpiId::Spi0);
             }
             _ => {
                 log::warn!("Unhandled SPI interrupt: {:?}", spi_interrupt);

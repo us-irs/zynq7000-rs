@@ -476,7 +476,7 @@ impl SpiLowLevel {
     /// the external decoding was enabled via the [Config::enable_external_decoding] option.
     #[inline]
     pub fn select_hw_cs(&mut self, chip_select: ChipSelect) {
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_config(|mut val| {
             val.set_cs_raw(chip_select.raw_reg());
             val
         });
@@ -486,7 +486,7 @@ impl SpiLowLevel {
     #[inline]
     pub fn configure_mode(&mut self, mode: Mode) {
         let (cpol, cpha) = spi_mode_const_to_cpol_cpha(mode);
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_config(|mut val| {
             val.set_cpha(cpha);
             val.set_cpol(cpol);
             val
@@ -510,7 +510,7 @@ impl SpiLowLevel {
         };
         let (cpol, cpha) = spi_mode_const_to_cpol_cpha(config.init_mode);
 
-        self.regs.write_cr(
+        self.regs.write_config(
             zynq7000::spi::Config::builder()
                 .with_modefail_gen_en(false)
                 .with_manual_start(false)
@@ -559,7 +559,7 @@ impl SpiLowLevel {
 
     #[inline]
     pub fn issue_manual_start(&mut self) {
-        self.regs.modify_cr(|val| val.with_manual_start(true));
+        self.regs.modify_config(|val| val.with_manual_start(true));
     }
 
     #[inline]

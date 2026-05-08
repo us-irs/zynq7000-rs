@@ -60,6 +60,12 @@ pub fn on_interrupt(peripheral: SpiId) {
     if context.transfer_type.is_none() {
         return;
     }
+
+    // Write the trigger to one, we want to empty the whole FIFO in the transfer handlers.
+    // The trigger might have been set to a higher value, and the NOT FULL status bit will be
+    // cleared when the FIFO falls below the threshold.
+    spi.write_rx_trig(0x1);
+
     let transfer_type = context.transfer_type.unwrap();
     match transfer_type {
         TransferType::Read => on_interrupt_read(index, &mut context, &mut spi),
@@ -433,11 +439,11 @@ impl<'spi> SpiFuture<'spi> {
         Self::generic_init_transfer(spi, id);
 
         let write_idx = core::cmp::min(super::FIFO_DEPTH, write.len());
+        Self::set_triggers(spi, write_idx, write.len());
         (0..write_idx).for_each(|idx| {
             spi.inner.write_fifo_unchecked(write[idx]);
         });
 
-        Self::set_triggers(spi, write_idx, write.len());
         // We assume that the slave select configuration was already performed, but we take
         // care of issuing a start if necessary.
         spi.issue_manual_start_for_manual_cfg();
@@ -452,7 +458,7 @@ impl<'spi> SpiFuture<'spi> {
             ))
             .unwrap();
         // We want to re-fill the TX FIFO before it is completely empty if the full transfer size
-        // is larger than the FIFO depth. Otherwise, set it to 0. Not exactly sure what that does,
+        // is larger than the FIFO depth. Otherwise, set it to 1. Not exactly sure what that does,
         // but we do not enable interrupts anyway.
         if write_len > super::FIFO_DEPTH {
             spi.inner
