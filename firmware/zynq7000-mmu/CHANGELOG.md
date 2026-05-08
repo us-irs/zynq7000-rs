@@ -8,9 +8,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.2.0] 2026-05-08
+
+- Bumped `aarch32-cpu` to v0.3
+
 # [v0.1.2] 2026-02-14
 
-Bumped `aarch32-cpu` to v0.2
+- Bumped `aarch32-cpu` to v0.2
 
 # [v0.1.1] 2025-10-10
 
@@ -20,7 +24,8 @@ Documentation fixes.
 
 Initial release
 
-[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-mmu-v0.1.2...HEAD
+[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-mmu-v0.2.0...HEAD
+[v0.2.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-mmu-v0.1.2...zynq7000-mmu-v0.2.0
 [v0.1.2]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-mmu-v0.1.1...zynq7000-mmu-v0.1.2
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-mmu-v0.1.0...zynq7000-mmu-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zynq7000-mmu-v0.1.0

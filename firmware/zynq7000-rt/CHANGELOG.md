@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.3.0] 2026-05-08
+
+Bumped `aarch32-rt` and `aarch32-cpu` to v0.3.
+
 # [v0.2.0] 2026-02-14
 
 Bugfixes in startup assembler code.
@@ -35,7 +39,8 @@ Documentation fixes.
 
 Initial release
 
-[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.2.0...HEAD
+[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.3.0...HEAD
+[v0.3.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.2.0...zynq7000-rt-v0.3.0
 [v0.2.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.1.1...zynq7000-rt-v0.2.0
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.1.0...zynq7000-rt-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zynq7000-rt-v0.1.0
