@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.3.0] 2026-05-08
+
 - Better names for various registers. Replaced abbreviations like SR, MR, CR, IER, IMR etc.
 
 # [v0.2.0] 2026-04-01
@@ -28,7 +30,8 @@ Documentation fix
 
 Initial release
 
-[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.2.0...HEAD
+[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.3.0...HEAD
+[v0.3.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.2.0...zynq7000-v0.3.0
 [v0.2.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.0...zynq7000-v0.2.0
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.0...zynq7000-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/tag/zynq7000-v0.1.0
