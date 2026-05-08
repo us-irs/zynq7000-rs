@@ -27,14 +27,14 @@ critical-section = "1"
 static_cell = "2"
 embedded-alloc = "0.7"
 embedded-hal = "1"
-embedded-hal-bus = "0.3"
+embedded-hal-bus = { version = "0.3", features = ["async"] }
 embedded-hal-async = "1"
 dummy-pin = "1"
 fugit = "0.4"
 fugit-03 = { version = "0.3", package = "fugit" }
 embedded-graphics = "0.8"
 log = "0.4"
-ssd1306 = { version = "0.10" }
+ssd1306 = { version = "0.10", features = ["async"] }
 tinybmp = "0.7"
 rand = { version = "0.10", default-features = false }
 

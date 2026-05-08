@@ -213,7 +213,7 @@ pub struct DelayControl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Registers {
-    cr: Config,
+    config: Config,
     #[mmio(PureRead, Write)]
     interrupt_status: InterruptStatus,
     /// Interrupt Enable Register.
