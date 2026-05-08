@@ -565,6 +565,15 @@ impl Uart {
             UartId::Uart0 => crate::PeriphSelect::Uart0,
             UartId::Uart1 => crate::PeriphSelect::Uart1,
         };
+        // Safety: We only touch register bits of the specified peripheral to enable the clock.
+        unsafe {
+            Slcr::with(|slcr| {
+                slcr.clk_ctrl().modify_uart_clk_ctrl(|val| match uart_id {
+                    UartId::Uart0 => val.with_clk_0_act(true),
+                    UartId::Uart1 => val.with_clk_1_act(true),
+                });
+            });
+        }
         enable_amba_peripheral_clock(periph_sel);
         reset(uart_id);
         reg_block.modify_control(|mut v| {
