@@ -1,5 +1,5 @@
 [package]
-name = "embassy-examples"
+name = "embassy-multiprio"
 version = "0.1.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
@@ -24,14 +24,12 @@ critical-section = "1"
 heapless = "0.9"
 embedded-io = "0.7"
 embedded-hal = "1"
+arbitrary-int = "2"
 fugit = "0.4"
 log = "0.4"
-
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
 embassy-executor = { version = "0.10", features = [
   "platform-z7",
   "executor-thread",
+  "executor-interrupt",
 ]}
-
-# embassy-executor = { git = "https://github.com/robamu/embassy.git", branch = "add-z7-arch-support", features = ["platform-z7", "executor-thread"] }
-# embassy-executor = { git = "https://github.com/robamu/embassy.git", features = ["platform-cortex-ar", "executor-thread"] }
-embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }

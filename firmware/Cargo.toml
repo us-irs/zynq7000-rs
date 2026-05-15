@@ -11,6 +11,7 @@ members = [
   "examples/embassy",
   "examples/zedboard",
   "examples/defmt",
+  "examples/multiprio",
 
   "zedboard-bsp",
   "zedboard-qspi-flasher",
@@ -40,3 +41,11 @@ codegen-units = 1
 lto = 'fat'
 # Leave the debug symbols in (default is no debug info)
 debug = 2
+
+[patch.crates-io]
+embassy-executor = { path = "../../embassy/embassy-executor" }
+embassy-executor-macros = { path = "../../embassy/embassy-executor-macros" }
+embassy-time-driver = { path = "../../embassy/embassy-time-driver" }
+embassy-time = { path = "../../embassy/embassy-time" }
+embassy-executor-timer-queue = { path = "../../embassy/embassy-executor-timer-queue" }
+

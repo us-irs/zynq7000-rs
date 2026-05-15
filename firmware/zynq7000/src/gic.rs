@@ -46,9 +46,14 @@ impl TypeRegister {
 
 pub type Typer = TypeRegister;
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    debug,
+    default = 0x0,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 #[derive(PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InterruptProcessorTargetRegister {
     /// Target array. Every register holds the information for 4 interrupts.
     #[bits(0..=1, rw, stride = 8)]
