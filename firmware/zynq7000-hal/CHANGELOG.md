@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- Increased reliabily of PS UART interrupt reception, which was proven to be buggy for higher baud
+  rates: Force user to configure RTO value, encouraging non-zero values, and use a RX FIFO trigger
+  value of FIFO depth divided by 2 by default.
 - `devcfg` moved to `pl` module
 - Added division by zero check in gtc frequency_to_ticks to avoid runtime panic
 - Increased UART type safety by providing dedicated MIO constructors for UART 0 and UART 1
