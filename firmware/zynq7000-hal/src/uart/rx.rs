@@ -114,8 +114,14 @@ impl Rx {
     ///
     /// This should be called once at system start-up. After that, you only need to call
     /// [Self::on_interrupt] in the interrupt handler for the UART peripheral.
-    pub fn start_interrupt_driven_reception(&mut self) {
+    ///
+    /// You can also configure a RX timeout by setting the RX timeout value `rto` which has a unit
+    /// of bit periods times 4. Setting a value of 0 disables the timeout feature of the hardware,
+    /// but this is strongly discouraged.
+    pub fn start_interrupt_driven_reception(&mut self, rto: u8) {
         self.soft_reset();
+        self.set_rx_fifo_trigger_level((FIFO_DEPTH / 2) as u8);
+        self.set_rx_timeout_value(rto);
         self.clear_interrupts();
         self.enable_interrupts();
     }
@@ -170,13 +176,7 @@ impl Rx {
             return result;
         }
         let isr = self.regs.read_interrupt_status();
-        if isr.rx_full() {
-            // Read all bytes in the full RX fifo.
-            for byte in buf.iter_mut() {
-                *byte = self.read_fifo_unchecked();
-            }
-            result.read_bytes = FIFO_DEPTH;
-        } else if isr.rx_trg() {
+        if self.regs.read_interrupt_status().rx_trg() {
             // It is guaranteed that we can read the FIFO level amount of data
             let fifo_trigger = self.regs.read_rx_fifo_trigger().trig().as_usize();
             (0..fifo_trigger).for_each(|i| {

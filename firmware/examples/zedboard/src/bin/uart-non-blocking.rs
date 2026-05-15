@@ -50,6 +50,7 @@ use zynq7000_hal::{
     uart::{ClockConfig, Config, Uart},
 };
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum UartMode {
     Uart0ToUartlite,
     Uart0ToUart16550,
@@ -73,6 +74,14 @@ const AXI_UAR16550_BASE_ADDR: u32 = 0x43C0_0000;
 
 pub const UARTLITE_PL_INT_ID: usize = 0;
 pub const UART16550_PL_INT_ID: usize = 1;
+
+pub const UART_SPEED: u32 = 115_200;
+
+// Other common baud rates to test with:
+
+// pub const UART_SPEED: u32 = 9600;
+// pub const UART_SPEED: u32 = 230_400;
+// pub const UART_SPEED: u32 = 912_600;
 
 const RB_SIZE: usize = 512;
 
@@ -239,15 +248,25 @@ async fn main(spawner: Spawner) -> ! {
         Output::new_for_emio(gpio_pins.emio.take(9).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(10).unwrap(), PinState::Low),
     ]);
+    let mut uart_speed = UART_SPEED;
     match UART_MODE {
         UartMode::Uart0ToUartlite => uart_mux.select(UartSel::Uart0ToUartlite),
         UartMode::Uart0ToUart16550 => uart_mux.select(UartSel::Uart0ToUart16550),
         UartMode::UartliteToUart16550 => uart_mux.select(UartSel::UartliteToUart16550),
     }
+    if (UART_MODE == UartMode::Uart0ToUartlite || UART_MODE == UartMode::UartliteToUart16550)
+        && uart_speed != 115200
+    {
+        log::warn!("UARTLITE speed is not configurable. Hardcoding UART speed to 115200");
+        uart_speed = 115200;
+    }
 
+    let uart0_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), uart_speed)
+        .unwrap()
+        .0;
     // UART0 routed through EMIO to PL pins.
     let uart_0 =
-        Uart::new_with_emio(dp.uart_0, Config::new_with_clk_config(uart_clk_config)).unwrap();
+        Uart::new_with_emio(dp.uart_0, Config::new_with_clk_config(uart0_clk_config)).unwrap();
     // Safety: Valid address of AXI UARTLITE.
     let mut uartlite = unsafe { AxiUartlite::new(AXI_UARTLITE_BASE_ADDR) };
     // We need to call this before splitting the structure, because the interrupt signal is
@@ -256,10 +275,15 @@ async fn main(spawner: Spawner) -> ! {
 
     let (clk_config, error) = axi_uart16550::ClockConfig::new_autocalc_with_error(
         fugit_03::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
-        115200,
+        uart_speed,
     )
     .unwrap();
-    assert!(error < 0.02);
+    if error > 0.02 {
+        log::warn!(
+            "Calculated clock config for AXI UART16550 has error of {} %, which is higher than 2%. This may lead to incorrect baud rate. Consider changing the input clock or the target baud rate.",
+            (error * 100.0)
+        );
+    }
     let _uart_16550 = unsafe {
         AxiUart16550::new(
             AXI_UAR16550_BASE_ADDR,
@@ -289,7 +313,7 @@ async fn main(spawner: Spawner) -> ! {
     let (uartlite_prod, mut uartlite_cons) = QUEUE_UARTLITE.take().split();
     let (uart16550_prod, mut uart16550_cons) = QUEUE_UART16550.take().split();
     // Use our helper function to start RX handling.
-    uart_0_rx.start_interrupt_driven_reception();
+    uart_0_rx.start_interrupt_driven_reception(0xFF);
     // Use our helper function to start RX handling.
     uart_16550_rx.start_interrupt_driven_reception();
     critical_section::with(|cs| {
