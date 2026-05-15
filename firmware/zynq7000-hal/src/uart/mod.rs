@@ -576,31 +576,27 @@ impl Uart {
         }
         enable_amba_peripheral_clock(periph_sel);
         reset(uart_id);
-        reg_block.modify_control(|mut v| {
-            v.set_tx_dis(true);
-            v.set_rx_dis(true);
-            v
-        });
+        reg_block.modify_control(|v| v.with_tx_disable(true).with_rx_disable(true));
         // Disable all interrupts.
         reg_block.write_interrupt_disable(InterruptControl::new_with_raw_value(0xFFFF_FFFF));
         let mode = Mode::builder()
             .with_chmode(cfg.chmode)
-            .with_nbstop(match cfg.stopbits {
+            .with_stopbits(match cfg.stopbits {
                 Stopbits::One => zynq7000::uart::Stopbits::One,
                 Stopbits::OnePointFive => zynq7000::uart::Stopbits::OnePointFive,
                 Stopbits::Two => zynq7000::uart::Stopbits::Two,
             })
-            .with_par(match cfg.parity {
+            .with_parity(match cfg.parity {
                 Parity::Even => zynq7000::uart::Parity::Even,
                 Parity::Odd => zynq7000::uart::Parity::Odd,
                 Parity::None => zynq7000::uart::Parity::NoParity,
             })
-            .with_chrl(match cfg.chrl {
+            .with_charlen(match cfg.chrl {
                 CharLen::SixBits => zynq7000::uart::CharLen::SixBits,
                 CharLen::SevenBits => zynq7000::uart::CharLen::SevenBits,
                 CharLen::EightBits => zynq7000::uart::CharLen::EightBits,
             })
-            .with_clksel(cfg.clk_sel)
+            .with_clock_select(cfg.clk_sel)
             .build();
         reg_block.write_mode(mode);
         reg_block.write_baudgen(
@@ -615,8 +611,8 @@ impl Uart {
         );
         // Soft reset for both TX and RX.
         reg_block.modify_control(|mut v| {
-            v.set_tx_rst(true);
-            v.set_rx_rst(true);
+            v.set_tx_reset(true);
+            v.set_rx_reset(true);
             v
         });
 
@@ -627,10 +623,10 @@ impl Uart {
 
         // Enable TX and RX.
         reg_block.modify_control(|mut v| {
-            v.set_tx_dis(false);
-            v.set_rx_dis(false);
-            v.set_tx_en(true);
-            v.set_rx_en(true);
+            v.set_tx_disable(false);
+            v.set_rx_disable(false);
+            v.set_tx_enable(true);
+            v.set_rx_enable(true);
             v
         });
 
