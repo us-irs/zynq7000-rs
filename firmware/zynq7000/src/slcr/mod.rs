@@ -98,6 +98,24 @@ pub struct LevelShifterRegister {
     user_lvl_shftr_en: Option<LevelShifterConfig>,
 }
 
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
+pub struct MioLoopback {
+    #[bit(3, rw)]
+    i2c0_loop_i2c1: bool,
+    #[bit(2, rw)]
+    can0_loop_can1: bool,
+    #[bit(1, rw)]
+    ua0_loop_ua1: bool,
+    #[bit(0, rw)]
+    spi0_loop_spi1: bool,
+}
+
 /// System Level Control Registers access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
@@ -158,7 +176,7 @@ pub struct Registers {
 
     _gap10: [u32; 0x0B],
 
-    mio_loopback: u32,
+    mio_loopback: MioLoopback,
     _gap11: u32,
     mio_mst_tri_0: u32,
     mio_mst_tri_1: u32,

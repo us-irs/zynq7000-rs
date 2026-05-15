@@ -17,7 +17,7 @@ use crate::{enable_amba_peripheral_clock, spi_mode_const_to_cpol_cpha};
 use crate::{clocks::IoClocks, slcr::Slcr, time::Hertz};
 use arbitrary_int::{prelude::*, u3, u4, u6};
 use embedded_hal::delay::DelayNs;
-pub use embedded_hal::spi::Mode;
+pub use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, Mode};
 use zynq7000::slcr::reset::DualRefAndClockResetSpiUart;
 pub use zynq7000::spi::DelayControl;
 use zynq7000::spi::{
@@ -31,10 +31,38 @@ pub const MODULE_ID: u32 = 0x90106;
 pub mod asynch;
 pub use asynch::*;
 
+pub mod slave;
+pub use slave::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpiId {
     Spi0 = 0,
     Spi1 = 1,
+}
+
+impl SpiId {
+    #[inline]
+    pub const fn interrupt_id(&self) -> crate::Interrupt {
+        match self {
+            SpiId::Spi0 => crate::Interrupt::Spi(crate::SpiInterrupt::Spi0),
+            SpiId::Spi1 => crate::Interrupt::Spi(crate::SpiInterrupt::Spi1),
+        }
+    }
+
+    /// Unsafely steal the register block.
+    ///
+    /// # Safety
+    ///
+    /// This API can be used to potentially create a driver to the same peripheral structure
+    /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
+    /// interfere with each other.
+    #[inline]
+    pub unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
+        match self {
+            SpiId::Spi0 => unsafe { zynq7000::spi::Registers::new_mmio_fixed_0() },
+            SpiId::Spi1 => unsafe { zynq7000::spi::Registers::new_mmio_fixed_1() },
+        }
+    }
 }
 
 pub trait PsSpi {
@@ -349,6 +377,42 @@ impl ChipSelect {
     }
 }
 
+/// This abstraction which can be used to map a hardware chip select pin
+/// to [embedded_hal::digital::OutputPin]. This is useful for creating physical chip select
+/// pins required by the [embedded_hal_bus](https://docs.rs/embedded-hal-bus/latest/embedded_hal_bus/)
+/// API.
+pub struct ChipSelectPin {
+    spi_id: SpiId,
+    cs: ChipSelect,
+}
+
+impl ChipSelectPin {
+    /// Chip select pin constructor.
+    pub const fn new(spi_id: SpiId, cs: ChipSelect) -> Self {
+        Self { spi_id, cs }
+    }
+}
+
+impl embedded_hal::digital::ErrorType for ChipSelectPin {
+    type Error = Infallible;
+}
+
+impl embedded_hal::digital::OutputPin for ChipSelectPin {
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        // Safety: We only touch the CS register bits of the specified peripheral.
+        let mut spi_regs = unsafe { SpiLowLevel::steal(self.spi_id).regs };
+        spi_regs.modify_config(|val| val.with_cs_raw(self.cs.raw_reg()));
+        Ok(())
+    }
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        // Safety: We only touch the CS register bits of the specified peripheral.
+        let mut spi_regs = unsafe { SpiLowLevel::steal(self.spi_id).regs };
+        spi_regs.modify_config(|val| val.with_cs_raw(u4::MAX));
+        Ok(())
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 /// Slave select configuration.
 pub enum SlaveSelectConfig {
@@ -533,7 +597,7 @@ impl SpiLowLevel {
                 .with_baud_rate_div(config.baud_div)
                 .with_cpha(cpha)
                 .with_cpol(cpol)
-                .with_master_ern(true)
+                .with_mode(zynq7000::spi::Mode::Master)
                 .build(),
         );
         // Configures for polling mode by default: TX trigger by one will lead to the
@@ -561,12 +625,12 @@ impl SpiLowLevel {
 
     #[inline(always)]
     pub fn write_fifo_unchecked(&mut self, data: u8) {
-        self.regs.write_txd(FifoWrite::new(data));
+        self.regs.write_tx_data(FifoWrite::new(data));
     }
 
     #[inline(always)]
     pub fn read_fifo_unchecked(&mut self) -> u8 {
-        self.regs.read_rxd().value()
+        self.regs.read_rx_data().value()
     }
 
     #[inline]
@@ -615,7 +679,7 @@ impl SpiLowLevel {
     /// This disables all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn disable_interrupts(&mut self) {
+    pub fn disable_interrupts_master_mode(&mut self) {
         self.regs.write_interupt_disable(
             InterruptControl::builder()
                 .with_tx_underflow(true)
@@ -632,7 +696,7 @@ impl SpiLowLevel {
     /// This enables all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn enable_interrupts(&mut self, tx_below_threshold: bool) {
+    pub fn enable_interrupts_master_mode(&mut self, tx_below_threshold: bool) {
         self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_underflow(true)
@@ -646,10 +710,27 @@ impl SpiLowLevel {
         );
     }
 
+    /// This enables all interrupts relevant for non-blocking interrupt driven SPI operation
+    /// in SPI slave mode.
+    #[inline]
+    pub fn enable_interrupts_slave_mode(&mut self, mode_fault: bool) {
+        self.regs.write_interrupt_enable(
+            InterruptControl::builder()
+                .with_tx_underflow(true)
+                .with_rx_full(true)
+                .with_rx_not_empty(true)
+                .with_tx_full(false)
+                .with_tx_below_threshold(true)
+                .with_mode_fault(mode_fault)
+                .with_rx_ovr(true)
+                .build(),
+        );
+    }
+
     /// This clears all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn clear_interrupts(&mut self) {
+    pub fn clear_interrupts_master_mode(&mut self) {
         self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_underflow(true)
@@ -857,6 +938,16 @@ impl Spi {
         let mut spi = Self { inner: ll, config };
         spi.reset_and_reconfigure();
         spi
+    }
+
+    #[inline]
+    pub const fn id(&self) -> SpiId {
+        self.inner.id
+    }
+
+    #[inline]
+    pub const fn interrupt_id(&self) -> crate::Interrupt {
+        self.inner.id.interrupt_id()
     }
 
     pub fn write_delay_control(&mut self, delay_control: DelayControl) {
@@ -1250,4 +1341,15 @@ pub fn configure_spi_ref_clock_with_divisor(clks: &mut Clocks, divisor: u6) {
         }
     };
     clks.io_clocks_mut().update_spi_clk(new_clk);
+}
+
+/// Connects SPI0 output signals to SPI1 input signals and vice-versa.
+#[inline]
+pub fn enable_spi0_to_spi1_loopback() {
+    // Safety: We only modify the SPI bit.
+    unsafe {
+        Slcr::with(|slcr| {
+            slcr.modify_mio_loopback(|val| val.with_spi0_loop_spi1(true));
+        });
+    }
 }

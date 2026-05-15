@@ -37,7 +37,7 @@ use embedded_alloc::LlffHeap as Heap;
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write as _;
 use heapless::spsc::Queue;
-use log::{error, info, warn};
+use log::{info, warn};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
@@ -47,7 +47,7 @@ use zynq7000_hal::{
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClockConfig, Config, Uart},
+    uart::{self, ClockConfig, Config, Uart},
 };
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -233,14 +233,7 @@ async fn main(spawner: Spawner) -> ! {
         on_interrupt_uart_0,
     );
 
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            log_uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(log_uart, log::LevelFilter::Trace, false);
 
     // Set up UART multiplexing before creating and configuring the UARTs.
     let mut uart_mux = UartMultiplexer::new([
@@ -584,6 +577,7 @@ fn prefetch_handler(_faulting_addr: usize) -> ! {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {info:?}");
+    let mut uart = unsafe { uart::Uart::steal(uart::UartId::Uart1) };
+    writeln!(uart, "panic: {}\r", info).ok();
     loop {}
 }

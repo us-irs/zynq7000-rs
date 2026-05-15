@@ -12,10 +12,9 @@ static LOG_SEL: AtomicU8 = AtomicU8::new(0);
 /// Blocking UART loggers.
 pub mod uart_blocking {
     use super::*;
-    use core::cell::{Cell, RefCell, UnsafeCell};
+    use core::cell::{RefCell, UnsafeCell};
     use embedded_io::Write as _;
 
-    use aarch32_cpu::register::Cpsr;
     use critical_section::Mutex;
     use log::{LevelFilter, Log, set_logger, set_max_level};
 
@@ -78,28 +77,64 @@ pub mod uart_blocking {
         }
     }
 
-    pub struct UartLoggerUnsafeSingleThread {
-        skip_in_isr: Cell<bool>,
+    pub struct UartLoggerWithBusyFlag {
+        busy: AtomicBool,
+        skip_in_isr: AtomicBool,
         uart: UnsafeCell<Option<Uart>>,
     }
 
-    unsafe impl Send for UartLoggerUnsafeSingleThread {}
-    unsafe impl Sync for UartLoggerUnsafeSingleThread {}
+    unsafe impl Send for UartLoggerWithBusyFlag {}
+    unsafe impl Sync for UartLoggerWithBusyFlag {}
 
-    static UART_LOGGER_UNSAFE_SINGLE_THREAD: UartLoggerUnsafeSingleThread =
-        UartLoggerUnsafeSingleThread {
-            skip_in_isr: Cell::new(false),
-            uart: UnsafeCell::new(None),
-        };
+    static UART_LOGGER_UNSAFE_SINGLE_THREAD: UartLoggerWithBusyFlag = UartLoggerWithBusyFlag {
+        busy: AtomicBool::new(false),
+        skip_in_isr: AtomicBool::new(false),
+        uart: UnsafeCell::new(None),
+    };
 
-    /// Initialize the logger with a blocking UART instance which does not use locks.
+    struct UartGuard<'lock>(&'lock AtomicBool);
+
+    impl<'lock> UartGuard<'lock> {
+        pub fn new(flag: &'lock AtomicBool) -> Option<Self> {
+            let proc_mode = aarch32_cpu::register::Cpsr::read().mode().ok()?;
+
+            let is_irq = proc_mode == aarch32_cpu::register::cpsr::ProcessorMode::Fiq
+                || proc_mode == aarch32_cpu::register::cpsr::ProcessorMode::Irq;
+
+            // For IRQs, only try once.
+            if is_irq {
+                if UART_LOGGER_UNSAFE_SINGLE_THREAD
+                    .skip_in_isr
+                    .load(core::sync::atomic::Ordering::Relaxed)
+                {
+                    return None;
+                }
+                if flag.swap(true, core::sync::atomic::Ordering::AcqRel) {
+                    return None;
+                }
+                return Some(Self(flag));
+            }
+
+            // For threaded code, spinning is allowed.
+            while flag.swap(true, core::sync::atomic::Ordering::AcqRel) {}
+            Some(Self(flag))
+        }
+    }
+
+    impl Drop for UartGuard<'_> {
+        fn drop(&mut self) {
+            self.0.store(false, core::sync::atomic::Ordering::Release);
+        }
+    }
+
+    /// Initialize the logger with a blocking UART instance which spins on a busy flag in threaded
+    /// mode, and does not log in interrupt contexts if the main task was busy with logging.
     ///
-    /// # Safety
+    /// It should be noted that this is still a blocking logger, and using it in an ISR might
+    /// invalidate application logic and introduce problematic delays in the system.
     ///
-    /// This is a blocking logger which performs a write WITHOUT a critical section. This logger is
-    /// NOT thread-safe, which might lead to garbled output. Log output in ISRs can optionally be
-    /// surpressed.
-    pub unsafe fn init_unsafe_single_core(uart: Uart, level: LevelFilter, skip_in_isr: bool) {
+    /// Therefore, the initialization also allows skipping logging in ISRs completely.
+    pub fn init_with_busy_flag(uart: Uart, level: LevelFilter, skip_in_isr: bool) {
         if LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
             return;
         }
@@ -109,34 +144,31 @@ pub mod uart_blocking {
         );
         let opt_uart = unsafe { &mut *UART_LOGGER_UNSAFE_SINGLE_THREAD.uart.get() };
         opt_uart.replace(uart);
+
         UART_LOGGER_UNSAFE_SINGLE_THREAD
             .skip_in_isr
-            .set(skip_in_isr);
+            .store(skip_in_isr, core::sync::atomic::Ordering::Relaxed);
 
         set_logger(&UART_LOGGER_UNSAFE_SINGLE_THREAD).unwrap();
         set_max_level(level); // Adjust as needed
     }
 
-    impl log::Log for UartLoggerUnsafeSingleThread {
+    impl log::Log for UartLoggerWithBusyFlag {
         fn enabled(&self, _metadata: &log::Metadata) -> bool {
             true
         }
 
         fn log(&self, record: &log::Record) {
-            if self.skip_in_isr.get() {
-                match Cpsr::read().mode().unwrap() {
-                    aarch32_cpu::register::cpsr::ProcessorMode::Fiq
-                    | aarch32_cpu::register::cpsr::ProcessorMode::Irq => {
-                        return;
-                    }
-                    _ => {}
-                }
+            let guard = UartGuard::new(&self.busy);
+            if guard.is_none() {
+                return;
             }
 
             let uart_mut = unsafe { &mut *self.uart.get() }.as_mut();
             if uart_mut.is_none() {
                 return;
             }
+
             writeln!(
                 uart_mut.unwrap(),
                 "{} - {}\r",
@@ -147,6 +179,11 @@ pub mod uart_blocking {
         }
 
         fn flush(&self) {
+            let guard = UartGuard::new(&self.busy);
+            if guard.is_none() {
+                return;
+            }
+
             let uart_mut = unsafe { &mut *self.uart.get() }.as_mut();
             if uart_mut.is_none() {
                 return;
@@ -171,6 +208,8 @@ pub mod asynch {
 
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
     use log::{LevelFilter, set_logger, set_max_level};
+
+    use crate::uart::TxAsync;
 
     /// Logger implementation which logs frames via a ring buffer and sends the frame sizes
     /// as messages.
@@ -228,9 +267,8 @@ pub mod asynch {
         fn flush(&self) {}
     }
 
-    pub fn init(
+    pub fn init_generic(
         level: LevelFilter,
-        //writer: embassy_sync::pipe::Writer<'static, CriticalSectionRawMutex, 4096>,
     ) -> Option<embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>> {
         if super::LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
             return None;
@@ -240,5 +278,27 @@ pub mod asynch {
         set_logger(&LOGGER).unwrap();
         set_max_level(level); // Adjust as needed
         Some(reader)
+    }
+
+    pub fn init_with_uart_tx(level: LevelFilter, tx: TxAsync) -> Option<UartLoggerRunner> {
+        init_generic(level).map(|reader| UartLoggerRunner { reader, tx })
+    }
+
+    pub struct UartLoggerRunner {
+        reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
+        tx: TxAsync,
+    }
+
+    impl UartLoggerRunner {
+        pub async fn run(&mut self) -> ! {
+            let mut log_buf = [0u8; 1024];
+
+            loop {
+                let read_bytes = self.reader.read(&mut log_buf).await;
+                if read_bytes > 0 {
+                    self.tx.write(&log_buf[..read_bytes]).unwrap().await;
+                }
+            }
+        }
     }
 }

@@ -129,13 +129,7 @@ async fn main(_spawner: Spawner) -> ! {
     log_uart.write_all(INIT_STRING.as_bytes()).unwrap();
 
     // Safety: Co-operative multi-tasking is used.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            log_uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(log_uart, log::LevelFilter::Trace, false);
 
     // UART0 routed through EMIO to PL pins.
     let mut uart_0 =

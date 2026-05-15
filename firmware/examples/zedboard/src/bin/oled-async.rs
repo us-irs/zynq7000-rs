@@ -5,18 +5,18 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use dummy_pin::DummyPin;
 use embassy_executor::Spawner;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::{Delay, Duration, Ticker};
 use embedded_graphics::{Drawable as _, geometry::Point};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs as _;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use embedded_io::Write;
-use log::{error, info};
+use log::info;
 use ssd1306::{Ssd1306Async, prelude::*};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
     BootMode, clocks, generic_interrupt_handler, gpio, gtc,
+    log::asynch::UartLoggerRunner,
     spi::{self, SpiAsync},
     time::Hertz,
     uart::{self, TxAsync},
@@ -27,7 +27,7 @@ use tinybmp::Bmp;
 
 use zynq7000_rt as _;
 
-const INIT_STRING: &str = "-- Zynq 7000 Zedboard OLED example --\n\r";
+const INIT_STRING: &str = "-- Zynq 7000 Zedboard Async OLED example --\n\r";
 
 /// Entry point which calls the embassy main method.
 #[zynq7000_rt::entry]
@@ -77,9 +77,11 @@ async fn main(spawner: Spawner) -> ! {
     uart.write_all(INIT_STRING.as_bytes()).unwrap();
     uart.flush().unwrap();
 
-    // Safety: We are not multi-threaded yet.
-    let log_reader = zynq7000_hal::log::asynch::init(log::LevelFilter::Trace)
-        .expect("Failed to initialize async logger");
+    let (tx, _) = uart.split();
+    let tx_async = TxAsync::new(tx, true);
+    let log_runner =
+        zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_async)
+            .expect("Failed to initialize async logger");
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -88,7 +90,7 @@ async fn main(spawner: Spawner) -> ! {
         clocks.io_clocks().spi_clk()
     );
 
-    spawner.spawn(logger_task(uart, log_reader).unwrap());
+    spawner.spawn(logger_task(log_runner).unwrap());
 
     let mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
     let emio_leds: [gpio::Output; 8] = [
@@ -216,19 +218,8 @@ impl FerrisMovement {
 }
 
 #[embassy_executor::task]
-pub async fn logger_task(
-    uart: uart::Uart,
-    reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
-) -> ! {
-    let (tx, _) = uart.split();
-    let mut tx_async = TxAsync::new(tx, true);
-    let mut log_buf: [u8; 2048] = [0; 2048];
-    loop {
-        let read_bytes = reader.read(&mut log_buf).await;
-        if read_bytes > 0 {
-            tx_async.write(&log_buf[0..read_bytes]).unwrap().await;
-        }
-    }
+pub async fn logger_task(mut log_runner: UartLoggerRunner) -> ! {
+    log_runner.run().await
 }
 
 #[embassy_executor::task]
@@ -279,6 +270,7 @@ fn prefetch_handler(_faulting_addr: usize) -> ! {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {info:?}");
+    let mut uart = unsafe { uart::Uart::steal(uart::UartId::Uart1) };
+    writeln!(uart, "panic: {}\r", info).ok();
     loop {}
 }

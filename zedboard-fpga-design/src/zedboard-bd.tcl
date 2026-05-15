@@ -741,7 +741,6 @@ proc create_root_design { parentCell } {
   connect_bd_net -net ilconstant_0_dout  [get_bd_pins ilconstant_0/dout] \
   [get_bd_pins EMIO_I_0/In2]
   connect_bd_net -net ilconstant_2_dout  [get_bd_pins ilconstant_2/dout] \
-  [get_bd_pins processing_system7_0/SPI0_MISO_I] \
   [get_bd_pins processing_system7_0/SPI0_SS_I]
   connect_bd_net -net ilconstant_3_dout  [get_bd_pins ilconstant_3/dout] \
   [get_bd_pins processing_system7_0/SPI0_MOSI_I] \

@@ -8,7 +8,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
-use log::{error, info};
+use log::info;
 use zynq7000::Peripherals;
 use zynq7000_hal::{
     BootMode,
@@ -19,7 +19,7 @@ use zynq7000_hal::{
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClockConfig, Config, TxAsync, Uart},
+    uart::{self, ClockConfig, Config, TxAsync, Uart},
 };
 
 use zynq7000_rt as _;
@@ -69,9 +69,10 @@ async fn main(spawner: Spawner) -> ! {
     uart.flush().unwrap();
 
     let (tx, _rx) = uart.split();
-    let mut logger = TxAsync::new(tx, true);
+    let logger = TxAsync::new(tx, true);
 
-    let log_reader = zynq7000_hal::log::asynch::init(log::LevelFilter::Trace).unwrap();
+    let mut log_runner =
+        zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, logger).unwrap();
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -80,14 +81,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.spawn(led_task(led).unwrap());
     spawner.spawn(hello_task().unwrap());
 
-    let mut log_buf: [u8; 2048] = [0; 2048];
-    loop {
-        let read_bytes = log_reader.read(&mut log_buf).await;
-        if read_bytes > 0 {
-            // Unwrap okay, checked that size is larger than 0.
-            logger.write(&log_buf[0..read_bytes]).unwrap().await;
-        }
-    }
+    log_runner.run().await
 }
 
 #[embassy_executor::task]
@@ -153,6 +147,7 @@ fn prefetch_handler(_faulting_addr: usize) -> ! {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {info:?}");
+    let mut uart = unsafe { uart::Uart::steal(uart::UartId::Uart1) };
+    writeln!(uart, "panic: {}\r", info).ok();
     loop {}
 }

@@ -1212,7 +1212,7 @@ pub fn initialize_card(
     }
 
     let responded_to_cmd8 = !status_cmd8.0.command_timeout_error();
-    let acmd41_arg = if responded_to_cmd8 {
+    let hsc = if responded_to_cmd8 {
         let r7 = response::R7::new_with_raw_value(ll.read_u32_response());
         if !r7.voltage_accepted().is_ok_and(|val| {
             val == embedded_sdmmc::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V
@@ -1223,31 +1223,26 @@ pub fn initialize_card(
                 error: InitializationError::ResponseError(status.response_errors()),
             });
         }
-        argument::Acmd41::builder()
-            .with_host_capacity_support(
-                embedded_sdmmc::sdcard::argument::HostCapacitySupport::SdhcOrSdxc,
-            )
-            .with_fast_boot(false)
-            .with_xpc(embedded_sdmmc::sdcard::argument::PowerControl::MaximumPerformance)
-            .with_s18r(false)
-            .with_ocr(VOLTAGE_LEVEL_CAPABILITIES)
-            .build()
+        embedded_sdmmc::sdcard::argument::HostCapacitySupport::SdhcOrSdxc
     } else {
+        embedded_sdmmc::sdcard::argument::HostCapacitySupport::SdscOnly
+    };
+    send_acmd(
+        ll,
+        commands::ACMD41_SEND_IF_COND,
         argument::Acmd41::builder()
-            .with_host_capacity_support(
-                embedded_sdmmc::sdcard::argument::HostCapacitySupport::SdscOnly,
-            )
+            .with_host_capacity_support(hsc)
             .with_fast_boot(false)
             .with_xpc(embedded_sdmmc::sdcard::argument::PowerControl::MaximumPerformance)
             .with_s18r(false)
             .with_ocr(VOLTAGE_LEVEL_CAPABILITIES)
             .build()
-    };
-    send_acmd(ll, commands::ACMD41_SEND_IF_COND, acmd41_arg.raw_value(), 0).map_err(|e| {
-        InitializationErrorWithStep {
-            step: InitStep::SendingIfCondAcmd41,
-            error: e,
-        }
+            .raw_value(),
+        0,
+    )
+    .map_err(|e| InitializationErrorWithStep {
+        step: InitStep::SendingIfCondAcmd41,
+        error: e,
     })?;
 
     let mut r3 = embedded_sdmmc::sdcard::response::R3::new_with_raw_value(ll.read_u32_response());

@@ -12,7 +12,6 @@
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::{Delay, Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs;
@@ -26,6 +25,7 @@ use zynq7000_hal::{
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
+    log::asynch::UartLoggerRunner,
     spi::{self, SpiAsync, SpiWithHwCs, SpiWithHwCsAsync},
     time::Hertz,
     uart::{self, TxAsync},
@@ -97,7 +97,10 @@ async fn main(spawner: Spawner) -> ! {
     uart.write_all(b"-- Zynq 7000 Zedboard SPI L3GD20H example --\n\r")
         .unwrap();
 
-    let log_reader = zynq7000_hal::log::asynch::init(log::LevelFilter::Trace).unwrap();
+    let (tx, _) = uart.split();
+    let tx_async = TxAsync::new(tx, true);
+    let log_runner =
+        zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_async).unwrap();
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -116,7 +119,7 @@ async fn main(spawner: Spawner) -> ! {
         spi::Config::new(
             // 10 MHz maximum rating of the sensor.
             zynq7000::spi::BaudDivSel::By64,
-            //l3gd20::MODE,
+            // l3gd20::MODE,
             embedded_hal::spi::MODE_3,
             spi::SlaveSelectConfig::AutoCsAutoStart,
         ),
@@ -163,28 +166,17 @@ async fn main(spawner: Spawner) -> ! {
         }
     }
 
-    spawner.spawn(logger_task(uart, log_reader).unwrap());
+    spawner.spawn(logger_task(log_runner).unwrap());
     if BLOCKING {
-        blocking_application(mio_led, emio_leds, spi).await;
+        blocking_application(mio_led, emio_leds, spi).await
     } else {
-        non_blocking_application(mio_led, emio_leds, spi).await;
+        non_blocking_application(mio_led, emio_leds, spi).await
     }
 }
 
 #[embassy_executor::task]
-pub async fn logger_task(
-    uart: uart::Uart,
-    reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
-) -> ! {
-    let (tx, _) = uart.split();
-    let mut tx_async = TxAsync::new(tx, true);
-    let mut log_buf: [u8; 2048] = [0; 2048];
-    loop {
-        let read_bytes = reader.read(&mut log_buf).await;
-        if read_bytes > 0 {
-            tx_async.write(&log_buf[0..read_bytes]).unwrap().await;
-        }
-    }
+pub async fn logger_task(mut log_runner: UartLoggerRunner) -> ! {
+    log_runner.run().await
 }
 
 pub async fn blocking_application(
