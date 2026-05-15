@@ -48,7 +48,7 @@ impl Tx {
     /// [nb] API which returns [nb::Error::WouldBlock] if the FIFO is full.
     #[inline]
     pub fn write_fifo(&mut self, word: u8) -> nb::Result<(), Infallible> {
-        if self.regs.read_sr().tx_full() {
+        if self.regs.read_status().tx_full() {
             return Err(nb::Error::WouldBlock);
         }
         self.write_fifo_unchecked(word);
@@ -62,8 +62,8 @@ impl Tx {
             self.soft_reset();
         }
         self.regs.modify_control(|mut val| {
-            val.set_tx_en(true);
-            val.set_tx_dis(false);
+            val.set_tx_enable(true);
+            val.set_tx_disable(false);
             val
         });
     }
@@ -72,8 +72,8 @@ impl Tx {
     #[inline]
     pub fn disable(&mut self) {
         self.regs.modify_control(|mut val| {
-            val.set_tx_en(false);
-            val.set_tx_dis(true);
+            val.set_tx_enable(false);
+            val.set_tx_disable(true);
             val
         });
     }
@@ -82,11 +82,11 @@ impl Tx {
     #[inline]
     pub fn soft_reset(&mut self) {
         self.regs.modify_control(|mut val| {
-            val.set_tx_rst(true);
+            val.set_tx_reset(true);
             val
         });
         loop {
-            if !self.regs.read_control().tx_rst() {
+            if !self.regs.read_control().tx_reset() {
                 break;
             }
         }
@@ -94,7 +94,7 @@ impl Tx {
 
     /// Flushes the TX FIFO by blocking until it is empty.
     pub fn flush(&mut self) {
-        while !self.regs.read_sr().tx_empty() {}
+        while !self.regs.read_status().tx_empty() {}
     }
 
     /// Write a byte to the TX FIFO without checking if there is space available.
@@ -110,7 +110,7 @@ impl Tx {
             InterruptControl::builder()
                 .with_tx_over(true)
                 .with_tx_near_full(false)
-                .with_tx_trig(tx_trig)
+                .with_tx_trigger(tx_trig)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -120,7 +120,7 @@ impl Tx {
                 .with_tx_empty(true)
                 .with_rx_full(false)
                 .with_rx_empty(false)
-                .with_rx_trg(false)
+                .with_rx_trigger(false)
                 .build(),
         );
     }
@@ -132,7 +132,7 @@ impl Tx {
             InterruptControl::builder()
                 .with_tx_over(true)
                 .with_tx_near_full(false)
-                .with_tx_trig(true)
+                .with_tx_trigger(true)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -142,7 +142,7 @@ impl Tx {
                 .with_tx_empty(true)
                 .with_rx_full(false)
                 .with_rx_empty(false)
-                .with_rx_trg(false)
+                .with_rx_trigger(false)
                 .build(),
         );
     }
@@ -164,7 +164,7 @@ impl Tx {
                 .with_tx_empty(true)
                 .with_rx_full(false)
                 .with_rx_empty(false)
-                .with_rx_trg(false)
+                .with_rx_trigger(false)
                 .build(),
         );
     }
@@ -181,7 +181,7 @@ impl embedded_hal_nb::serial::Write for Tx {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        if self.regs.read_sr().tx_empty() {
+        if self.regs.read_status().tx_empty() {
             return Ok(());
         }
         Err(nb::Error::WouldBlock)
@@ -199,7 +199,7 @@ impl embedded_io::Write for Tx {
         }
         let mut written = 0;
         loop {
-            if !self.regs.read_sr().tx_full() {
+            if !self.regs.read_status().tx_full() {
                 break;
             }
         }

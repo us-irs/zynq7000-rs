@@ -72,7 +72,7 @@ pub unsafe fn on_interrupt_tx(peripheral: UartId) {
 
     // Pump the FIFO.
     while context.progress < slice_len {
-        if tx_with_irq.regs().read_sr().tx_full() {
+        if tx_with_irq.regs().read_status().tx_full() {
             break;
         }
         // Safety: TX structure is owned by the future which does not write into the the data
@@ -84,7 +84,7 @@ pub unsafe fn on_interrupt_tx(peripheral: UartId) {
     if remaining > FIFO_DEPTH {
         tx_with_irq.regs.write_tx_fifo_trigger(
             FifoTrigger::builder()
-                .with_trig(u6::new((FIFO_DEPTH / 2) as u8))
+                .with_trigger(u6::new((FIFO_DEPTH / 2) as u8))
                 .build(),
         );
     }
@@ -148,7 +148,7 @@ impl<'uart> TxFuture<'uart> {
         if data.len() > FIFO_DEPTH {
             tx_with_irq.regs.write_tx_fifo_trigger(
                 FifoTrigger::builder()
-                    .with_trig(u6::new((FIFO_DEPTH / 2) as u8))
+                    .with_trigger(u6::new((FIFO_DEPTH / 2) as u8))
                     .build(),
             );
         }

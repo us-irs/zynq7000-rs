@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.4.0] 2026-05-15
+
+- Better names for `uart` registers and register fields. Replaced various abbreviations.
+- Update `gic` module: Add some better type for SGIR field.
+
 # [v0.3.0] 2026-05-08
 
 - Better names for various registers. Replaced abbreviations like SR, MR, CR, IER, IMR etc.
@@ -30,7 +35,8 @@ Documentation fix
 
 Initial release
 
-[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.3.0...HEAD
+[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.4.0...HEAD
+[v0.4.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.3.0...zynq7000-v0.4.0
 [v0.3.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.2.0...zynq7000-v0.3.0
 [v0.2.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.0...zynq7000-v0.2.0
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.0...zynq7000-v0.1.1
