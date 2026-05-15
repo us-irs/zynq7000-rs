@@ -68,6 +68,9 @@ build-zynq: (build-dir "firmware")
   # feature, which conflicts with every other example's `critical-section-single-core` under
   # workspace feature unification.
   cd "examples/zedboard-smp" && cargo build
+  # Excluded from the firmware workspace: relies on a brand-new embassy-executor platform, see
+  # the TODO next to it in firmware/Cargo.toml.
+  cd "examples/multiprio" && cargo build
   cd "zynq7000-hal" && cargo build --features "time-driver-gtc"
 
 clean-dir target:

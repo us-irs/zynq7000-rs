@@ -22,6 +22,9 @@ exclude = [
   # (both call `critical_section::set_impl!`, so enabling both at once is a hard duplicate-
   # symbol error, not just a behavior difference).
   "examples/zedboard-smp",
+  # Relies on brand-new platform.
+  # TODO: Pull back into workspace as soon as new embassy executor is released.
+  "examples/multiprio",
 ]
 
 # cargo build/run

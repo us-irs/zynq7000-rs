@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+- `InterruptProcessorTargetRegister` now has a `default = 0x0` value and uses `bitbybit`'s
+  `defmt_bitfields` attribute instead of a manual `defmt::Format` derive.
+
 # [v0.4.0] 2026-05-15
 
 - Better names for `uart` registers and register fields. Replaced various abbreviations.

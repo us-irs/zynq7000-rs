@@ -12,7 +12,7 @@ use aarch32_cpu::interrupt;
 use zynq7000::gic::{
     CpuInterfaceRegisters, DistributorControlRegister, DistributorRegisters, InterfaceControl,
     InterruptProcessorTargetRegister, InterruptSignalRegister, MmioCpuInterfaceRegisters,
-    MmioDistributorRegisters, PriorityRegister,
+    MmioDistributorRegisters, PriorityRegister, SoftwareGeneratedInterruptRegister,
 };
 
 /// Spurious interrupt ID.
@@ -235,13 +235,41 @@ pub enum SpiInterrupt {
     ScuParity = 92,
 }
 
+/// SGI interrupt ID wrapper.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub struct SgiInterrupt(usize);
+
+impl SgiInterrupt {
+    /// Create a new SGI interrupt ID wrapper.
+    pub const fn new(int_id: usize) -> Result<Self, InvalidSgiInterruptId> {
+        if int_id >= 16 {
+            return Err(InvalidSgiInterruptId(int_id));
+        }
+        Ok(SgiInterrupt(int_id))
+    }
+
+    /// Returns the raw interrupt ID of the SGI.
+    #[inline]
+    pub const fn raw_id(&self) -> usize {
+        self.0
+    }
+
+    /// Returns the raw interrupt ID of the SGI as [u4].
+    #[inline]
+    pub const fn as_u4(&self) -> u4 {
+        u4::new(self.0 as u8)
+    }
+}
+
 /// Interrupt ID wrapper.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Interrupt {
     /// Software-generated interrupt (SGI).
-    Sgi(usize),
+    Sgi(SgiInterrupt),
     /// Private peripheral interrupt (PPI).
     Ppi(PpiInterrupt),
     /// Shared peripheral interrupt (SPI).
@@ -498,7 +526,29 @@ impl Configurator {
             .unwrap();
     }
 
-    /// Utility function to set all SGI interrupt targets to CPU0.
+    /// Set the interrupt priority for a SGI interrupt.
+    ///
+    /// There are 32 priority levels, and a lower value means a higher priority.
+    #[inline]
+    pub fn set_sgi_interrupt_priority(&mut self, sgi: SgiInterrupt, priority: u5) {
+        // The IPR arrays are byte accessible.
+        let base_ptr = self.gicd.pointer_to_ipr_start() as *mut u8;
+        let raw_index = sgi.raw_id();
+        unsafe {
+            core::ptr::write_volatile(base_ptr.add(raw_index), priority.as_u8() << 3);
+        }
+    }
+
+    /// Read the interrupt priority for a SGI interrupt.
+    #[inline]
+    pub fn read_sgi_interrupt_priority(&mut self, sgi: SgiInterrupt) -> u5 {
+        // The IPR arrays are byte accessible.
+        let base_ptr = self.gicd.pointer_to_ipr_start() as *const u8;
+        let raw_index = sgi.raw_id();
+        unsafe { u5::new(core::ptr::read_volatile(base_ptr.add(raw_index)) >> 3) }
+    }
+
+    /// Utility function to set all SPI interrupt targets to CPU0.
     ///
     /// This does not clear interrupt target bits for CPU1, it only activates the interrupts for
     /// CPU 0 as well.
@@ -509,6 +559,25 @@ impl Configurator {
         for i in 0..0x10 {
             self.gicd
                 .modify_iptr_spi(i, |v| {
+                    InterruptProcessorTargetRegister::new_with_raw_value(
+                        v.raw_value() | TARGETS_ALL_CPU_0_IPTR_VAL.raw_value(),
+                    )
+                })
+                .unwrap();
+        }
+    }
+
+    /// Utility function to set all SGI interrupt targets to CPU0.
+    ///
+    /// This does not clear interrupt target bits for CPU1, it only activates the interrupts for
+    /// CPU 0 as well.
+    /// This is useful if only CPU0 is active in a system, or if CPU0 handles most interrupts in
+    /// the system.
+    #[inline]
+    pub fn set_all_sgi_interrupt_targets_cpu0(&mut self) {
+        for i in 0..4 {
+            self.gicd
+                .modify_iptr_sgi(i, |v| {
                     InterruptProcessorTargetRegister::new_with_raw_value(
                         v.raw_value() | TARGETS_ALL_CPU_0_IPTR_VAL.raw_value(),
                     )
@@ -560,6 +629,19 @@ impl Configurator {
                 v
             })
         };
+    }
+    /// Enable all PPI interrupts.
+    #[inline]
+    pub fn trigger_software_interrupt(&mut self, sgi_id: SgiInterrupt) {
+        self.gicd.write_sgir(
+            SoftwareGeneratedInterruptRegister::builder()
+                .with_target_list_filter(zynq7000::gic::TargetListFilter::SendToSelf)
+                .with_security_condition(zynq7000::gic::SecurityCondition::IfConfiguredAsSecure)
+                .with_sbz(u11::ZERO)
+                .with_cpu_target_list(0)
+                .with_interrupt_id(u4::new(sgi_id.raw_id() as u8))
+                .build(),
+        );
     }
 
     /// Enable specific SPI interrupt.
@@ -682,9 +764,15 @@ impl InterruptGuard {
         let iar = regs.read_iar();
         let int_id = iar.ack_int_id().as_u32();
         let interrupt = match int_id {
-            0..=15 => Interrupt::Sgi(int_id as usize),
-            27..=31 => Interrupt::Ppi(PpiInterrupt::try_from(int_id as u8).unwrap()),
-            32..=92 => Interrupt::Spi(SpiInterrupt::try_from(int_id as u8).unwrap()),
+            0..=15 => Interrupt::Sgi(
+                SgiInterrupt::new(int_id as usize).expect("invalid SGI interrupt number"),
+            ),
+            27..=31 => Interrupt::Ppi(
+                PpiInterrupt::try_from(int_id as u8).expect("invalid PPI interrupt number"),
+            ),
+            32..=92 => Interrupt::Spi(
+                SpiInterrupt::try_from(int_id as u8).expect("invalid SPI interrupt number"),
+            ),
             SPURIOUS_INTERRUPT_ID => Interrupt::Spurious,
             _ => Interrupt::Invalid(int_id as usize),
         };

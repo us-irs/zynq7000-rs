@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- `Interrupt::Sgi` now wraps the new `SgiInterrupt` type instead of a raw `usize`.
 - Merged the `zynq7000-mmu` crate into `mmu`. The `L1Table`, `L1TableRaw` and `L1TableWrapper`
   types now live here directly, since this HAL was their only remaining consumer.
 - Moved MMU table setup here from `zynq7000-rt`. The `mmu` and `mmu_table` modules and the
@@ -20,6 +21,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Added
 
+- Added the `SgiInterrupt` type-safe SGI ID wrapper, plus `Configurator::set_sgi_interrupt_priority`/
+  `read_sgi_interrupt_priority`, `Configurator::trigger_software_interrupt` and
+  `Configurator::set_all_sgi_interrupt_targets_cpu0`. Used by the new `multiprio` example to run
+  tasks on separate `InterruptExecutor`s at distinct SGI priorities.
 - Added `cache::invalidate_data_cache_range_inner`, `cache::clean_data_cache_range_inner` and
   `cache::clean_and_invalidate_data_cache_range_inner`, which perform only the L1 (inner) half
   of cache maintenance. Useful for memory the L2 doesn't cache in the first place (e.g. OCM
