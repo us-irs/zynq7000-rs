@@ -72,13 +72,7 @@ async fn main(_spawner: Spawner) -> ! {
     uart.write_all(b"-- Zynq 7000 DHT22 --\n\r").unwrap();
 
     // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let mut delay = Delay;
 

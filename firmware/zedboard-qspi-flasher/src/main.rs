@@ -65,14 +65,7 @@ fn main() -> ! {
     )
     .unwrap();
     uart.write_all(INIT_STRING.as_bytes()).unwrap();
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            uart,
-            log::LevelFilter::Info,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Info, true);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);

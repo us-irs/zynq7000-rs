@@ -66,6 +66,32 @@ pub enum UartId {
     Uart1 = 1,
 }
 
+impl UartId {
+    /// Interrupt ID.
+    #[inline]
+    pub const fn interrupt_id(&self) -> crate::Interrupt {
+        match self {
+            UartId::Uart0 => crate::Interrupt::Spi(crate::SpiInterrupt::Uart0),
+            UartId::Uart1 => crate::Interrupt::Spi(crate::SpiInterrupt::Uart1),
+        }
+    }
+
+    /// Unsafely steal the register block.
+    ///
+    /// # Safety
+    ///
+    /// This API can be used to potentially create a driver to the same peripheral structure
+    /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
+    /// interfere with each other.
+    #[inline]
+    pub unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
+        match self {
+            UartId::Uart0 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_0() },
+            UartId::Uart1 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_1() },
+        }
+    }
+}
+
 /// Common trait for PS UART peripherals.
 pub trait PsUart {
     /// UART register block.
@@ -466,7 +492,6 @@ impl Config {
 pub struct Uart {
     rx: Rx,
     tx: Tx,
-    cfg: Config,
 }
 
 /// Invalid PS UART error.
@@ -638,7 +663,25 @@ impl Uart {
                 regs: reg_block,
                 id: uart_id,
             },
-            cfg,
+        }
+    }
+
+    /// Steal a UART without doing ANY configuration.
+    ///
+    /// # Safety
+    ///
+    /// Circumvents ownership and safety guarantees by the HAL. Also, the driver will not work
+    /// unless the UART was configured beforehand.
+    pub unsafe fn steal(id: UartId) -> Uart {
+        let reg_block = unsafe { id.steal_regs() };
+        Self {
+            rx: Rx {
+                regs: unsafe { reg_block.clone() },
+            },
+            tx: Tx {
+                regs: reg_block,
+                id,
+            },
         }
     }
 
@@ -655,12 +698,6 @@ impl Uart {
     #[inline]
     pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.rx.regs
-    }
-
-    /// Configuration.
-    #[inline]
-    pub const fn cfg(&self) -> &Config {
-        &self.cfg
     }
 
     /// Split into TX and RX halves.

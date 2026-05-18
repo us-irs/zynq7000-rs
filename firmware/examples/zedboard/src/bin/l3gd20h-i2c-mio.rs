@@ -80,14 +80,8 @@ async fn main(_spawner: Spawner) -> ! {
     .unwrap();
     uart.write_all(b"-- Zynq 7000 Zedboard I2C L3GD20H example --\n\r")
         .unwrap();
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);

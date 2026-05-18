@@ -34,13 +34,15 @@ impl BaudDivSel {
     }
 }
 
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    debug,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
+#[bitbybit::bitenum(u1, exhaustive = true)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Mode {
+    Slave = 0,
+    Master = 1,
+}
+
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Config {
     #[bit(17, rw)]
     modefail_gen_en: bool,
@@ -69,6 +71,9 @@ pub struct Config {
     #[bit(1, rw)]
     cpol: SpiClockPolarity,
     /// Master mode enable. 1 is master mode.
+    #[bit(0, rw)]
+    mode: Mode,
+    // Deprecated access to bit 0.
     #[bit(0, rw)]
     master_ern: bool,
 }
@@ -125,6 +130,18 @@ pub struct InterruptControl {
     /// Receiver overflow interrupt.
     #[bit(0, w)]
     rx_ovr: bool,
+}
+
+impl InterruptControl {
+    pub const ALL: Self = Self::builder()
+        .with_tx_underflow(true)
+        .with_rx_full(true)
+        .with_rx_not_empty(true)
+        .with_tx_full(true)
+        .with_tx_below_threshold(true)
+        .with_mode_fault(true)
+        .with_rx_ovr(true)
+        .build();
 }
 
 #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
@@ -228,9 +245,9 @@ pub struct Registers {
     enable: u32,
     delay_control: DelayControl,
     #[mmio(Write)]
-    txd: FifoWrite,
+    tx_data: FifoWrite,
     #[mmio(Read)]
-    rxd: FifoRead,
+    rx_data: FifoRead,
     sicr: u32,
     tx_trig: u32,
     rx_trig: u32,

@@ -38,9 +38,9 @@ pub unsafe fn on_interrupt(peripheral: SpiId) {
     let index = peripheral as usize;
     let enabled_irqs = spi.read_enabled_interrupts();
     // Prevent spurious interrupts from messing with out logic here.
-    spi.disable_interrupts();
+    spi.disable_interrupts_master_mode();
     let interrupt_status = spi.read_interrupt_status();
-    spi.clear_interrupts();
+    spi.clear_interrupts_master_mode();
     // IRQ is not related.
     if !enabled_irqs.tx_below_threshold()
         && !enabled_irqs.tx_full()
@@ -155,8 +155,7 @@ fn on_interrupt_transfer(idx: usize, context: &mut TransferContext, spi: &mut Sp
         context.tx_progress += 1;
     }
 
-    // Read data from RX FIFO first.
-    while spi.read_interrupt_status().rx_not_empty() {
+    while context.rx_progress < transfer_len && spi.read_interrupt_status().rx_not_empty() {
         if context.rx_progress < read_len {
             read_slice[context.rx_progress] = spi.read_fifo_unchecked();
         } else {
@@ -252,7 +251,7 @@ fn unfinished_transfer(spi: &mut SpiLowLevel, transfer_len: usize, context: &Tra
     }
     // Re-enable interrupts with the new RX FIFO trigger level. Only enable TX threshold interrupt
     // if we are not done yet with pushing all bytes to the FIFO.
-    spi.enable_interrupts(tx_pending);
+    spi.enable_interrupts_master_mode(tx_pending);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -308,6 +307,7 @@ impl<'spi> SpiFuture<'spi> {
         });
 
         Self::set_triggers(spi, write_index, words.len());
+
         // We assume that the slave select configuration was already performed, but we take
         // care of issuing a start if necessary.
         spi.issue_manual_start_for_manual_cfg();
@@ -322,8 +322,9 @@ impl<'spi> SpiFuture<'spi> {
             context.tx_slice.set_null();
             context.tx_progress = write_index;
             context.rx_progress = 0;
-            spi.inner.clear_interrupts();
-            spi.inner.enable_interrupts(write_index < words.len());
+            spi.inner.clear_interrupts_master_mode();
+            spi.inner
+                .enable_interrupts_master_mode(write_index < words.len());
             spi.inner.enable();
         });
         Self {
@@ -349,8 +350,9 @@ impl<'spi> SpiFuture<'spi> {
             context.rx_slice.set_null();
             context.tx_progress = write_index;
             context.rx_progress = 0;
-            spi.inner.clear_interrupts();
-            spi.inner.enable_interrupts(write_index < words.len());
+            spi.inner.clear_interrupts_master_mode();
+            spi.inner
+                .enable_interrupts_master_mode(write_index < words.len());
             spi.inner.enable();
         });
         Self {
@@ -376,6 +378,11 @@ impl<'spi> SpiFuture<'spi> {
         }
 
         Self::set_triggers(spi, fifo_prefill, full_write_len);
+
+        // We assume that the slave select configuration was already performed, but we take
+        // care of issuing a start if necessary.
+        spi.issue_manual_start_for_manual_cfg();
+
         critical_section::with(|cs| {
             let context_ref = TRANSFER_CONTEXTS[spi_id as usize].borrow(cs);
             let mut context = context_ref.borrow_mut();
@@ -386,8 +393,9 @@ impl<'spi> SpiFuture<'spi> {
             }
             context.tx_progress = fifo_prefill;
             context.rx_progress = 0;
-            spi.inner.clear_interrupts();
-            spi.inner.enable_interrupts(fifo_prefill < write.len());
+            spi.inner.clear_interrupts_master_mode();
+            spi.inner
+                .enable_interrupts_master_mode(full_write_len > FIFO_DEPTH);
             spi.inner.enable();
         });
         Self {
@@ -413,8 +421,9 @@ impl<'spi> SpiFuture<'spi> {
             context.tx_slice.set_null();
             context.tx_progress = write_index;
             context.rx_progress = 0;
-            spi.inner.clear_interrupts();
-            spi.inner.enable_interrupts(write_index < words.len());
+            spi.inner.clear_interrupts_master_mode();
+            spi.inner
+                .enable_interrupts_master_mode(write_index < words.len());
             spi.inner.enable();
         });
         Self {
@@ -429,7 +438,7 @@ impl<'spi> SpiFuture<'spi> {
         let idx = id as usize;
         DONE[idx].store(false, core::sync::atomic::Ordering::Relaxed);
         spi.inner.disable();
-        spi.inner.disable_interrupts();
+        spi.inner.disable_interrupts_master_mode();
     }
 
     // Returns amount of bytes written to FIFO.

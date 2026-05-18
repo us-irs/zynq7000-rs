@@ -17,7 +17,6 @@ use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
 use zynq7000_boot_image::DestinationDevice;
 use zynq7000_hal::clocks::ArmClocks;
-use zynq7000_hal::{generic_interrupt_handler, priv_tim};
 use zynq7000_hal::{
     BootMode,
     clocks::{
@@ -31,6 +30,7 @@ use zynq7000_hal::{
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
 };
+use zynq7000_hal::{generic_interrupt_handler, priv_tim};
 
 // PS clock input frequency.
 const PS_CLK: Hertz = Hertz::from_raw(33_333_333);
@@ -109,14 +109,7 @@ fn main() -> ! {
     logger_uart
         .write_all(b"-- Zedboard Rust FSBL --\n\r")
         .unwrap();
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            logger_uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(logger_uart, log::LevelFilter::Trace, true);
 
     // Set up the global interrupt controller.
     let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
