@@ -228,11 +228,7 @@ pub async fn blocking_tests_small(
     }
     slave_rx_reader.read_exact(&mut buf[0..16]).await.unwrap();
     for (i, item) in buf.iter().enumerate().take(16) {
-        assert_eq!(
-            *item,
-            (i * 2) as u8,
-            "slave did not send the expected data"
-        );
+        assert_eq!(*item, (i * 2) as u8, "slave did not send the expected data");
     }
 
     // Transfer in place test.
@@ -249,11 +245,7 @@ pub async fn blocking_tests_small(
     }
     slave_rx_reader.read_exact(&mut buf[0..16]).await.unwrap();
     for (i, item) in buf.iter().enumerate().take(16) {
-        assert_eq!(
-            *item,
-            (i * 2) as u8,
-            "slave did not send the expected data"
-        );
+        assert_eq!(*item, (i * 2) as u8, "slave did not send the expected data");
     }
     40
 }
@@ -390,11 +382,7 @@ pub async fn blocking_tests_small_async(
     }
     slave_rx_reader.read_exact(&mut buf[0..16]).await.unwrap();
     for (i, item) in buf.iter().enumerate().take(16) {
-        assert_eq!(
-            *item,
-            (i * 2) as u8,
-            "slave did not send the expected data"
-        );
+        assert_eq!(*item, (i * 2) as u8, "slave did not send the expected data");
     }
 
     // Transfer in place test.
@@ -411,11 +399,7 @@ pub async fn blocking_tests_small_async(
     }
     slave_rx_reader.read_exact(&mut buf[0..16]).await.unwrap();
     for (i, item) in buf.iter().enumerate().take(16) {
-        assert_eq!(
-            *item,
-            (i * 2) as u8,
-            "slave did not send the expected data"
-        );
+        assert_eq!(*item, (i * 2) as u8, "slave did not send the expected data");
     }
     40
 }
