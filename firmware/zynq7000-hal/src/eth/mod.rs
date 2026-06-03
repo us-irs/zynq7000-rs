@@ -550,10 +550,14 @@ impl Ethernet {
         // to disable the other addresses here.
         ll.regs.write_addr1_low(macaddr_lsbs);
         ll.regs.write_addr1_high(macaddr_msbs);
+        // Set hash reg to all-1 and enable multicast hash filtering to receive all multicast.
+        ll.regs.write_hash_low(0xffff_ffff);
+        ll.regs.write_hash_high(0xffff_ffff);
         ll.regs.modify_net_cfg(|mut val| {
             val.set_rx_enable_1536(true);
             val.set_rx_checksum_enable(true);
             val.set_no_broadcast(false);
+            val.set_multicast_hash_enable(true);
             // val.set_pause_enable(true);
             val
         });
