@@ -144,9 +144,9 @@ impl smoltcp::phy::Device for Driver {
         capabilities.medium = smoltcp::phy::Medium::Ethernet;
         capabilities.max_transmission_unit = super::MTU;
         capabilities.max_burst_size = Some(self.0.burst_size);
-        capabilities.checksum.ipv4 = smoltcp::phy::Checksum::Both;
-        capabilities.checksum.udp = smoltcp::phy::Checksum::Both;
-        capabilities.checksum.tcp = smoltcp::phy::Checksum::Both;
+        capabilities.checksum.ipv4 = smoltcp::phy::Checksum::None;
+        capabilities.checksum.udp = smoltcp::phy::Checksum::None;
+        capabilities.checksum.tcp = smoltcp::phy::Checksum::None;
         capabilities
     }
 }
