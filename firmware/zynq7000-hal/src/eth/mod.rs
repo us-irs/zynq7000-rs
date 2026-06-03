@@ -493,6 +493,10 @@ impl Ethernet {
         ll.configure_clock(config.clk_config_1000_mbps, true);
         let mut mdio = mdio::Mdio::new(&ll, true);
         mdio.configure_clock_div(config.mdc_clk_div);
+        ll.regs.modify_net_ctrl(|mut val| {
+            val.set_management_port_enable(true);
+            val
+        });
         Ethernet {
             ll,
             mdio,
