@@ -258,8 +258,9 @@ async fn main(spawner: Spawner) -> ! {
     let rx_bufs = ETH_RX_BUFS.take();
     let tx_bufs = ETH_TX_BUFS.take();
 
-    let rx_descr = RX_DESCRIPTORS.take().unwrap();
-    let tx_descr = TX_DESCRIPTORS.take().unwrap();
+    // Safety: We only call this once here.
+    let rx_descr = unsafe { RX_DESCRIPTORS.take() };
+    let tx_descr = unsafe { TX_DESCRIPTORS.take() };
     // Unwraps okay, list length is not 0
     let mut rx_descr_ref =
         zynq7000_hal::eth::rx_descr::DescriptorListWrapper::new(rx_descr.as_mut_slice());

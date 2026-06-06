@@ -1,4 +1,4 @@
-use core::{cell::UnsafeCell, mem::MaybeUninit, sync::atomic::AtomicBool};
+use core::{cell::UnsafeCell, mem::MaybeUninit};
 
 use arbitrary_int::u14;
 
@@ -19,8 +19,6 @@ pub struct Descriptor {
     pub word1: VolatileCell<Word1>,
 }
 
-static TX_DESCR_TAKEN: AtomicBool = AtomicBool::new(false);
-
 /// This is a low level wrapper to simplify declaring a global descriptor list.
 ///
 /// It allows placing the descriptor structure statically in memory which might not
@@ -37,13 +35,15 @@ impl<const SLOTS: usize> DescriptorList<SLOTS> {
     }
 
     /// Initializes the TX descriptors and returns a mutable reference to them.
-    pub fn take(&self) -> Option<&'static mut [Descriptor; SLOTS]> {
-        if TX_DESCR_TAKEN.swap(true, core::sync::atomic::Ordering::SeqCst) {
-            return None; // Already taken, return None
-        }
+    ///
+    /// # Safety
+    ///
+    /// This allows creating aliasing mutable references and circumventing ownership and safety
+    /// guarantees of the HAL. You MUST call this function only once per descriptor instance.
+    pub unsafe fn take(&self) -> &'static mut [Descriptor; SLOTS] {
         let descr = unsafe { &mut *self.0.get() };
         descr.write([const { Descriptor::new() }; SLOTS]);
-        Some(unsafe { descr.assume_init_mut() })
+        unsafe { descr.assume_init_mut() }
     }
 }
 
