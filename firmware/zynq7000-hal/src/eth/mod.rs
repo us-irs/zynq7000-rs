@@ -68,6 +68,12 @@ impl<const SLOTS: usize> UninitBufferList<SLOTS> {
     }
 }
 
+impl<const SLOTS: usize> Default for UninitBufferList<SLOTS> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 use crate::gpio::mio::{
     Mio16, Mio17, Mio18, Mio19, Mio20, Mio21, Mio22, Mio23, Mio24, Mio25, Mio26, Mio27,
