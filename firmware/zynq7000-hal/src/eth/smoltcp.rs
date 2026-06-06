@@ -1,11 +1,12 @@
 //! smoltcp driver for the Zynq 7000 ethernet peripheral.
 use arbitrary_int::u14;
 
-pub use crate::eth::{EthernetId, InterruptResult};
-use crate::{
-    cache::{CACHE_LINE_SIZE, clean_and_invalidate_data_cache_range, invalidate_data_cache_range},
-    eth::{rx_descr, tx_descr},
+#[cfg(feature = "eth-cache-maintenance")]
+use crate::cache::{
+    clean_and_invalidate_data_cache_range, invalidate_data_cache_range, CACHE_LINE_SIZE,
 };
+use crate::eth::{rx_descr, tx_descr};
+pub use crate::eth::{EthernetId, InterruptResult};
 
 /// This interrupt handler should be called when a Gigabit Ethernet interrupt occurs.
 pub fn on_interrupt(eth_id: EthernetId) -> InterruptResult {
@@ -46,16 +47,21 @@ impl SmoltcpRxToken<'_> {
         // The DMA will write the received frame into DDR. The L1 and L2 cache lines for the
         // particular reception address need to be invalidated, to avoid fetching stale data from
         // the cache instead of the DDR.
+        #[cfg(feature = "eth-cache-maintenance")]
         let clean_invalidate_len = (self.rx_size + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
+        #[cfg(feature = "eth-cache-maintenance")]
         invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
             .expect("RX buffer or buffer size not aligned to cache line size");
+
         log::debug!("eth rx {} bytes", self.rx_size);
         log::trace!("rx data: {:x?}", &self.rx_buf.0[0..self.rx_size]);
         let result = f(&mut self.rx_buf.0[0..self.rx_size]);
         self.descr_list.clear_slot(self.slot_index);
+
         // Okay, this is weird, but we have to do this. I encountered this bug where ICMP replies
         // were duplicated after the descriptor rings wrapped. My theory is that there is
         // some data in the cache after the embassy reception function which needs to be cleaned.
+        #[cfg(feature = "eth-cache-maintenance")]
         clean_and_invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
             .expect("RX buffer or buffer size not aligned to cache line size");
         result
@@ -97,11 +103,15 @@ impl SmoltcpTxToken<'_> {
         let buffer = self.tx_bufs.get_mut(tx_idx).unwrap();
         let addr = buffer.0.as_ptr() as u32;
         let result = f(&mut buffer.0[0..len]);
-        let clean_invalidate_len = (len + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
+
         // DMA accesses the DDR memory directly, so we need to flush everything that might
         // still be in the L1 or L2 cache to the DDR.
+        #[cfg(feature = "eth-cache-maintenance")]
+        let clean_invalidate_len = (len + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
+        #[cfg(feature = "eth-cache-maintenance")]
         clean_and_invalidate_data_cache_range(buffer.0.as_ptr() as u32, clean_invalidate_len)
             .expect("TX buffer or buffer size not aligned to cache line size");
+
         log::debug!("eth tx {len} bytes");
         log::trace!("tx data: {:x?}", &buffer.0[0..len]);
         self.descr_list

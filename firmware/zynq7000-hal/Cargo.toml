@@ -49,13 +49,21 @@ serde = { version = "1", optional = true, features = ["derive"] }
 defmt = { version = "1", optional = true }
 
 [features]
-# Activates the embassy-time support using the global timer counter.
-time-driver-gtc = ["dep:embassy-time-driver", "dep:embassy-time-queue-utils", "dep:once_cell"]
+default = ["eth-cache-maintenance"]
 alloc = []
 defmt = ["dep:defmt", "fugit/defmt", "zynq7000/defmt"]
 std = ["thiserror/std", "alloc"]
+
+# Activates the embassy-time support using the global timer counter.
+time-driver-gtc = ["dep:embassy-time-driver", "dep:embassy-time-queue-utils", "dep:once_cell"]
+
 # These devices have a lower pin count.
 7z010-7z007s-clg225 = []
+
+# Enabled by default to run cache maintenance operations on Ethernet DMA buffers.
+# Only disable if the Ethernet DMA buffers are placed in a memory region where
+# caching is disabled.
+eth-cache-maintenance = []
 
 [dev-dependencies]
 approx = "0.5"
