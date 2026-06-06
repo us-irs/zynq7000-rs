@@ -149,7 +149,7 @@ pub mod section_attrs {
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::OuterAndInnerWriteThroughNoWriteAlloc.as_raw(),
     };
-    pub const OCM_MAPPED_HIGH: SectionAttributes = SectionAttributes {
+    pub const OCM: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
         shareable: false,
@@ -162,6 +162,10 @@ pub mod section_attrs {
         }
         .as_raw(),
     };
+    #[cfg(feature="first-segment-ddr-attr")]
+    pub const FIRST_SEGMENT: SectionAttributes = DDR;
+    #[cfg(not(feature="first-segment-ddr-attr"))]
+    pub const FIRST_SEGMENT: SectionAttributes = OCM;
     pub const UNASSIGNED_RESERVED: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,

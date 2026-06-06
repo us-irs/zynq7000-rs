@@ -15,6 +15,13 @@
 //! - No L2 cache initialization is performed.
 //! - MMU table is specified as Rust code.
 //! - Modification to the stack setup code, because a different linker script is used.
+//!
+//! ## Features
+//!
+//! * `first-segment-ddr-attr` - This feature can be enabled if the DDR is accessed through memory
+//!   addresses 0x8000 to 0x0010_0000. In this case, the MMU attribute for the first segment is
+//!   the DDR memory attribute (inner and outer cache maintenance). Otherwise, the OCM attribute
+//!   will be used (only inner cache maintenance).
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(all(feature = "rt", arm_profile = "a"))]

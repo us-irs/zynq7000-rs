@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+- Changed default mapping of first 1 MB segment to use OCM attributes.
+- Added `first-segment-ddr-attr` which can be used to use DDR attributes for the first segment
+  to allow accessing DDR through address 0x8000 to 0x10_0000
+
 # [v0.3.0] 2026-05-08
 
 Bumped `aarch32-rt` and `aarch32-cpu` to v0.3.
