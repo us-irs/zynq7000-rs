@@ -20,6 +20,7 @@ build-dir target:
 build-zynq: (build-dir "firmware")
   cd "zynq7000" && cargo build --all-features
   cd "zedboard-fsbl" && cargo build --release
+  cd "zynq7000-hal" && cargo build --features "time-driver-gtc"
 
 clean-dir target:
   cd {{target}} && cargo clean

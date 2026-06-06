@@ -8,6 +8,13 @@
 //! [embedded-hal](https://github.com/rust-embedded/embedded-hal) project, making it compatible with
 //! various drivers in the embedded rust ecosystem.
 //!
+//! ## Features
+//!
+//! * `defmt` - Activates `defmt` support for various data structures
+//! * `7z010-7z007s-clg225`  - Chip variant which has a lower pin count
+//! * `time-driver-gtc` - Access to the `embassy-time` driver API which uses the global timer
+//!   counter (GTC).
+//!
 //! ## Examples
 //!
 //! All examples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/examples)
@@ -43,6 +50,8 @@ pub mod sd;
 pub mod slcr;
 pub mod spi;
 pub mod time;
+#[cfg(feature = "time-driver-gtc")]
+pub mod time_driver_gtc;
 pub mod ttc;
 pub mod uart;
 

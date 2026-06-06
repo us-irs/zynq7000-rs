@@ -50,7 +50,7 @@ async fn main(spawner: Spawner) -> ! {
     }
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     let mio_pins = mio::Pins::new(dp.gpio);
 

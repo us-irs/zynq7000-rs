@@ -30,7 +30,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
     let mio_pins = gpio::mio::Pins::new(periphs.gpio);
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);

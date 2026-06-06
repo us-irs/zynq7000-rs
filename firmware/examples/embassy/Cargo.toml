@@ -14,8 +14,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-cpu = { version = "0.3", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
-zynq7000-hal = { path = "../../zynq7000-hal" }
-zynq7000-embassy = { path = "../../zynq7000-embassy" }
+zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
 dht-sensor = { git = "https://github.com/michaelbeaumont/dht-sensor.git", rev = "10319bdeae9ace3bb0fc79a15da2869c5bf50f52", features = ["async"] }
 embedded-hal-async = "1"
 embassy-sync = "0.8"

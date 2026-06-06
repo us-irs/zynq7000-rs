@@ -1,11 +1,6 @@
-//! # Embassy time support for the AMD Zynq7000 SoC family
-//!
-//! This project contains the [embassy-rs](https://github.com/embassy-rs/embassy) time support for
-//! the AMD Zynq7000 SoC family. It currently provides one driver using the global timer peripheral
-//! provided by the Zynq7000 PS for this purpose.
+//! # Embassy time support for the AMD Zynq7000 SoC family using the global timer counter (GTC).
 //!
 //! The [crate::init] method must be called once for the time driver to work properly.
-#![no_std]
 use core::cell::{Cell, RefCell};
 
 use critical_section::{CriticalSection, Mutex};
@@ -13,11 +8,12 @@ use embassy_time_driver::{Driver, TICK_HZ, time_driver_impl};
 use embassy_time_queue_utils::Queue;
 use once_cell::sync::OnceCell;
 
-use zynq7000_hal::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
+use crate::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
 
 static SCALE: OnceCell<u64> = OnceCell::new();
 static CPU_3X2X_CLK: OnceCell<Hertz> = OnceCell::new();
 
+#[derive(Debug)]
 struct AlarmState {
     timestamp: Cell<u64>,
 }
@@ -72,8 +68,8 @@ impl GtcTimerDriver {
                 on_interrupt();
             }
         }
-        zynq7000_hal::register_interrupt(
-            zynq7000_hal::gic::Interrupt::Ppi(zynq7000_hal::gic::PpiInterrupt::GlobalTimer),
+        crate::register_interrupt(
+            crate::gic::Interrupt::Ppi(crate::gic::PpiInterrupt::GlobalTimer),
             safe_interrupt_handler,
         );
         CPU_3X2X_CLK.set(arm_clock.cpu_3x2x_clk()).unwrap();
@@ -157,6 +153,7 @@ impl GtcTimerDriver {
         }
     }
 }
+
 impl Driver for GtcTimerDriver {
     #[inline]
     fn now(&self) -> u64 {

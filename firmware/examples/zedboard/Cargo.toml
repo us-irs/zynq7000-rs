@@ -14,8 +14,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-cpu = { version = "0.3", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
-zynq7000-hal = { path = "../../zynq7000-hal" }
-zynq7000-embassy = { path = "../../zynq7000-embassy" }
+zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
 zedboard-bsp = { path = "../../zedboard-bsp" }
 num_enum = { version = "0.7", default-features = false }
 l3gd20 = { git = "https://github.com/us-irs/l3gd20.git", branch = "add-async-if" }

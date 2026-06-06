@@ -39,15 +39,21 @@ smoltcp = { version = "0.13", default-features = false, features = ["proto-ipv4"
 vcell = "0.1"
 raw-slicee = "0.1"
 embedded-io-async = "0.7"
-serde = { version = "1", optional = true, features = ["derive"] }
-defmt = { version = "1", optional = true }
 embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
 bytemuck = "1.25"
 
+once_cell = { version = "1", default-features = false, features = ["critical-section"], optional = true }
+embassy-time-driver = { version = "0.2", optional = true }
+embassy-time-queue-utils = { version = "0.3", optional = true }
+serde = { version = "1", optional = true, features = ["derive"] }
+defmt = { version = "1", optional = true }
+
 [features]
-std = ["thiserror/std", "alloc"]
+# Activates the embassy-time support using the global timer counter.
+time-driver-gtc = ["dep:embassy-time-driver", "dep:embassy-time-queue-utils", "dep:once_cell"]
 alloc = []
 defmt = ["dep:defmt", "fugit/defmt", "zynq7000/defmt"]
+std = ["thiserror/std", "alloc"]
 # These devices have a lower pin count.
 7z010-7z007s-clg225 = []
 

@@ -5,7 +5,6 @@ members = [
   "zynq7000-mmu",
   "zynq7000",
   "zynq7000-hal",
-  "zynq7000-embassy",
 
   "examples/simple",
   "examples/embassy",
