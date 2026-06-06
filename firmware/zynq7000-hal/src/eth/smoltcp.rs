@@ -3,10 +3,10 @@ use arbitrary_int::u14;
 
 #[cfg(feature = "eth-cache-maintenance")]
 use crate::cache::{
-    clean_and_invalidate_data_cache_range, invalidate_data_cache_range, CACHE_LINE_SIZE,
+    CACHE_LINE_SIZE, clean_and_invalidate_data_cache_range, invalidate_data_cache_range,
 };
-use crate::eth::{rx_descr, tx_descr};
 pub use crate::eth::{EthernetId, InterruptResult};
+use crate::eth::{rx_descr, tx_descr};
 
 /// This interrupt handler should be called when a Gigabit Ethernet interrupt occurs.
 pub fn on_interrupt(eth_id: EthernetId) -> InterruptResult {
