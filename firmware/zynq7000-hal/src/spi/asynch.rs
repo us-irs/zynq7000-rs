@@ -1,10 +1,10 @@
 //! Asynchronous PS SPI driver.
-use core::{cell::RefCell, sync::atomic::AtomicBool};
+use core::{cell::RefCell, marker::PhantomData, sync::atomic::AtomicBool};
 
 use critical_section::Mutex;
 use embassy_sync::waitqueue::AtomicWaker;
 use embedded_hal_async::spi::SpiBus;
-use raw_slice::{RawBufSlice, RawBufSliceMut};
+use raw_buffer::{RawBufSlice, RawBufSliceMut};
 
 use super::{ChipSelect, FIFO_DEPTH, Spi, SpiId, SpiLowLevel};
 
@@ -286,17 +286,26 @@ impl TransferContext {
     }
 }
 
-pub struct SpiFuture<'spi> {
+pub struct SpiFuture<'spi, 'read, 'write> {
     id: super::SpiId,
+    buffer_empty: bool,
     spi: &'spi mut super::SpiLowLevel,
     config: super::Config,
     finished_regularly: core::cell::Cell<bool>,
+    phantom: core::marker::PhantomData<(&'read (), &'write ())>,
 }
 
-impl<'spi> SpiFuture<'spi> {
-    fn new_for_read(spi: &'spi mut Spi, spi_id: SpiId, words: &mut [u8]) -> Self {
+impl<'spi, 'read, 'write> SpiFuture<'spi, 'read, 'write> {
+    fn new_for_read(spi: &'spi mut Spi, spi_id: SpiId, words: &'read mut [u8]) -> Self {
         if words.is_empty() {
-            panic!("words length unexpectedly 0");
+            return Self {
+                id: spi_id,
+                buffer_empty: true,
+                spi: &mut spi.inner,
+                config: spi.config,
+                finished_regularly: core::cell::Cell::new(true),
+                phantom: PhantomData,
+            };
         }
         Self::generic_init_transfer(spi, spi_id);
 
@@ -329,15 +338,24 @@ impl<'spi> SpiFuture<'spi> {
         });
         Self {
             id: spi_id,
+            buffer_empty: false,
             config: spi.config,
             spi: &mut spi.inner,
             finished_regularly: core::cell::Cell::new(false),
+            phantom: PhantomData,
         }
     }
 
-    fn new_for_write(spi: &'spi mut Spi, spi_id: SpiId, words: &[u8]) -> Self {
+    fn new_for_write(spi: &'spi mut Spi, spi_id: SpiId, words: &'write [u8]) -> Self {
         if words.is_empty() {
-            panic!("words length unexpectedly 0");
+            return Self {
+                id: spi_id,
+                buffer_empty: true,
+                spi: &mut spi.inner,
+                config: spi.config,
+                finished_regularly: core::cell::Cell::new(true),
+                phantom: PhantomData,
+            };
         }
         let write_index = Self::generic_init_transfer_write_transfer_in_place(spi, spi_id, words);
         critical_section::with(|cs| {
@@ -357,15 +375,29 @@ impl<'spi> SpiFuture<'spi> {
         });
         Self {
             id: spi_id,
+            buffer_empty: false,
             config: spi.config,
             spi: &mut spi.inner,
             finished_regularly: core::cell::Cell::new(false),
+            phantom: PhantomData,
         }
     }
 
-    fn new_for_transfer(spi: &'spi mut Spi, spi_id: SpiId, read: &mut [u8], write: &[u8]) -> Self {
+    fn new_for_transfer(
+        spi: &'spi mut Spi,
+        spi_id: SpiId,
+        read: &'read mut [u8],
+        write: &'write [u8],
+    ) -> Self {
         if read.is_empty() || write.is_empty() {
-            panic!("read or write buffer unexpectedly empty");
+            return Self {
+                id: spi_id,
+                buffer_empty: true,
+                spi: &mut spi.inner,
+                config: spi.config,
+                finished_regularly: core::cell::Cell::new(true),
+                phantom: PhantomData,
+            };
         }
         let full_write_len = core::cmp::max(read.len(), write.len());
         let fifo_prefill = core::cmp::min(super::FIFO_DEPTH, full_write_len);
@@ -400,15 +432,28 @@ impl<'spi> SpiFuture<'spi> {
         });
         Self {
             id: spi_id,
+            buffer_empty: false,
             config: spi.config,
             spi: &mut spi.inner,
             finished_regularly: core::cell::Cell::new(false),
+            phantom: PhantomData,
         }
     }
 
-    fn new_for_transfer_in_place(spi: &'spi mut Spi, spi_id: SpiId, words: &mut [u8]) -> Self {
+    fn new_for_transfer_in_place(
+        spi: &'spi mut Spi,
+        spi_id: SpiId,
+        words: &'read mut [u8],
+    ) -> Self {
         if words.is_empty() {
-            panic!("read and write buffer unexpectedly empty");
+            return Self {
+                id: spi_id,
+                buffer_empty: true,
+                spi: &mut spi.inner,
+                config: spi.config,
+                finished_regularly: core::cell::Cell::new(true),
+                phantom: PhantomData,
+            };
         }
         let write_index = Self::generic_init_transfer_write_transfer_in_place(spi, spi_id, words);
         critical_section::with(|cs| {
@@ -428,9 +473,11 @@ impl<'spi> SpiFuture<'spi> {
         });
         Self {
             id: spi_id,
+            buffer_empty: false,
             config: spi.config,
             spi: &mut spi.inner,
             finished_regularly: core::cell::Cell::new(false),
+            phantom: PhantomData,
         }
     }
 
@@ -481,7 +528,7 @@ impl<'spi> SpiFuture<'spi> {
     }
 }
 
-impl Future for SpiFuture<'_> {
+impl Future for SpiFuture<'_, '_, '_> {
     type Output = Result<(), RxOverrunError>;
 
     fn poll(
@@ -506,9 +553,9 @@ impl Future for SpiFuture<'_> {
     }
 }
 
-impl Drop for SpiFuture<'_> {
+impl Drop for SpiFuture<'_, '_, '_> {
     fn drop(&mut self) {
-        if !self.finished_regularly.get() {
+        if !self.finished_regularly.get() && !self.buffer_empty {
             // It might be sufficient to disable and enable the SPI.. But this definitely
             // ensures the SPI is fully reset.
             self.spi.reset_and_reconfigure(self.config);
@@ -523,7 +570,11 @@ impl Drop for SpiFuture<'_> {
 pub struct SpiAsync(pub Spi);
 
 impl SpiAsync {
-    pub fn new(spi: Spi) -> Self {
+    /// # Safety
+    ///
+    /// The user MUST ensure that the `Drop` method of all futures generated with this driver
+    /// is called on transfer cancellation. By default, this does not require any special handling.
+    pub unsafe fn new(spi: Spi) -> Self {
         match spi.inner.id {
             SpiId::Spi0 => {
                 unsafe fn spi0_interrupt_handler() {
@@ -551,36 +602,28 @@ impl SpiAsync {
         Self(spi)
     }
 
-    pub fn read(&mut self, words: &mut [u8]) -> Option<SpiFuture<'_>> {
-        if words.is_empty() {
-            return None;
-        }
+    pub fn read<'read>(&mut self, words: &'read mut [u8]) -> SpiFuture<'_, 'read, '_> {
         let id = self.0.inner.id;
-        Some(SpiFuture::new_for_read(&mut self.0, id, words))
+        SpiFuture::new_for_read(&mut self.0, id, words)
     }
 
-    pub fn write(&mut self, words: &[u8]) -> Option<SpiFuture<'_>> {
-        if words.is_empty() {
-            return None;
-        }
+    pub fn write<'write>(&mut self, words: &'write [u8]) -> SpiFuture<'_, '_, 'write> {
         let id = self.0.inner.id;
-        Some(SpiFuture::new_for_write(&mut self.0, id, words))
+        SpiFuture::new_for_write(&mut self.0, id, words)
     }
 
-    pub fn transfer(&mut self, read: &mut [u8], write: &[u8]) -> Option<SpiFuture<'_>> {
-        if read.is_empty() || write.is_empty() {
-            return None;
-        }
+    pub fn transfer<'read, 'write>(
+        &mut self,
+        read: &'read mut [u8],
+        write: &'write [u8],
+    ) -> SpiFuture<'_, 'read, 'write> {
         let id = self.0.inner.id;
-        Some(SpiFuture::new_for_transfer(&mut self.0, id, read, write))
+        SpiFuture::new_for_transfer(&mut self.0, id, read, write)
     }
 
-    pub fn transfer_in_place(&mut self, words: &mut [u8]) -> Option<SpiFuture<'_>> {
-        if words.is_empty() {
-            return None;
-        }
+    pub fn transfer_in_place<'read>(&mut self, words: &'read mut [u8]) -> SpiFuture<'_, 'read, '_> {
         let id = self.0.inner.id;
-        Some(SpiFuture::new_for_transfer_in_place(&mut self.0, id, words))
+        SpiFuture::new_for_transfer_in_place(&mut self.0, id, words)
     }
 }
 
@@ -593,7 +636,7 @@ impl embedded_hal_async::spi::SpiBus for SpiAsync {
         if words.is_empty() {
             return Ok(());
         }
-        self.read(words).unwrap().await?;
+        self.read(words).await?;
         Ok(())
     }
 
@@ -601,7 +644,7 @@ impl embedded_hal_async::spi::SpiBus for SpiAsync {
         if words.is_empty() {
             return Ok(());
         }
-        self.write(words).unwrap().await?;
+        self.write(words).await?;
         Ok(())
     }
 
@@ -609,7 +652,7 @@ impl embedded_hal_async::spi::SpiBus for SpiAsync {
         if read.is_empty() && write.is_empty() {
             return Ok(());
         }
-        self.transfer(read, write).unwrap().await?;
+        self.transfer(read, write).await?;
         Ok(())
     }
 
@@ -617,7 +660,7 @@ impl embedded_hal_async::spi::SpiBus for SpiAsync {
         if words.is_empty() {
             return Ok(());
         }
-        self.transfer_in_place(words).unwrap().await?;
+        self.transfer_in_place(words).await?;
         Ok(())
     }
 
@@ -659,26 +702,15 @@ impl<Delay: embedded_hal_async::delay::DelayNs> embedded_hal_async::spi::SpiDevi
     ) -> Result<(), Self::Error> {
         self.spi.0.inner.select_hw_cs(self.cs);
         for op in operations {
+            // Safety: We do not cancel the futures.
             match op {
-                embedded_hal::spi::Operation::Read(items) => {
-                    if let Some(fut) = self.spi.read(items) {
-                        fut.await?;
-                    }
-                }
-                embedded_hal::spi::Operation::Write(items) => {
-                    if let Some(fut) = self.spi.write(items) {
-                        fut.await?;
-                    }
-                }
+                embedded_hal::spi::Operation::Read(items) => self.spi.read(items).await?,
+                embedded_hal::spi::Operation::Write(items) => self.spi.write(items).await?,
                 embedded_hal::spi::Operation::Transfer(read, write) => {
-                    if let Some(fut) = self.spi.transfer(read, write) {
-                        fut.await?;
-                    }
+                    self.spi.transfer(read, write).await?
                 }
                 embedded_hal::spi::Operation::TransferInPlace(items) => {
-                    if let Some(fut) = self.spi.transfer_in_place(items) {
-                        fut.await?;
-                    }
+                    self.spi.transfer_in_place(items).await?
                 }
                 embedded_hal::spi::Operation::DelayNs(delay) => {
                     self.delay.delay_ns(*delay).await;

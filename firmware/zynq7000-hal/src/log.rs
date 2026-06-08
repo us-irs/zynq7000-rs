@@ -296,7 +296,7 @@ pub mod asynch {
             loop {
                 let read_bytes = self.reader.read(&mut log_buf).await;
                 if read_bytes > 0 {
-                    self.tx.write(&log_buf[..read_bytes]).unwrap().await;
+                    self.tx.write(&log_buf[..read_bytes]).await;
                 }
             }
         }

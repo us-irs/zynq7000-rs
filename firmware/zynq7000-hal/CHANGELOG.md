@@ -22,6 +22,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- UART TX Async and SPI Async API is `unsafe` now.
+- Asynch UART and SPI operations now borrow the passed buffer for their lifetime.
 - Increased reliabily of PS UART interrupt reception, which was proven to be buggy for higher baud
   rates: Force user to configure RTO value, encouraging non-zero values, and use a RX FIFO trigger
   value of FIFO depth divided by 2 by default.
