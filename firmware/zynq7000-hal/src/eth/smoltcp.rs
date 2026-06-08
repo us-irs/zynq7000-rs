@@ -53,7 +53,9 @@ impl SmoltcpRxToken<'_> {
         invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
             .expect("RX buffer or buffer size not aligned to cache line size");
 
+        #[cfg(feature = "eth-packet-trace")]
         log::debug!("eth rx {} bytes", self.rx_size);
+        #[cfg(feature = "eth-packet-trace")]
         log::trace!("rx data: {:x?}", &self.rx_buf.0[0..self.rx_size]);
         let result = f(&mut self.rx_buf.0[0..self.rx_size]);
         self.descr_list.clear_slot(self.slot_index);
@@ -112,7 +114,9 @@ impl SmoltcpTxToken<'_> {
         clean_and_invalidate_data_cache_range(buffer.0.as_ptr() as u32, clean_invalidate_len)
             .expect("TX buffer or buffer size not aligned to cache line size");
 
+        #[cfg(feature = "eth-packet-trace")]
         log::debug!("eth tx {len} bytes");
+        #[cfg(feature = "eth-packet-trace")]
         log::trace!("tx data: {:x?}", &buffer.0[0..len]);
         self.descr_list
             .prepare_transfer_unchecked(Some(addr), u14::new(len as u16), true, false);
@@ -255,12 +259,13 @@ impl CommonSmoltcpDriver {
             rx_descr::FrameScanResult::SingleFrame {
                 index,
                 size,
-                status,
+                status: _status,
             } => {
+                #[cfg(feature = "eth-packet-trace")]
                 log::trace!(
                     "eth rx frame, fsc status {:?}, cksum status {:?}",
-                    status.fcs_status(),
-                    status.type_id_match_info_or_chksum_status()
+                    _status.fcs_status(),
+                    _status.type_id_match_info_or_chksum_status()
                 );
 
                 let rx_buf = self.bufs.rx_bufs.get_mut(index).unwrap();
