@@ -7,6 +7,9 @@ pub use super::shared::Ownership;
 use arbitrary_int::{prelude::*, u2, u3, u13, u30};
 use vcell::VolatileCell;
 
+// Note on vcell usage: Speculative reads which the compiler might theoretically insert,
+// are not an issue for us.
+
 /// RX buffer descriptor.
 ///
 /// The user should declare an array of this structure inside uncached memory.
