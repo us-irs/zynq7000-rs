@@ -4,7 +4,7 @@ use core::{cell::RefCell, convert::Infallible, marker::PhantomData, sync::atomic
 use arbitrary_int::u6;
 use critical_section::Mutex;
 use embassy_sync::waitqueue::AtomicWaker;
-use raw_slice::RawBufSlice;
+use raw_buffer::RawBufSlice;
 use zynq7000::uart::FifoTrigger;
 
 use crate::uart::{FIFO_DEPTH, Tx, UartId};
@@ -117,17 +117,23 @@ impl TxContext {
 }
 
 /// Transmission future for UART TX.
-pub struct TxFuture<'uart> {
+pub struct TxFuture<'uart, 'buf> {
     id: UartId,
-    marker: core::marker::PhantomData<&'uart ()>,
+    buffer_empty: bool,
+    phantom: core::marker::PhantomData<(&'uart (), &'buf ())>,
 }
 
-impl<'uart> TxFuture<'uart> {
-    /// # Safety
-    ///
-    /// This function stores the raw pointer of the passed data slice. The user MUST ensure
-    /// that the slice outlives the data structure.
-    pub unsafe fn new(tx_with_irq: &'uart mut Tx, data: &[u8]) -> TxFuture<'uart> {
+impl<'uart, 'buf> TxFuture<'uart, 'buf> {
+    /// Constructor for TX future.
+    pub fn new(tx_with_irq: &'uart mut Tx, data: &'buf [u8]) -> TxFuture<'uart, 'buf> {
+        if data.is_empty() {
+            // Nothing to transfer, return a future which is immediately ready.
+            return TxFuture {
+                id: tx_with_irq.uart_id(),
+                buffer_empty: true,
+                phantom: PhantomData,
+            };
+        }
         let idx = tx_with_irq.uart_id() as usize;
         TX_DONE[idx].store(false, core::sync::atomic::Ordering::Relaxed);
         tx_with_irq.disable_interrupts();
@@ -159,18 +165,22 @@ impl<'uart> TxFuture<'uart> {
 
         Self {
             id: tx_with_irq.uart_id(),
-            marker: PhantomData,
+            buffer_empty: false,
+            phantom: PhantomData,
         }
     }
 }
 
-impl Future for TxFuture<'_> {
+impl Future for TxFuture<'_, '_> {
     type Output = usize;
 
     fn poll(
         self: core::pin::Pin<&mut Self>,
         cx: &mut core::task::Context<'_>,
     ) -> core::task::Poll<Self::Output> {
+        if self.buffer_empty {
+            return core::task::Poll::Ready(0);
+        }
         UART_TX_WAKERS[self.id as usize].register(cx.waker());
         if TX_DONE[self.id as usize].swap(false, core::sync::atomic::Ordering::Relaxed) {
             let progress = critical_section::with(|cs| {
@@ -184,7 +194,7 @@ impl Future for TxFuture<'_> {
     }
 }
 
-impl Drop for TxFuture<'_> {
+impl Drop for TxFuture<'_, '_> {
     fn drop(&mut self) {
         let mut tx = unsafe { Tx::steal(self.id) };
         tx.disable_interrupts();
@@ -202,7 +212,12 @@ impl TxAsync {
     /// The second argument specifies whether the [on_interrupt_tx] function will be registered
     /// in the HAL interrupt map. You might need to skip this in case you have your own
     /// interrupt handler which also handles RX interrupts.
-    pub fn new(tx: Tx, register_interrupt_handler: bool) -> Self {
+    ///
+    /// # Safety
+    ///
+    /// This function stores the raw pointer of the passed data slice. The user MUST ensure
+    /// that the slice outlives the data structure.
+    pub unsafe fn new(tx: Tx, register_interrupt_handler: bool) -> Self {
         if register_interrupt_handler {
             match tx.uart_id() {
                 UartId::Uart0 => {
@@ -235,15 +250,10 @@ impl TxAsync {
 
     /// Write a buffer asynchronously.
     ///
-    /// Returns [None] if the passed buffer is empty.
-    ///
     /// This implementation is not side effect free, and a started future might have already
     /// written part of the passed buffer.
-    pub fn write(&mut self, buf: &[u8]) -> Option<TxFuture<'_>> {
-        if buf.is_empty() {
-            return None;
-        }
-        Some(unsafe { TxFuture::new(&mut self.tx, buf) })
+    pub fn write<'buf>(&mut self, buf: &'buf [u8]) -> TxFuture<'_, 'buf> {
+        TxFuture::new(&mut self.tx, buf)
     }
 
     /// Release the underlying blocking TX driver.
@@ -262,10 +272,7 @@ impl embedded_io_async::Write for TxAsync {
     /// This implementation is not side effect free, and a started future might have already
     /// written part of the passed buffer.
     async fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
-        if buf.is_empty() {
-            return Ok(0);
-        }
-        Ok(self.write(buf).unwrap().await)
+        Ok(self.write(buf).await)
     }
 
     /// This implementation does not do anything.

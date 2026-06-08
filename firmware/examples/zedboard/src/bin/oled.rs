@@ -78,7 +78,8 @@ async fn main(spawner: Spawner) -> ! {
     uart.flush().unwrap();
 
     let (tx, _) = uart.split();
-    let tx_async = TxAsync::new(tx, true);
+    // Safety: We are not forgetting any futures.
+    let tx_async = unsafe { TxAsync::new(tx, true) };
     let log_runner =
         zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_async)
             .expect("Failed to initialize async logger");
