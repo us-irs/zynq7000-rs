@@ -40,7 +40,8 @@ use zynq7000_hal::{
     clocks::Clocks,
     configure_level_shifter,
     eth::{
-        AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, embassy_net::InterruptResult,
+        AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, MTU,
+        embassy_net::InterruptResult,
     },
     generic_interrupt_handler,
     gic::{Configurator, Interrupt},
@@ -354,15 +355,18 @@ async fn main(spawner: Spawner) -> ! {
         rng.next_u64(),
     );
 
+    const N_SLOTS: usize = 8;
+    const BUFSIZE: usize = N_SLOTS * 1024;
+
     // Ensure those are in the data section by making them static.
-    static RX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; 8]> =
-        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; 8]);
-    static TX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; 8]> =
-        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; 8]);
-    static TX_UDP_BUFS: static_cell::ConstStaticCell<[u8; zynq7000_hal::eth::MTU]> =
-        static_cell::ConstStaticCell::new([0; zynq7000_hal::eth::MTU]);
-    static RX_UDP_BUFS: static_cell::ConstStaticCell<[u8; zynq7000_hal::eth::MTU]> =
-        static_cell::ConstStaticCell::new([0; zynq7000_hal::eth::MTU]);
+    static RX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; N_SLOTS]> =
+        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; N_SLOTS]);
+    static TX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; N_SLOTS]> =
+        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; N_SLOTS]);
+    static TX_UDP_BUFS: static_cell::ConstStaticCell<[u8; BUFSIZE]> =
+        static_cell::ConstStaticCell::new([0; BUFSIZE]);
+    static RX_UDP_BUFS: static_cell::ConstStaticCell<[u8; BUFSIZE]> =
+        static_cell::ConstStaticCell::new([0; BUFSIZE]);
 
     let udp_socket = UdpSocket::new(
         stack,
