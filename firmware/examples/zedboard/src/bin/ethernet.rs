@@ -40,8 +40,7 @@ use zynq7000_hal::{
     clocks::Clocks,
     configure_level_shifter,
     eth::{
-        AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, MTU,
-        embassy_net::InterruptResult,
+        AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, embassy_net::InterruptResult,
     },
     generic_interrupt_handler,
     gic::{Configurator, Interrupt},
