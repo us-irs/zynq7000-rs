@@ -6,6 +6,7 @@ rustflags = [
   "-Ctarget-feature=+vfp3",
   "-Ctarget-feature=+neon",
   "-Clink-arg=-Tlink.x",
+
   # Breaks builds not using/including defmt..
   # "-Clink-arg=-Tdefmt.x",
   # If this is not enabled, debugging / stepping can become problematic.
