@@ -24,6 +24,15 @@ SECTIONS
     . = ALIGN(4);
     _ebss_uncached = .;
   } > UNCACHED
+
+  /* Add OCM memory region to allow placing items in fast OCM memory. */
+  .ocm (NOLOAD) : ALIGN(4) {
+      . = ALIGN(4);
+      _socm = .;
+      *(.ocm .ocm.*);
+      . = ALIGN(4);
+      _eocm = .;
+  } > OCM
 }
 
 PROVIDE(_sys_stack_size = 1M);
