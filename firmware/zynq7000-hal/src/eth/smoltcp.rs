@@ -2,9 +2,7 @@
 use arbitrary_int::u14;
 
 #[cfg(feature = "eth-cache-maintenance")]
-use crate::cache::{
-    CACHE_LINE_SIZE, clean_and_invalidate_data_cache_range, invalidate_data_cache_range,
-};
+use crate::cache::{self, CACHE_LINE_SIZE};
 pub use crate::eth::{EthernetId, InterruptResult};
 use crate::eth::{rx_descr, tx_descr};
 
@@ -50,7 +48,7 @@ impl SmoltcpRxToken<'_> {
         #[cfg(feature = "eth-cache-maintenance")]
         let clean_invalidate_len = (self.rx_size + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
         #[cfg(feature = "eth-cache-maintenance")]
-        invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
+        cache::invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
             .expect("RX buffer or buffer size not aligned to cache line size");
 
         #[cfg(feature = "eth-packet-trace")]
@@ -105,7 +103,7 @@ impl SmoltcpTxToken<'_> {
         #[cfg(feature = "eth-cache-maintenance")]
         let clean_invalidate_len = (len + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
         #[cfg(feature = "eth-cache-maintenance")]
-        clean_and_invalidate_data_cache_range(buffer.0.as_ptr() as u32, clean_invalidate_len)
+        cache::clean_data_cache_range(buffer.0.as_ptr() as u32, clean_invalidate_len)
             .expect("TX buffer or buffer size not aligned to cache line size");
 
         #[cfg(feature = "eth-packet-trace")]
