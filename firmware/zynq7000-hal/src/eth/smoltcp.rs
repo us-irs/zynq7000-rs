@@ -60,12 +60,6 @@ impl SmoltcpRxToken<'_> {
         let result = f(&mut self.rx_buf.0[0..self.rx_size]);
         self.descr_list.clear_slot(self.slot_index);
 
-        // Okay, this is weird, but we have to do this. I encountered this bug where ICMP replies
-        // were duplicated after the descriptor rings wrapped. My theory is that there is
-        // some data in the cache after the embassy reception function which needs to be cleaned.
-        #[cfg(feature = "eth-cache-maintenance")]
-        clean_and_invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
-            .expect("RX buffer or buffer size not aligned to cache line size");
         result
     }
 }
