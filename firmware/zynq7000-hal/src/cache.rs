@@ -70,7 +70,7 @@ pub fn invalidate_data_cache_range(addr: u32, len: usize) -> Result<(), Alignmen
     compiler_fence(core::sync::atomic::Ordering::SeqCst);
 
     while current_addr < end_addr {
-        invalidate_data_cache_line_to_poc(addr);
+        invalidate_data_cache_line_to_poc(current_addr);
         current_addr = current_addr.saturating_add(CACHE_LINE_SIZE as u32);
     }
     // Synchronize the cache maintenance.
