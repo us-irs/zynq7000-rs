@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Bugfix for DDR initialization: `calibrate_iob_impedance_for_ddr3` and `calibrate_iob_impedance`
   now expect a `zynq7000::slcr::ddriob::DdrControl` input argument. This register write was
   missing
+- Bugfix for `cache::invalidate_data_cache_range` which did not properly invalidate inner cache
+  (L1) for sizes larger than 32.
 - Several bugfixes and improvements for GIC module. Some of the registers previously were
   completely overwritten instead of only modifying their own bit portions. Also allow targeting
   interrupts without clearing other CPU target.
