@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- Inside the `smoltcp` ethernet TX driver, only clean the cache.
 - UART TX Async and SPI Async API is `unsafe` now.
 - Asynch UART and SPI operations now borrow the passed buffer for their lifetime.
 - Increased reliabily of PS UART interrupt reception, which was proven to be buggy for higher baud
