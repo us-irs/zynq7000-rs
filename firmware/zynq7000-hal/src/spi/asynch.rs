@@ -570,11 +570,14 @@ impl Drop for SpiFuture<'_, '_, '_> {
 pub struct SpiAsync(pub Spi);
 
 impl SpiAsync {
+    /// Constructor for asynchronous SPI driver.
+    ///
     /// # Safety
     ///
     /// The user MUST ensure that the `Drop` method of all futures generated with this driver
     /// is called on transfer cancellation. By default, this does not require any special handling.
-    pub unsafe fn new(spi: Spi) -> Self {
+    /// This case was considered exotic enough to not justify an `unsafe` API.
+    pub fn new(spi: Spi) -> Self {
         match spi.inner.id {
             SpiId::Spi0 => {
                 unsafe fn spi0_interrupt_handler() {

@@ -98,8 +98,7 @@ async fn main(spawner: Spawner) -> ! {
         .unwrap();
 
     let (tx, _) = uart.split();
-    // Safety: We are not forgetting any futures.
-    let tx_async = unsafe { TxAsync::new(tx, true) };
+    let tx_async = TxAsync::new(tx, true);
     let log_runner =
         zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_async).unwrap();
 
@@ -215,8 +214,7 @@ pub async fn non_blocking_application(
     spi: spi::Spi,
 ) -> ! {
     let mut delay = Delay;
-    // Safety: We do not forget any futures.
-    let spi_async = unsafe { SpiAsync::new(spi) };
+    let spi_async = SpiAsync::new(spi);
     let spi_dev = SpiWithHwCsAsync::new(spi_async, spi::ChipSelect::Slave0, delay.clone());
     let mut l3gd20 = l3gd20::asynchronous::spi::L3gd20::new(spi_dev)
         .await

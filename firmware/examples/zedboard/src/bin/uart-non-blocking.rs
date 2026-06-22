@@ -421,8 +421,7 @@ async fn uartlite_task(uartlite: axi_uartlite::Tx) {
 #[embassy_executor::task]
 async fn uart_0_task(uart_tx: zynq7000_hal::uart::Tx) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    // Safety: We are not forgetting any futures.
-    let mut tx_async = unsafe { zynq7000_hal::uart::TxAsync::new(uart_tx, false) };
+    let mut tx_async = zynq7000_hal::uart::TxAsync::new(uart_tx, false);
 
     let str0 = build_print_string("UART0:", "Hello World");
     let str1 = build_print_string(

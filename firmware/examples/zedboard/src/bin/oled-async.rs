@@ -78,8 +78,7 @@ async fn main(spawner: Spawner) -> ! {
     uart.flush().unwrap();
 
     let (tx, _) = uart.split();
-    // Safety: We are not forgetting any futures.
-    let tx_async = unsafe { TxAsync::new(tx, true) };
+    let tx_async = TxAsync::new(tx, true);
     let log_runner =
         zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_async)
             .expect("Failed to initialize async logger");
@@ -126,8 +125,7 @@ async fn main(spawner: Spawner) -> ! {
         ),
     )
     .expect("Failed to initialize SPI");
-    // Safety: We are not forgetting any futures.
-    let spi_asynch = unsafe { SpiAsync::new(spi) };
+    let spi_asynch = SpiAsync::new(spi);
     let exclusive_device = ExclusiveDevice::new(spi_asynch, DummyPin::new_high(), NoDelay)
         .expect("Failed to create exclusive SPI device");
     let spi_if = SPIInterface::new(exclusive_device, dc_pin);
