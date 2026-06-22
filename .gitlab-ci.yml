@@ -1,0 +1,48 @@
+# .gitlab-ci.yml
+
+image: rust:latest
+
+stages:
+  - stage1
+  - stage2
+
+.common_setup:
+  before_script:
+    - cargo install just
+
+check:
+  stage: stage1
+  extends: .common_setup
+  script:
+    - just check-dir firmware
+    - just check-dir host
+
+build:
+  stage: stage2
+  extends: .common_setup
+  script:
+    - just build-zynq
+    - just build-dir host
+
+fmt:
+  stage: stage1
+  extends: .common_setup
+  script:
+    - just check-fmt-dir firmware
+    - just check-fmt-dir host
+
+docs:
+  stage: stage1
+  extends: .common_setup
+  script:
+    - rustup install nightly
+    - rustup component add rust-src --toolchain nightly
+    - rustup target add armv7a-none-eabihf --toolchain nightly
+    - just docs-zynq
+
+clippy:
+  stage: stage1
+  extends: .common_setup
+  script:
+    - just clippy-dir firmware
+    - just clippy-dir host
