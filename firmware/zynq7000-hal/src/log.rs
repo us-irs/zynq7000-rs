@@ -207,6 +207,7 @@ pub mod asynch {
     use core::fmt::Write as _;
 
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+    use embedded_io_async::Write as _;
     use log::{LevelFilter, set_logger, set_max_level};
 
     use crate::uart::TxAsync;
@@ -296,7 +297,7 @@ pub mod asynch {
             loop {
                 let read_bytes = self.reader.read(&mut log_buf).await;
                 if read_bytes > 0 {
-                    self.tx.write(&log_buf[..read_bytes]).await;
+                    self.tx.write_all(&log_buf[..read_bytes]).await;
                 }
             }
         }
