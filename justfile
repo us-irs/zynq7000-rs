@@ -26,10 +26,10 @@ clean-dir target:
   cd {{target}} && cargo clean
 
 check-fmt-dir target:
-  cd {{target}} && cargo +stable fmt --all -- --check
+  cd {{target}} && cargo fmt --all -- --check
 
 fmt-dir target:
-  cd {{target}} && cargo +stable fmt
+  cd {{target}} && cargo fmt
 
 clippy-dir target:
   cd {{target}} && cargo clippy -- -D warnings
