@@ -76,8 +76,7 @@ async fn main(spawner: Spawner) -> ! {
     Delay.delay_ms(1).await;
 
     let (tx, _rx) = uart.split();
-    // Safety: We are not forgetting any futures.
-    let tx_asynch = unsafe { TxAsync::new(tx, true) };
+    let tx_asynch = TxAsync::new(tx, true);
     let logger_runner =
         zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_asynch)
             .expect("Failed to initialize async logger");
@@ -160,8 +159,7 @@ async fn main(spawner: Spawner) -> ! {
         blocking_tests_large(&mut spi_master, current_rx_val, &mut slave_rx_reader).await;
         log::info!("blocking tests with large data blocks done");
     } else {
-        // Safety: We are not forgetting any futures.
-        let spi_master = unsafe { SpiAsync::new(spi_master) };
+        let spi_master = SpiAsync::new(spi_master);
         let mut spi_master =
             embedded_hal_bus::spi::ExclusiveDevice::new(spi_master, cs_pin, embassy_time::Delay)
                 .expect("creating exlusive SPI master failed");

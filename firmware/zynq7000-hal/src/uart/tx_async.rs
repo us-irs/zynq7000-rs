@@ -217,7 +217,8 @@ impl TxAsync {
     ///
     /// This function stores the raw pointer of the passed data slice. The user MUST ensure
     /// that the slice outlives the data structure.
-    pub unsafe fn new(tx: Tx, register_interrupt_handler: bool) -> Self {
+    /// This case was considered exotic enough to not justify an `unsafe` API.
+    pub fn new(tx: Tx, register_interrupt_handler: bool) -> Self {
         if register_interrupt_handler {
             match tx.uart_id() {
                 UartId::Uart0 => {
