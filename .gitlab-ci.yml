@@ -2,6 +2,9 @@
 
 image: rust:latest
 
+variables:
+    CARGO_HOME: $CI_PROJECT_DIR/.cargo_cache
+
 stages:
   - stage1
   - stage2
@@ -9,6 +12,12 @@ stages:
 .common_setup:
   before_script:
     - cargo install just
+  cache:
+    paths: 
+      - '.cargo_cache/'
+      - 'firmware/target/'
+      - 'host/target/'
+    key: cargo-cache
 
 check:
   stage: stage1
