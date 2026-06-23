@@ -12,8 +12,6 @@ def main():
     parser.add_argument(
         "-t",
         "--tools",
-        # Required only if env var is not set
-        required=not bool(os.getenv("AMD_TOOLS")),
         # Use env var if set
         default=os.getenv("AMD_TOOLS"),
         help="The path to the tool to use. Must point to a valid Vivado tools installation which"
@@ -38,12 +36,17 @@ def main():
 
     settings_script = os.path.join(args.tools, "settings64.sh")
 
-    if not os.path.isfile(settings_script):
-        print(f"Invalid tool path {args.tools}, did not find settings file.")
-        sys.exit(1)
+    command = None
+    if args.tools is not None:
+        settings_script = os.path.join(args.tools, "settings64.sh")
 
-    # Source the settings script and check for xsdb availability
-    command = f"source {settings_script} && command -v xsct"
+        if not os.path.isfile(settings_script):
+            print(f"Invalid tool path {args.tools}, did not find settings file.")
+            sys.exit(1)
+        command = f"source {settings_script} && command -v xsct"
+    if command is None:
+        command = "command -v xsct"
+
     result = subprocess.run(
         command,
         shell=True,

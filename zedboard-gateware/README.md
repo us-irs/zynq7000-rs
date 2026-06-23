@@ -64,5 +64,6 @@ export AMD_TOOLS="/tools/2025.2/Vitis"
 ./sdtgen.py -x ./zedboard-rust/zedboard-rust.xsa
 ```
 
+If you have already sourced the setting script, you do not have to set the `AMD_TOOLS` environment.
 Run `stdgen.py -h` for more information and configuration options. The `stdgen.py` is a helper
 script which will invoke `sdtgen.tcl` to generate the SDT.
