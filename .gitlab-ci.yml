@@ -3,7 +3,7 @@
 image: rust:latest
 
 variables:
-    CARGO_HOME: .cargo
+    CARGO_HOME: ${CI_PROJECT_DIR}/.cargo
 
 stages:
   - stage1
@@ -11,14 +11,15 @@ stages:
 
 .common_setup:
   before_script:
-    - cargo install just
-    - export PATH=$PATH:$CARGO_HOME/bin
+    - curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
   cache:
     paths: 
-      - '.cargo'
-      - 'firmware/target/'
-      - 'host/target/'
-    key: cargo-cache
+      - .cargo/registry
+      - .cargo/git
+      - .cargo/bin
+      - firmware/target/
+      - host/target/
+    key: ${CI_COMMIT_REF_SLUG}
 
 check:
   stage: stage1
