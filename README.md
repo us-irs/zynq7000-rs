@@ -58,7 +58,7 @@ It also contains the following helper crates:
 
 # Using the `.cargo/config.toml` file
 
-This is mostly relevant for development directly inside this repostiory.
+This is mostly relevant for development directly inside this repository.
 Use the following command to have a starting `config.toml` file
 
 ```sh
@@ -147,7 +147,7 @@ Zedboard are configured for JTAG boot.
    using the provided initialization script (adapt `AMD_TOOLS` to your system):
 
    ```sh
-   export AMD_TOOLS="/tools/Xilinx/Vitis/2024.1"
+   export AMD_TOOLS="/tools/2025.2/Vivado"
    ./scripts/zynq7000-init.py --itcl ./scripts/ps7_init.tcl
    ```
 
