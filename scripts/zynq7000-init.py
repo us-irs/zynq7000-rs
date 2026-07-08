@@ -75,24 +75,35 @@ def main():
 
     args = parser.parse_args()
 
-    settings_script = os.path.join(args.tools, "settings64.sh")
+    def find_tool(settings_script, *tool_names):
+        """Return the first available tool name, or None."""
+        for tool in tool_names:
+            if settings_script:
+                cmd = f"source {settings_script} && command -v {tool}"
+                r = subprocess.run(cmd, shell=True, capture_output=True, executable="/bin/bash")
+            else:
+                r = subprocess.run(f"command -v {tool}", shell=True, capture_output=True, executable="/bin/bash")
+            if r.returncode == 0:
+                return tool
+        return None
 
-    if not os.path.isfile(settings_script):
-        print(f"Invalid tool path {args.tools}, did not find settings file.")
+    if args.tools:
+        settings_script = os.path.join(args.tools, "settings64.sh")
+
+        if not os.path.isfile(settings_script):
+            print(f"Invalid tool path {args.tools}, did not find settings file.")
+            sys.exit(1)
+    else:
+        settings_script = None
+
+    xsct_tool = find_tool(settings_script, "xsct", "xsdb")
+    if xsct_tool is None:
+        print(
+            "Error: Neither 'xsct' nor 'xsdb' could be found. "
+            "Either provide --tools / set AMD_TOOLS, or make sure one of them is on your PATH."
+        )
         sys.exit(1)
-
-    # Source the settings script and check for xsdb availability
-    command = f"source {settings_script} && command -v xsct"
-    result = subprocess.run(
-        command,
-        shell=True,
-        capture_output=True,
-        executable="/bin/bash",
-    )
-
-    if result.returncode != 0:
-        print("Error: 'xsct' could not be found after sourcing settings64.sh.")
-        sys.exit(1)
+    print(f"Using tool: {xsct_tool}")
 
     if args.app and not os.path.isfile(args.app):
         print(f"The app '{args.app}' does not exist")
@@ -138,9 +149,9 @@ def main():
             print(f"Could not find the xsct initialization script {TCL_SCRIPT_NAME}")
             sys.exit(1)
 
-    # Launch xsct with the initialization script
+    # Launch xsct/xsdb with the initialization script
     # Prepare tcl_args as a list to avoid manual string concatenation issues
-    cmd_list = ["xsct", str(xsct_script), init_tcl]
+    cmd_list = [xsct_tool, str(xsct_script), init_tcl]
     if bitstream:
         cmd_list.append("--bit")
         cmd_list.append(bitstream)
@@ -153,7 +164,10 @@ def main():
     # Join safely for shell execution
     xsct_cmd = shlex.join(cmd_list)
     print(f"Running xsct command: {xsct_cmd}")
-    command = f"bash -c 'source {settings_script} && {xsct_cmd} | tee xsct-output.log'"
+    if settings_script:
+        command = f"bash -c 'source {settings_script} && {xsct_cmd} | tee xsct-output.log'"
+    else:
+        command = f"bash -c '{xsct_cmd} | tee xsct-output.log'"
     subprocess.run(
         command,
         shell=True,
