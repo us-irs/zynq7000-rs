@@ -96,7 +96,7 @@ def main():
     else:
         settings_script = None
 
-    xsct_tool = find_tool(settings_script, "xsct", "xsdb")
+    xsct_tool = find_tool(settings_script, "xsdb", "xsct")
     if xsct_tool is None:
         print(
             "Error: Neither 'xsct' nor 'xsdb' could be found. "
