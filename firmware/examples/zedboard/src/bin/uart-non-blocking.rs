@@ -34,7 +34,6 @@ use critical_section::Mutex;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_alloc::LlffHeap as Heap;
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write as _;
 use heapless::spsc::Queue;
 use log::{info, warn};
@@ -208,7 +207,7 @@ async fn main(spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    log_uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    log_uart.write_all(INIT_STRING.as_bytes());
 
     // Initialize the allocator BEFORE you use it
     {
@@ -386,9 +385,9 @@ async fn led_task(mut mio_led: Output, mut emio_leds: [Output; 8]) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     let mut led_idx = 0;
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
-        emio_leds[led_idx].toggle().unwrap();
+        emio_leds[led_idx].toggle();
         led_idx += 1;
         if led_idx >= emio_leds.len() {
             led_idx = 0;

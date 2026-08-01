@@ -6,8 +6,6 @@ use arbitrary_int::{traits::Integer as _, u2};
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
-use embedded_io::Write;
 use log::{error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zedboard_bsp::qspi_spansion;
@@ -61,7 +59,7 @@ async fn main(_spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let boot_mode = BootMode::new_from_regs();
@@ -181,7 +179,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         ticker.next().await; // Wait for the next cycle of the ticker
     }

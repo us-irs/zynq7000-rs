@@ -29,7 +29,6 @@ use core::{net::Ipv4Addr, panic::PanicInfo};
 use embassy_executor::Spawner;
 use embassy_net::{Ipv4Cidr, StaticConfigV4, tcp::TcpSocket, udp::UdpSocket};
 use embassy_time::{Duration, Timer};
-use embedded_io::Write;
 use embedded_io_async::Write as _;
 use log::{LevelFilter, debug, error, info, warn};
 use rand::{Rng, SeedableRng};
@@ -240,7 +239,7 @@ async fn main(spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
     // Safety: We are not multi-threaded yet.
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, LOG_LEVEL, false);
 

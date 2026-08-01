@@ -12,9 +12,7 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Delay, Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs;
-use embedded_io::Write;
 use l3gd20::i2c::I2cAddr;
 use log::{error, info};
 use zynq7000_hal::{
@@ -78,8 +76,7 @@ async fn main(_spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 Zedboard I2C L3GD20H example --\n\r")
-        .unwrap();
+    uart.write_all(b"-- Zynq 7000 Zedboard I2C L3GD20H example --\n\r");
 
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
@@ -134,13 +131,13 @@ async fn main(_spawner: Spawner) -> ! {
     // Power up time for the sensor to get good readings.
     delay.delay_ms(50).await;
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         let measurements = l3gd20.all().unwrap();
         info!("L3GD20: {measurements:?}");
         info!("L3GD20 Temp: {:?}", measurements.temp_celcius());
         for led in emio_leds.iter_mut() {
-            led.toggle().unwrap();
+            led.toggle();
         }
 
         ticker.next().await; // Wait for the next cycle of the ticker

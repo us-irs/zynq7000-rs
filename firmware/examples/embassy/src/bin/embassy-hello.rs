@@ -5,8 +5,6 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
-use embedded_io::Write;
 use log::{error, info};
 use zynq7000_hal::{
     BootMode, InteruptConfig, clocks, generic_interrupt_handler, gpio, gtc, time::Hertz, uart,
@@ -49,8 +47,7 @@ async fn main(_spawner: Spawner) -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 Embassy Hello World --\n\r")
-        .unwrap();
+    uart.write_all(b"-- Zynq 7000 Embassy Hello World --\n\r");
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let boot_mode = BootMode::new_from_regs();
@@ -60,7 +57,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     loop {
         info!("Hello, world!");
-        led.toggle().unwrap();
+        led.toggle();
         ticker.next().await;
     }
 }

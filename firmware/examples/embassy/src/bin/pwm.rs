@@ -11,8 +11,7 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::{digital::StatefulOutputPin, pwm::SetDutyCycle};
-use embedded_io::Write;
+use embedded_hal::pwm::SetDutyCycle;
 use fugit::RateExtU32;
 use log::{error, info};
 use zynq7000_hal::{
@@ -77,7 +76,7 @@ async fn main(_spawner: Spawner) -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 PWM example--\n\r").unwrap();
+    uart.write_all(b"-- Zynq 7000 PWM example--\n\r");
     // Safety: We are not multi-threaded yet.
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
@@ -88,7 +87,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
     let mut current_duty = 0;
     loop {
-        led.toggle().unwrap();
+        led.toggle();
 
         pwm.set_duty_cycle_percent(current_duty).unwrap();
         info!("Setting duty cycle to {current_duty}%");

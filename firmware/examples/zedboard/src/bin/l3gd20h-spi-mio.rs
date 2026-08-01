@@ -13,9 +13,7 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Delay, Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs;
-use embedded_io::Write;
 use log::{error, info};
 use zynq7000_hal::{
     BootMode,
@@ -94,8 +92,7 @@ async fn main(spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 Zedboard SPI L3GD20H example --\n\r")
-        .unwrap();
+    uart.write_all(b"-- Zynq 7000 Zedboard SPI L3GD20H example --\n\r");
 
     let (tx, _) = uart.split();
     let tx_async = TxAsync::new(tx, true);
@@ -195,13 +192,13 @@ pub async fn blocking_application(
     // Power up time for the sensor to get good readings.
     delay.delay_ms(50).await;
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         let measurements = l3gd20.all().unwrap();
         info!("L3GD20: {measurements:?}");
         info!("L3GD20 Temp: {:?}", measurements.temp_celcius());
         for led in emio_leds.iter_mut() {
-            led.toggle().unwrap();
+            led.toggle();
         }
 
         ticker.next().await; // Wait for the next cycle of the ticker
@@ -227,13 +224,13 @@ pub async fn non_blocking_application(
     // Power up time for the sensor to get good readings.
     delay.delay_ms(50).await;
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         let measurements = l3gd20.all().await.unwrap();
         info!("L3GD20: {measurements:?}");
         info!("L3GD20 Temp: {:?}", measurements.temp_celcius());
         for led in emio_leds.iter_mut() {
-            led.toggle().unwrap();
+            led.toggle();
         }
 
         ticker.next().await; // Wait for the next cycle of the ticker

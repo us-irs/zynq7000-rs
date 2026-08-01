@@ -5,8 +5,6 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
-use embedded_io::Write;
 use log::error;
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::gpio::Input;
@@ -65,7 +63,7 @@ async fn main(_spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
     // Safety: We are not multi-threaded yet.
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
@@ -214,7 +212,7 @@ async fn main(_spawner: Spawner) -> ! {
     }
 
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         ticker.next().await; // Wait for the next cycle of the ticker
     }

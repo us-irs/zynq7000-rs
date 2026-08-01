@@ -7,7 +7,6 @@ use dummy_pin::DummyPin;
 use embassy_executor::Spawner;
 use embassy_time::{Delay, Duration, Ticker};
 use embedded_graphics::{Drawable as _, geometry::Point};
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs as _;
 use embedded_hal_bus::spi::{ExclusiveDevice, NoDelay};
 use embedded_io::Write;
@@ -74,7 +73,7 @@ async fn main(spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
     uart.flush().unwrap();
 
     let (tx, _) = uart.split();
@@ -221,11 +220,11 @@ pub async fn logger_task(mut log_runner: UartLoggerRunner) -> ! {
 pub async fn blinky_task(mut mio_led: gpio::Output, mut emio_leds: [gpio::Output; 8]) {
     let mut ticker = Ticker::every(Duration::from_millis(200));
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         // Create a wave pattern for emio_leds
         for led in emio_leds.iter_mut() {
-            led.toggle().unwrap();
+            led.toggle();
             ticker.next().await; // Wait for the next ticker for each toggle
         }
         ticker.next().await;
