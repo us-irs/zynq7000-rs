@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import shlex
+import time
 import argparse
 import os
 import subprocess
@@ -173,6 +174,10 @@ def main():
         shell=True,
         check=True,
     )
+    # Wait a bit: ensures the log is flushed, and gives hw_server time to release its
+    # exclusive claim on the USB JTAG cable after xsct disconnects, so a follow-up tool
+    # (e.g. probe-rs) that opens the same USB interface directly doesn't hit "busy".
+    time.sleep(1.0)
 
 
 if __name__ == "__main__":

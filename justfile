@@ -10,6 +10,13 @@ fmt: (fmt-dir "firmware") (fmt-dir "host")
 check-fmt: (check-fmt-dir "firmware") (check-fmt-dir "host")
 clippy: (clippy-dir "firmware") (clippy-dir "host")
 
+prepare-repo: download-zed-gateware
+  cd {{justfile_directory()}}/host/z7-run && cargo install --path .
+
+# Download a pre-built bitstream
+download-zed-gateware:
+    curl -L -o {{justfile_directory()}}/zedboard-gateware/zedboard-rust.bit "https://www.dropbox.com/scl/fi/oos5l6qknb4nom7tvbx1t/zedboard-rust.bit?rlkey=ikjec7e6v6rdih7hbti4jhet3&st=av4wf83u&dl=1"
+
 check-dir target:
   cd {{target}} && cargo check
 
@@ -56,19 +63,17 @@ bootgen:
   bootgen -arch zynq -image boot.bif -o boot.bin -w on
   echo "Generated boot.bin at zynq-boot-image/staging"
 
-# Internal helper to start GDB after running init.
-# Pass init flags (if any) via `init_args`.
 [no-cd]
-run_generic binary init_args="":
-  python3 {{INIT_SCRIPT}} {{init_args}}
-  gdb-multiarch -q -x {{GDB_CMD}} {{binary}} -tui
+run binary:
+  z7-run --config {{justfile_directory()}}/scripts/z7_run.toml --regs {{justfile_directory()}}/scripts/zedboard_init_regs.ron {{binary}}
 
-# Public targets
+# Runner which uses TCL scripting but relies on an external hw_server running.
+# Set HW_SERVER_IP (same env var zynq7000-init.py already uses for -i/--ip) to the host running
+# hw_server/the gdbserver bridge when debugging a board that isn't attached to this machine.
 [no-cd]
-run binary: (run_generic binary)
-
-[no-cd]
-run-no-reset binary: (run_generic binary "-s")
+run-tcl binary:
+  python3 {{INIT_SCRIPT}}
+  gdb-multiarch -q -ex "target remote {{env_var_or_default('HW_SERVER_IP', 'localhost')}}:3000" -x {{GDB_CMD}} {{binary}} -tui
 
 flash-nor-zedboard boot_binary:
   cd {{justfile_directory()}}/firmware/zedboard-qspi-flasher && cargo build --release

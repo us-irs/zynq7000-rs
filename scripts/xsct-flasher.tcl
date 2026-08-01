@@ -145,4 +145,5 @@ if {$app ne ""} {
   con
 }
 
+disconnect
 puts "Success"

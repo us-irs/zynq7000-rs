@@ -4,6 +4,7 @@
 
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
+use embedded_io::Write;
 use zynq7000::Peripherals;
 use zynq7000_hal::{
     clocks::Clocks,
@@ -11,6 +12,7 @@ use zynq7000_hal::{
     l2_cache,
     priv_tim::CpuPrivateTimer,
     time::Hertz,
+    uart,
 };
 
 pub const LIB: Lib = Lib::Hal;
@@ -39,7 +41,7 @@ fn main() -> ! {
             gpio.bank_0().modify_out_en(|v| v | ZEDBOARD_LED_MASK);
             loop {
                 gpio.modify_out_0(|v| v ^ ZEDBOARD_LED_MASK);
-                for _ in 0..5_000_000 {
+                for _ in 0..500_000 {
                     nop();
                 }
             }
@@ -85,7 +87,9 @@ fn prefetch_handler(_faulting_addr: usize) -> ! {
 
 /// Panic handler
 #[panic_handler]
-fn panic(_info: &PanicInfo) -> ! {
+fn panic(info: &PanicInfo) -> ! {
+    let mut uart = unsafe { uart::Uart::steal(uart::UartId::Uart1) };
+    writeln!(uart, "panic: {}\r", info).ok();
     loop {
         nop();
     }
