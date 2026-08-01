@@ -694,6 +694,12 @@ impl Uart {
         });
     }
 
+    /// Write all bytes in the buffer to the UART.
+    pub fn write_all(&mut self, buf: &[u8]) {
+        // Ignore error because the write is infallible.
+        <Self as embedded_io::Write>::write_all(self, buf);
+    }
+
     /// Raw access to the UART registers.
     #[inline]
     pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {

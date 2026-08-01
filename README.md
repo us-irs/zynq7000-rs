@@ -23,9 +23,7 @@ This workspace contains libraries and application which can only be run on the t
 - The [`zynq7000-mmu`](./firmware/zynq7000-mmu)
   crate containing common MMU abstractions used by both the HAL and the run-time crate.
 - The [`zynq7000-hal`](./firmware/zynq7000-hal) HAL crate containing higher-level abstractions on
-  top of the PAC register crate.
-- The [`zynq7000-embassy`](./firmware/zynq7000-embassy) crate containing an embassy-rs time driver
-  using the global timer counter peripheral.
+  top of the PAC register crate and also contains embassy time drivers.
 
 This project was developed using a Zedboard, so there are several crates available targeted towards
 this board:

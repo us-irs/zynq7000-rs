@@ -297,6 +297,11 @@ impl Output {
     }
 
     #[inline]
+    pub fn toggle(&mut self) {
+        <Self as embedded_hal::digital::StatefulOutputPin>::toggle(self).unwrap();
+    }
+
+    #[inline]
     pub fn set_low(&mut self) {
         self.0.set_low();
     }

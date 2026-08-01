@@ -6,8 +6,6 @@
 use aarch32_cpu::asm::nop;
 use arbitrary_int::{traits::Integer as _, u2};
 use core::panic::PanicInfo;
-use embedded_hal::{delay::DelayNs as _, digital::StatefulOutputPin as _};
-use embedded_io::Write as _;
 use log::{error, info};
 use zedboard_bsp::qspi_spansion;
 use zynq7000_boot_image::BootHeader;
@@ -64,7 +62,7 @@ fn main() -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Info, true);
 
     let boot_mode = BootMode::new_from_regs();
@@ -177,7 +175,7 @@ fn main() -> ! {
 
     let mut mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         timer.delay_ms(500);
     }

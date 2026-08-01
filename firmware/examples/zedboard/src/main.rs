@@ -5,8 +5,6 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
-use embedded_io::Write;
 use log::{error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{BootMode, clocks, generic_interrupt_handler, gpio, gtc, uart};
@@ -48,7 +46,7 @@ async fn main(_spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
 
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
@@ -69,11 +67,11 @@ async fn main(_spawner: Spawner) -> ! {
         gpio::Output::new_for_emio(gpio_pins.emio.take(7).unwrap(), gpio::PinState::Low),
     ];
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         // Create a wave pattern for emio_leds
         for led in emio_leds.iter_mut() {
-            led.toggle().unwrap();
+            led.toggle();
             ticker.next().await; // Wait for the next ticker for each toggle
         }
 

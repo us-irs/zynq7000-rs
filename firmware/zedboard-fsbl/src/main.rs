@@ -12,7 +12,6 @@ use aarch32_cpu::asm::nop;
 use arbitrary_int::traits::Integer as _;
 use arbitrary_int::{u2, u6};
 use core::panic::PanicInfo;
-use embedded_io::Write as _;
 use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
 use zynq7000_boot_image::DestinationDevice;
@@ -106,9 +105,7 @@ fn main() -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    logger_uart
-        .write_all(b"-- Zedboard Rust FSBL --\n\r")
-        .unwrap();
+    logger_uart.write_all(b"-- Zedboard Rust FSBL --\n\r");
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(logger_uart, log::LevelFilter::Trace, true);
 
     // Set up the global interrupt controller.

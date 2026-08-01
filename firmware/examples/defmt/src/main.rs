@@ -5,7 +5,6 @@
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use defmt_rtt as _;
-use embedded_hal::{delay::DelayNs, digital::StatefulOutputPin};
 use zynq7000_hal::{
     InteruptConfig,
     clocks::Clocks,
@@ -45,7 +44,7 @@ fn main() -> ! {
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::High);
     loop {
         defmt::info!("toggling LED!");
-        led.toggle().unwrap();
+        led.toggle();
         cpu_tim.delay_ms(1000);
     }
 }

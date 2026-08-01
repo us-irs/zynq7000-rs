@@ -5,7 +5,6 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
 use log::error;
 use zynq7000_hal::{InteruptConfig, clocks, generic_interrupt_handler, gpio, gtc, time::Hertz};
 
@@ -35,7 +34,7 @@ async fn main(_spawner: Spawner) -> ! {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     loop {
-        led.toggle().unwrap();
+        led.toggle();
         ticker.next().await;
     }
 }

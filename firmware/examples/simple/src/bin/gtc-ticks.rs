@@ -4,8 +4,6 @@
 
 use aarch32_cpu::asm::nop;
 use core::{panic::PanicInfo, sync::atomic::AtomicU64};
-use embedded_hal::digital::StatefulOutputPin;
-use embedded_io::Write;
 use log::{error, info};
 use zynq7000_hal::{
     Interrupt,
@@ -58,8 +56,7 @@ fn main() -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 GTC Ticks example --\n\r")
-        .unwrap();
+    uart.write_all(b"-- Zynq 7000 GTC Ticks example --\n\r");
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
@@ -68,7 +65,7 @@ fn main() -> ! {
             "MS_TICKS: {}",
             MS_TICKS.load(core::sync::atomic::Ordering::Relaxed)
         );
-        led.toggle().unwrap();
+        led.toggle();
         for _ in 0..5_000_000 {
             nop();
         }

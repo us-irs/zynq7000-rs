@@ -6,8 +6,7 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Delay, Duration, Ticker};
-use embedded_hal::{delay::DelayNs, digital::StatefulOutputPin};
-use embedded_io::Write;
+use embedded_hal::delay::DelayNs;
 use log::{error, info, warn};
 use zynq7000_hal::{
     BootMode,
@@ -69,7 +68,7 @@ async fn main(_spawner: Spawner) -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 DHT22 --\n\r").unwrap();
+    uart.write_all(b"-- Zynq 7000 DHT22 --\n\r");
 
     // Safety: We are not multi-threaded yet.
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
@@ -145,7 +144,7 @@ async fn main(_spawner: Spawner) -> ! {
                 }
             }
         }
-        led.toggle().unwrap();
+        led.toggle();
 
         ticker.next().await;
     }

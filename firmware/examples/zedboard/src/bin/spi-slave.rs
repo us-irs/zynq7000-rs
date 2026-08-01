@@ -6,7 +6,6 @@ use core::{cell::RefCell, panic::PanicInfo, sync::atomic::AtomicU8};
 use embassy_executor::Spawner;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_time::{Delay, Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_hal_async::delay::DelayNs as _;
 use embedded_io::Write;
 use embedded_io_async::Read as _;
@@ -71,7 +70,7 @@ async fn main(spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    uart.write_all(INIT_STRING.as_bytes());
     uart.flush().unwrap();
     Delay.delay_ms(1).await;
 
@@ -521,11 +520,11 @@ unsafe fn spi_interrupt_handler() {
 pub async fn blinky_task(mut mio_led: gpio::Output, mut emio_leds: [gpio::Output; 8]) {
     let mut ticker = Ticker::every(Duration::from_millis(200));
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
         // Create a wave pattern for emio_leds
         for led in emio_leds.iter_mut() {
-            led.toggle().unwrap();
+            led.toggle();
             ticker.next().await; // Wait for the next ticker for each toggle
         }
         ticker.next().await;

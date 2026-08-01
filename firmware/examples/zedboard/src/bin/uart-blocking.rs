@@ -7,7 +7,6 @@ use axi_uartlite::AxiUartlite;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
 use log::{error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
@@ -126,7 +125,7 @@ async fn main(_spawner: Spawner) -> ! {
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
-    log_uart.write_all(INIT_STRING.as_bytes()).unwrap();
+    log_uart.write_all(INIT_STRING.as_bytes());
 
     // Safety: Co-operative multi-tasking is used.
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(log_uart, log::LevelFilter::Trace, false);
@@ -175,16 +174,14 @@ async fn main(_spawner: Spawner) -> ! {
     uart_mux.select(current_sel);
     let mut led_idx = 0;
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
 
-        emio_leds[led_idx].toggle().unwrap();
+        emio_leds[led_idx].toggle();
         led_idx += 1;
         if led_idx >= emio_leds.len() {
             led_idx = 0;
         }
-        uart_0
-            .write_all("Hello, World from UART0!\n\r".as_bytes())
-            .unwrap();
+        uart_0.write_all("Hello, World from UART0!\n\r".as_bytes());
         uartlite
             .write_all("Hello, World from AXI UARTLITE!\n\r".as_bytes())
             .unwrap();

@@ -6,7 +6,6 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
-use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
 use log::info;
 use zynq7000::Peripherals;
@@ -64,8 +63,7 @@ async fn main(spawner: Spawner) -> ! {
         (mio_pins.mio48, mio_pins.mio49),
     )
     .unwrap();
-    uart.write_all(b"-- Zynq 7000 Logging example --\n\r")
-        .unwrap();
+    uart.write_all(b"-- Zynq 7000 Logging example --\n\r");
     uart.flush().unwrap();
 
     let (tx, _rx) = uart.split();
@@ -91,7 +89,7 @@ async fn led_task(mut mio_led: Output) {
 
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     loop {
-        mio_led.toggle().unwrap();
+        mio_led.toggle();
         info!(
             "Toggling LED ({})",
             ATOMIC_COUNTER.fetch_add(1, core::sync::atomic::Ordering::Relaxed)

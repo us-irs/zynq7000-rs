@@ -4,7 +4,6 @@
 
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
-use embedded_hal::{delay::DelayNs, digital::StatefulOutputPin};
 use zynq7000::Peripherals;
 use zynq7000_hal::{
     clocks::Clocks,
@@ -53,7 +52,7 @@ fn main() -> ! {
             let mio_pins = mio::Pins::new(dp.gpio);
             let mut led = Output::new_for_mio(mio_pins.mio7, PinState::High);
             loop {
-                led.toggle().unwrap();
+                led.toggle();
                 cpu_tim.delay_ms(1000);
             }
         }
