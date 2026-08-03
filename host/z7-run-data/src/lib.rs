@@ -103,6 +103,12 @@ pub struct PsInitOps {
     /// lists above): general-purpose MIO pin muxing (UART/GPIO/SPI/etc.) alongside the DDRIOB I/O
     /// buffer config, DCI impedance calibration, and the SLCR unlock/lock bracket.
     pub mio_init_ops: Vec<RegOp>,
+    /// Post-config sequence, extracted from `ps7_post_config_3_0`: enables the AXI level
+    /// shifters (`LVL_SHFTR_EN`) and deasserts the PL reset (`FPGA_RST_CTRL`), bracketed by the
+    /// SLCR unlock/lock writes. The PL comes up in reset after power-on; on real hardware this is
+    /// called right after `ps7_init` (independent of whether/when a bitstream gets loaded), which
+    /// is why it's kept as its own op list rather than folded into `ddr_init_ops`.
+    pub post_config_ops: Vec<RegOp>,
 }
 
 /// (De)serializes a `u32` as a `0x`-prefixed hex string, so RON/JSON files stay readable instead
@@ -149,6 +155,7 @@ mod tests {
             }],
             ddriob_init_ops: vec![],
             mio_init_ops: vec![],
+            post_config_ops: vec![],
         };
         let ron = ron::ser::to_string_pretty(&ops, ron::ser::PrettyConfig::default()).unwrap();
         let parsed: PsInitOps = ron::from_str(&ron).unwrap();

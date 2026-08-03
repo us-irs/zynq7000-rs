@@ -17,10 +17,14 @@ Right now, the script expects the `ps7init.tcl` file to be passed as a command l
 for `-p` or `--path`. It then generates the configuration as a `ddrc_config_autogen.rs` and
 `ddriob_config_autogen.rs` file.
 
-It also generates a `ps7_ops_autogen.rs` file containing the PLL bring-up, clock control, and
-DDR/DDRIOB register init sequences as ordered `RegOp` lists (`PLL_INIT_OPS`, `CLOCK_INIT_OPS`,
-`DDR_INIT_OPS`, `DDRIOB_INIT_OPS`), preserving the exact write/mask-write/poll order from the
-source script. This is meant for host-side tools that talk to the target directly (e.g. over
+It also generates a `ps7_ops_autogen.rs` file containing the PLL bring-up, clock control,
+DDR/DDRIOB, and post-config register init sequences as ordered `RegOp` lists (`PLL_INIT_OPS`,
+`CLOCK_INIT_OPS`, `DDR_INIT_OPS`, `DDRIOB_INIT_OPS`, `POST_CONFIG_OPS`), preserving the exact
+write/mask-write/poll order from the source script. `POST_CONFIG_OPS` is extracted from
+`ps7_post_config_3_0`: it enables the AXI level shifters and deasserts the PL reset
+(`FPGA_RST_CTRL`), which is needed to bring the PL out of its power-on reset state and matches
+what AMD's tooling runs right after `ps7_init` regardless of whether/when a bitstream gets
+loaded. This is meant for host-side tools that talk to the target directly (e.g. over
 JTAG via probe-rs) rather than for on-target firmware, since some of these registers (in
 particular the PLL control registers) need to be written multiple times in sequence to bring the
 hardware up correctly, not just poked with a single final value.

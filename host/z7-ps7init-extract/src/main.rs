@@ -20,6 +20,12 @@ const DDRIOB_ADDR_RANGE: RangeInclusive<u32> = 0xf800_0b40..=0xf800_0b74;
 // runs before PLL_INIT_OPS unlocks it.
 const SLCR_UNLOCK_ADDR: u32 = 0xF800_0008;
 const SLCR_LOCK_ADDR: u32 = 0xF800_0004;
+const LVL_SHFTR_EN_ADDR: u32 = 0xF800_0900;
+const FPGA_RST_CTRL_ADDR: u32 = 0xF800_0240;
+
+// `mio_pins` in `zynq7000::slcr::Registers`: 54 identical 32-bit pin config registers, named
+// MIO_PIN_00..MIO_PIN_53 individually rather than listed out in REGISTER_NAMES.
+const MIO_PIN_ADDR_RANGE: RangeInclusive<u32> = 0xF800_0700..=0xF800_07D4;
 
 // Written twice in `ps7_ddr_init_data_3_0`: once early to configure the DDRC (controller not yet
 // started), and again near the end to actually trigger DRAM init. The second write is a distinct,
@@ -34,6 +40,8 @@ const REGISTER_NAMES: &[(u32, &str)] = &[
     (DDRC_CTRL_ADDR, "DDRC Control"),
     (SLCR_UNLOCK_ADDR, "SLCR Unlock"),
     (SLCR_LOCK_ADDR, "SLCR Lock"),
+    (LVL_SHFTR_EN_ADDR, "LVL_SHFTR_EN"),
+    (FPGA_RST_CTRL_ADDR, "FPGA_RST_CTRL"),
     (0xF800_0B5C, "DDRIOB Drive Slew Addr"),
     (0xF800_0B60, "DDRIOB Drive Slew Data"),
     (0xF800_0B64, "DDRIOB Drive Slew Diff"),
@@ -123,6 +131,82 @@ const REGISTER_NAMES: &[(u32, &str)] = &[
     (0xF800_0B50, "DDRIOB Diff 0"),
     (0xF800_0B54, "DDRIOB Diff 1"),
     (0xF800_0B58, "DDRIOB Clock"),
+    // SLCR PLL/clock control block (base 0xF8000100, `zynq7000::slcr::clocks::ClockControlRegisters`).
+    (0xF800_0100, "ARM_PLL_CTRL"),
+    (0xF800_0104, "DDR_PLL_CTRL"),
+    (0xF800_0108, "IO_PLL_CTRL"),
+    (0xF800_010C, "PLL_STATUS"),
+    (0xF800_0110, "ARM_PLL_CFG"),
+    (0xF800_0114, "DDR_PLL_CFG"),
+    (0xF800_0118, "IO_PLL_CFG"),
+    (0xF800_0120, "ARM_CLK_CTRL"),
+    (0xF800_0124, "DDR_CLK_CTRL"),
+    (0xF800_0128, "DCI_CLK_CTRL"),
+    (0xF800_012C, "APER_CLK_CTRL"),
+    (0xF800_0130, "USB0_CLK_CTRL"),
+    (0xF800_0134, "USB1_CLK_CTRL"),
+    (0xF800_0138, "GEM0_RCLK_CTRL"),
+    (0xF800_013C, "GEM1_RCLK_CTRL"),
+    (0xF800_0140, "GEM0_CLK_CTRL"),
+    (0xF800_0144, "GEM1_CLK_CTRL"),
+    (0xF800_0148, "SMC_CLK_CTRL"),
+    (0xF800_014C, "LQSPI_CLK_CTRL"),
+    (0xF800_0150, "SDIO_CLK_CTRL"),
+    (0xF800_0154, "UART_CLK_CTRL"),
+    (0xF800_0158, "SPI_CLK_CTRL"),
+    (0xF800_015C, "CAN_CLK_CTRL"),
+    (0xF800_0160, "CAN_MIOCLK_CTRL"),
+    (0xF800_0164, "DBG_CLK_CTRL"),
+    (0xF800_0168, "PCAP_CLK_CTRL"),
+    (0xF800_016C, "TOPSW_CLK_CTRL"),
+    (0xF800_0170, "FPGA0_CLK_CTRL"),
+    (0xF800_0174, "FPGA0_THR_CTRL"),
+    (0xF800_0178, "FPGA0_THR_CNT"),
+    (0xF800_017C, "FPGA0_THR_STA"),
+    (0xF800_0180, "FPGA1_CLK_CTRL"),
+    (0xF800_0184, "FPGA1_THR_CTRL"),
+    (0xF800_0188, "FPGA1_THR_CNT"),
+    (0xF800_018C, "FPGA1_THR_STA"),
+    (0xF800_0190, "FPGA2_CLK_CTRL"),
+    (0xF800_0194, "FPGA2_THR_CTRL"),
+    (0xF800_0198, "FPGA2_THR_CNT"),
+    (0xF800_019C, "FPGA2_THR_STA"),
+    (0xF800_01A0, "FPGA3_CLK_CTRL"),
+    (0xF800_01A4, "FPGA3_THR_CTRL"),
+    (0xF800_01A8, "FPGA3_THR_CNT"),
+    (0xF800_01AC, "FPGA3_THR_STA"),
+    (0xF800_01C4, "CLK_621_TRUE"),
+    // SLCR reset control block (base 0xF8000200, `zynq7000::slcr::reset::ResetControl`).
+    (0xF800_0200, "PSS_RST_CTRL"),
+    (0xF800_0204, "DDR_RST_CTRL"),
+    (0xF800_0208, "TOPSW_RESET_CTRL"),
+    (0xF800_020C, "DMAC_RST_CTRL"),
+    (0xF800_0210, "USB_RST_CTRL"),
+    (0xF800_0214, "GEM_RST_CTRL"),
+    (0xF800_0218, "SDIO_RST_CTRL"),
+    (0xF800_021C, "SPI_RST_CTRL"),
+    (0xF800_0220, "CAN_RST_CTRL"),
+    (0xF800_0224, "I2C_RST_CTRL"),
+    (0xF800_0228, "UART_RST_CTRL"),
+    (0xF800_022C, "GPIO_RST_CTRL"),
+    (0xF800_0230, "LQSPI_RST_CTRL"),
+    (0xF800_0234, "SMC_RST_CTRL"),
+    (0xF800_0238, "OCM_RST_CTRL"),
+    (0xF800_0244, "A9_CPU_RST_CTRL"),
+    (0xF800_024C, "RS_AWDT_CTRL"),
+    // MIO/GPIOB registers surrounding the MIO_PIN_NN block (`zynq7000::slcr::Registers`).
+    (0xF800_0804, "MIO_LOOPBACK"),
+    (0xF800_080C, "MIO_MST_TRI0"),
+    (0xF800_0810, "MIO_MST_TRI1"),
+    (0xF800_0830, "SD0_WP_CD_SEL"),
+    (0xF800_0834, "SD1_WP_CD_SEL"),
+    // GPIOB block (base 0xF8000B00, `zynq7000::slcr::GpiobRegisters`).
+    (0xF800_0B00, "GPIOB_CTRL"),
+    (0xF800_0B04, "GPIOB_CFG_CMOS18"),
+    (0xF800_0B08, "GPIOB_CFG_CMOS25"),
+    (0xF800_0B0C, "GPIOB_CFG_CMOS33"),
+    (0xF800_0B14, "GPIOB_CFG_HSTL"),
+    (0xF800_0B18, "GPIOB_DRVR_BIAS_CTRL"),
 ];
 
 /// `REGISTER_NAMES` as an actual O(1) lookup table, built once on first use.
@@ -133,6 +217,21 @@ static REGISTER_NAME_MAP: std::sync::LazyLock<HashMap<u32, &'static str>> =
 #[inline]
 fn register_name(addr: u32) -> Option<&'static str> {
     REGISTER_NAME_MAP.get(&addr).copied()
+}
+
+/// Looks up the human-readable name for a register address, same as [`register_name`], but also
+/// resolves addresses inside [`MIO_PIN_ADDR_RANGE`] to `MIO_PIN_NN`. Kept separate from
+/// [`register_name`] since those names are computed rather than static, so they can't live in
+/// [`REGISTER_NAME_MAP`].
+fn resolve_register_name(addr: u32) -> Option<String> {
+    if let Some(name) = register_name(addr) {
+        return Some(name.to_string());
+    }
+    if MIO_PIN_ADDR_RANGE.contains(&addr) && (addr - MIO_PIN_ADDR_RANGE.start()).is_multiple_of(4) {
+        let pin = (addr - MIO_PIN_ADDR_RANGE.start()) / 4;
+        return Some(format!("MIO_PIN_{pin:02}"));
+    }
+    None
 }
 
 const DDRC_FILE_NAME: &str = "ddrc_config_autogen.rs";
@@ -150,6 +249,7 @@ impl From<&OpsFileInput<'_>> for PsInitOps {
             ddr_init_ops: input.ddr_ops.to_vec(),
             ddriob_init_ops: input.ddriob_ops.to_vec(),
             mio_init_ops: input.mio_ops.to_vec(),
+            post_config_ops: input.post_config_ops.to_vec(),
         }
     }
 }
@@ -163,6 +263,7 @@ struct OpsFileInput<'a> {
     ddr_ops: &'a [RegOp],
     ddriob_ops: &'a [RegOp],
     mio_ops: &'a [RegOp],
+    post_config_ops: &'a [RegOp],
     file_name: &'a str,
 }
 
@@ -229,10 +330,7 @@ fn parse_op(line: &str) -> Option<RegOp> {
     } else {
         return None;
     };
-    Some(RegOp::new(
-        kind,
-        register_name(kind.addr()).map(String::from),
-    ))
+    Some(RegOp::new(kind, resolve_register_name(kind.addr())))
 }
 
 #[derive(Default)]
@@ -259,11 +357,12 @@ enum ParsingMode {
     MioRev3,
     PllRev3,
     ClockRev3,
+    PostConfigRev3,
 }
 
 impl ParsingMode {
     /// Returns the mode a line switches into, if it's the opening line of one of the
-    /// `ps7_*_init_data_3_0` procs.
+    /// `ps7_*_init_data_3_0`/`ps7_post_config_3_0` procs.
     fn detect(line: &str) -> Option<Self> {
         if line.contains("ps7_ddr_init_data_3_0") {
             Some(Self::DdrRev3)
@@ -273,6 +372,8 @@ impl ParsingMode {
             Some(Self::PllRev3)
         } else if line.contains("ps7_clock_init_data_3_0") {
             Some(Self::ClockRev3)
+        } else if line.contains("ps7_post_config_3_0") {
+            Some(Self::PostConfigRev3)
         } else {
             None
         }
@@ -317,6 +418,7 @@ fn main() -> std::io::Result<()> {
     let mut ddr_ops: Vec<RegOp> = Vec::new();
     let mut ddriob_ops: Vec<RegOp> = Vec::new();
     let mut mio_ops: Vec<RegOp> = Vec::new();
+    let mut post_config_ops: Vec<RegOp> = Vec::new();
 
     for line in std::fs::read_to_string(ps7init_tcl)?.lines() {
         // Outside any proc body: the only thing a line can do is open one.
@@ -345,6 +447,7 @@ fn main() -> std::io::Result<()> {
             ParsingMode::PllRev3 => pll_ops.push(op),
             ParsingMode::ClockRev3 => clock_ops.push(op),
             ParsingMode::DdrRev3 => ddr_ops.push(op),
+            ParsingMode::PostConfigRev3 => post_config_ops.push(op),
             ParsingMode::MioRev3 => {
                 let addr = op.addr();
                 if DDRIOB_ADDR_RANGE.contains(&addr)
@@ -370,6 +473,7 @@ fn main() -> std::io::Result<()> {
         ddr_ops: &ddr_ops,
         ddriob_ops: &ddriob_ops,
         mio_ops: &mio_ops,
+        post_config_ops: &post_config_ops,
         file_name: OPS_RON_FILE_NAME,
     };
 
@@ -664,6 +768,7 @@ fn generate_ops_file(input: OpsFileInput) -> std::io::Result<()> {
     let ddr_tokens: Vec<_> = input.ddr_ops.iter().map(reg_op_tokens).collect();
     let ddriob_tokens: Vec<_> = input.ddriob_ops.iter().map(reg_op_tokens).collect();
     let mio_tokens: Vec<_> = input.mio_ops.iter().map(reg_op_tokens).collect();
+    let post_config_tokens: Vec<_> = input.post_config_ops.iter().map(reg_op_tokens).collect();
 
     let generated = quote::quote! {
         //! This file was auto-generated by the [z7-ps7init-extract](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/host/z7-ps7init-extract) program.
@@ -704,6 +809,11 @@ fn generate_ops_file(input: OpsFileInput) -> std::io::Result<()> {
         /// The full `ps7_mio_init_data_3_0` proc body: general-purpose MIO pin muxing alongside
         /// the DDRIOB/DCI config also captured separately in `DDRIOB_INIT_OPS`.
         pub const MIO_INIT_OPS: &[RegOp] = &[ #(#mio_tokens),* ];
+
+        /// Post-config sequence, extracted from `ps7_post_config_3_0`: enables the AXI level
+        /// shifters and deasserts the PL reset, bracketed by the SLCR unlock/lock writes. Run
+        /// this after `DDR_INIT_OPS` to put the PL out of its power-on reset state.
+        pub const POST_CONFIG_OPS: &[RegOp] = &[ #(#post_config_tokens),* ];
     };
 
     std::fs::write(input.file_name, generated.to_string())?;
