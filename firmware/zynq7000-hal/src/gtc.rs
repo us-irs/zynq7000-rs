@@ -63,12 +63,13 @@ impl GlobalTimerCounter {
         // function non-mut, so we steal the GTC here. Ownership is guaranteed or mandated
         // by constructor.
         let upper = self.regs.read_count_upper();
-        loop {
-            let lower = self.regs.read_count_lower();
-            if self.regs.read_count_upper() == upper {
-                return ((upper as u64) << 32) | (lower as u64);
-            }
-            // Overflow, read upper again.
+        let lower = self.regs.read_count_lower();
+        let upper2 = self.regs.read_count_upper();
+        if upper == upper2 {
+            ((upper as u64) << 32) | (lower as u64)
+        } else {
+            let lower2 = self.regs.read_count_lower();
+            ((upper2 as u64) << 32) | (lower2 as u64)
         }
     }
 
