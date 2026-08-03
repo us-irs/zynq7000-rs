@@ -54,14 +54,9 @@ impl GlobalTimerCounter {
         self.cpu_3x2x_clock = Some(clock);
     }
 
-    // TODO: Change this API once pure-reads work.
     /// Read the 64-bit timer.
     #[inline]
     pub fn read_timer(&self) -> u64 {
-        // Safety: We require interior mutability here because even reads are unsafe.
-        // But we want to avoid a RefCell which would incur a run-time cost solely to make this
-        // function non-mut, so we steal the GTC here. Ownership is guaranteed or mandated
-        // by constructor.
         let upper = self.regs.read_count_upper();
         let lower = self.regs.read_count_lower();
         let upper2 = self.regs.read_count_upper();
