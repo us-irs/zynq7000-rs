@@ -369,10 +369,13 @@ fn main() -> anyhow::Result<()> {
     core.reset_and_halt(Duration::from_millis(100))?;
 
     // Execution order mirrors the real ps7_init.tcl call order: DDRIOB config -> PLL init ->
-    // clock init -> DDR init. DDRIOB configures the
+    // clock init -> DDR init -> post-config. DDRIOB configures the
     // physical I/O buffers (drive strength/termination) for the DDR pins, so it has to be done
     // before the DDR controller starts its calibration handshake, or that handshake never
-    // completes (status register stuck at 0, DDR_INIT_OPS mask_poll times out).
+    // completes (status register stuck at 0, DDR_INIT_OPS mask_poll times out). Post-config
+    // (level shifters + PL reset deassert) runs last, same as on real hardware where
+    // `ps7_post_config` is called right after `ps7_init` regardless of whether/when a bitstream
+    // gets loaded - the PL powers up in reset and stays there until this runs.
     tracing::info!("performing board clock and DDR init");
     execute_register_ops(&mut core, &ps7_init_ops.ddriob_init_ops)
         .with_context(|| "DDRIOB register setup")?;
@@ -385,6 +388,9 @@ fn main() -> anyhow::Result<()> {
     tracing::debug!("initializing DDR controller");
     execute_register_ops(&mut core, &ps7_init_ops.ddr_init_ops)
         .with_context(|| "DDR controller register setup")?;
+    tracing::debug!("running PS7 post-config (level shifters, PL reset deassert)");
+    execute_register_ops(&mut core, &ps7_init_ops.post_config_ops)
+        .with_context(|| "PS7 post-config register setup")?;
 
     if let Some(test_addr) = cli.check_ddr {
         tracing::info!("running DDR sanity check at {test_addr:#010x}");

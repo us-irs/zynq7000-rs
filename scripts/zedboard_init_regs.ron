@@ -8,6 +8,7 @@
             ),
         ),
         (
+            name: Some("ARM_PLL_CFG"),
             kind: MaskWrite(
                 addr: "0xf8000110",
                 mask: "0x003ffff0",
@@ -15,6 +16,7 @@
             ),
         ),
         (
+            name: Some("ARM_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000100",
                 mask: "0x0007f000",
@@ -22,6 +24,7 @@
             ),
         ),
         (
+            name: Some("ARM_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000100",
                 mask: "0x00000010",
@@ -29,6 +32,7 @@
             ),
         ),
         (
+            name: Some("ARM_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000100",
                 mask: "0x00000001",
@@ -36,6 +40,7 @@
             ),
         ),
         (
+            name: Some("ARM_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000100",
                 mask: "0x00000001",
@@ -43,12 +48,14 @@
             ),
         ),
         (
+            name: Some("PLL_STATUS"),
             kind: MaskPoll(
                 addr: "0xf800010c",
                 mask: "0x00000001",
             ),
         ),
         (
+            name: Some("ARM_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000100",
                 mask: "0x00000010",
@@ -56,6 +63,7 @@
             ),
         ),
         (
+            name: Some("ARM_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000120",
                 mask: "0x1f003f30",
@@ -63,6 +71,7 @@
             ),
         ),
         (
+            name: Some("DDR_PLL_CFG"),
             kind: MaskWrite(
                 addr: "0xf8000114",
                 mask: "0x003ffff0",
@@ -70,6 +79,7 @@
             ),
         ),
         (
+            name: Some("DDR_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000104",
                 mask: "0x0007f000",
@@ -77,6 +87,7 @@
             ),
         ),
         (
+            name: Some("DDR_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000104",
                 mask: "0x00000010",
@@ -84,6 +95,7 @@
             ),
         ),
         (
+            name: Some("DDR_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000104",
                 mask: "0x00000001",
@@ -91,6 +103,7 @@
             ),
         ),
         (
+            name: Some("DDR_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000104",
                 mask: "0x00000001",
@@ -98,12 +111,14 @@
             ),
         ),
         (
+            name: Some("PLL_STATUS"),
             kind: MaskPoll(
                 addr: "0xf800010c",
                 mask: "0x00000002",
             ),
         ),
         (
+            name: Some("DDR_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000104",
                 mask: "0x00000010",
@@ -111,6 +126,7 @@
             ),
         ),
         (
+            name: Some("DDR_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000124",
                 mask: "0xfff00003",
@@ -118,6 +134,7 @@
             ),
         ),
         (
+            name: Some("IO_PLL_CFG"),
             kind: MaskWrite(
                 addr: "0xf8000118",
                 mask: "0x003ffff0",
@@ -125,6 +142,7 @@
             ),
         ),
         (
+            name: Some("IO_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000108",
                 mask: "0x0007f000",
@@ -132,6 +150,7 @@
             ),
         ),
         (
+            name: Some("IO_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000108",
                 mask: "0x00000010",
@@ -139,6 +158,7 @@
             ),
         ),
         (
+            name: Some("IO_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000108",
                 mask: "0x00000001",
@@ -146,6 +166,7 @@
             ),
         ),
         (
+            name: Some("IO_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000108",
                 mask: "0x00000001",
@@ -153,12 +174,14 @@
             ),
         ),
         (
+            name: Some("PLL_STATUS"),
             kind: MaskPoll(
                 addr: "0xf800010c",
                 mask: "0x00000004",
             ),
         ),
         (
+            name: Some("IO_PLL_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000108",
                 mask: "0x00000010",
@@ -182,6 +205,7 @@
             ),
         ),
         (
+            name: Some("DCI_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000128",
                 mask: "0x03f03f01",
@@ -189,6 +213,7 @@
             ),
         ),
         (
+            name: Some("GEM0_RCLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000138",
                 mask: "0x00000011",
@@ -196,6 +221,7 @@
             ),
         ),
         (
+            name: Some("GEM0_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000140",
                 mask: "0x03f03f71",
@@ -203,6 +229,7 @@
             ),
         ),
         (
+            name: Some("LQSPI_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf800014c",
                 mask: "0x00003f31",
@@ -210,6 +237,7 @@
             ),
         ),
         (
+            name: Some("SDIO_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000150",
                 mask: "0x00003f33",
@@ -217,6 +245,7 @@
             ),
         ),
         (
+            name: Some("UART_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000154",
                 mask: "0x00003f33",
@@ -224,6 +253,7 @@
             ),
         ),
         (
+            name: Some("SPI_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000158",
                 mask: "0x00003f33",
@@ -231,6 +261,7 @@
             ),
         ),
         (
+            name: Some("PCAP_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000168",
                 mask: "0x00003f31",
@@ -238,6 +269,7 @@
             ),
         ),
         (
+            name: Some("FPGA0_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000170",
                 mask: "0x03f03f30",
@@ -245,6 +277,7 @@
             ),
         ),
         (
+            name: Some("CLK_621_TRUE"),
             kind: MaskWrite(
                 addr: "0xf80001c4",
                 mask: "0x00000001",
@@ -252,6 +285,7 @@
             ),
         ),
         (
+            name: Some("APER_CLK_CTRL"),
             kind: MaskWrite(
                 addr: "0xf800012c",
                 mask: "0x01ffcccd",
@@ -1063,6 +1097,7 @@
             ),
         ),
         (
+            name: Some("GPIOB_CTRL"),
             kind: MaskWrite(
                 addr: "0xf8000b00",
                 mask: "0x00000071",
@@ -1190,6 +1225,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_00"),
             kind: MaskWrite(
                 addr: "0xf8000700",
                 mask: "0x00003fff",
@@ -1197,6 +1233,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_01"),
             kind: MaskWrite(
                 addr: "0xf8000704",
                 mask: "0x00003fff",
@@ -1204,6 +1241,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_02"),
             kind: MaskWrite(
                 addr: "0xf8000708",
                 mask: "0x00003fff",
@@ -1211,6 +1249,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_03"),
             kind: MaskWrite(
                 addr: "0xf800070c",
                 mask: "0x00003fff",
@@ -1218,6 +1257,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_04"),
             kind: MaskWrite(
                 addr: "0xf8000710",
                 mask: "0x00003fff",
@@ -1225,6 +1265,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_05"),
             kind: MaskWrite(
                 addr: "0xf8000714",
                 mask: "0x00003fff",
@@ -1232,6 +1273,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_06"),
             kind: MaskWrite(
                 addr: "0xf8000718",
                 mask: "0x00003fff",
@@ -1239,6 +1281,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_07"),
             kind: MaskWrite(
                 addr: "0xf800071c",
                 mask: "0x00003fff",
@@ -1246,6 +1289,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_08"),
             kind: MaskWrite(
                 addr: "0xf8000720",
                 mask: "0x00003fff",
@@ -1253,6 +1297,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_09"),
             kind: MaskWrite(
                 addr: "0xf8000724",
                 mask: "0x00003fff",
@@ -1260,6 +1305,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_10"),
             kind: MaskWrite(
                 addr: "0xf8000728",
                 mask: "0x00003fff",
@@ -1267,6 +1313,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_11"),
             kind: MaskWrite(
                 addr: "0xf800072c",
                 mask: "0x00003fff",
@@ -1274,6 +1321,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_12"),
             kind: MaskWrite(
                 addr: "0xf8000730",
                 mask: "0x00003fff",
@@ -1281,6 +1329,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_13"),
             kind: MaskWrite(
                 addr: "0xf8000734",
                 mask: "0x00003fff",
@@ -1288,6 +1337,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_14"),
             kind: MaskWrite(
                 addr: "0xf8000738",
                 mask: "0x00003fff",
@@ -1295,6 +1345,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_15"),
             kind: MaskWrite(
                 addr: "0xf800073c",
                 mask: "0x00003fff",
@@ -1302,6 +1353,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_16"),
             kind: MaskWrite(
                 addr: "0xf8000740",
                 mask: "0x00003fff",
@@ -1309,6 +1361,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_17"),
             kind: MaskWrite(
                 addr: "0xf8000744",
                 mask: "0x00003fff",
@@ -1316,6 +1369,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_18"),
             kind: MaskWrite(
                 addr: "0xf8000748",
                 mask: "0x00003fff",
@@ -1323,6 +1377,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_19"),
             kind: MaskWrite(
                 addr: "0xf800074c",
                 mask: "0x00003fff",
@@ -1330,6 +1385,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_20"),
             kind: MaskWrite(
                 addr: "0xf8000750",
                 mask: "0x00003fff",
@@ -1337,6 +1393,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_21"),
             kind: MaskWrite(
                 addr: "0xf8000754",
                 mask: "0x00003fff",
@@ -1344,6 +1401,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_22"),
             kind: MaskWrite(
                 addr: "0xf8000758",
                 mask: "0x00003fff",
@@ -1351,6 +1409,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_23"),
             kind: MaskWrite(
                 addr: "0xf800075c",
                 mask: "0x00003fff",
@@ -1358,6 +1417,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_24"),
             kind: MaskWrite(
                 addr: "0xf8000760",
                 mask: "0x00003fff",
@@ -1365,6 +1425,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_25"),
             kind: MaskWrite(
                 addr: "0xf8000764",
                 mask: "0x00003fff",
@@ -1372,6 +1433,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_26"),
             kind: MaskWrite(
                 addr: "0xf8000768",
                 mask: "0x00003fff",
@@ -1379,6 +1441,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_27"),
             kind: MaskWrite(
                 addr: "0xf800076c",
                 mask: "0x00003fff",
@@ -1386,6 +1449,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_28"),
             kind: MaskWrite(
                 addr: "0xf8000770",
                 mask: "0x00003fff",
@@ -1393,6 +1457,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_29"),
             kind: MaskWrite(
                 addr: "0xf8000774",
                 mask: "0x00003fff",
@@ -1400,6 +1465,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_30"),
             kind: MaskWrite(
                 addr: "0xf8000778",
                 mask: "0x00003fff",
@@ -1407,6 +1473,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_31"),
             kind: MaskWrite(
                 addr: "0xf800077c",
                 mask: "0x00003fff",
@@ -1414,6 +1481,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_32"),
             kind: MaskWrite(
                 addr: "0xf8000780",
                 mask: "0x00003fff",
@@ -1421,6 +1489,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_33"),
             kind: MaskWrite(
                 addr: "0xf8000784",
                 mask: "0x00003fff",
@@ -1428,6 +1497,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_34"),
             kind: MaskWrite(
                 addr: "0xf8000788",
                 mask: "0x00003fff",
@@ -1435,6 +1505,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_35"),
             kind: MaskWrite(
                 addr: "0xf800078c",
                 mask: "0x00003fff",
@@ -1442,6 +1513,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_36"),
             kind: MaskWrite(
                 addr: "0xf8000790",
                 mask: "0x00003fff",
@@ -1449,6 +1521,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_37"),
             kind: MaskWrite(
                 addr: "0xf8000794",
                 mask: "0x00003fff",
@@ -1456,6 +1529,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_38"),
             kind: MaskWrite(
                 addr: "0xf8000798",
                 mask: "0x00003fff",
@@ -1463,6 +1537,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_39"),
             kind: MaskWrite(
                 addr: "0xf800079c",
                 mask: "0x00003fff",
@@ -1470,6 +1545,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_40"),
             kind: MaskWrite(
                 addr: "0xf80007a0",
                 mask: "0x00003fff",
@@ -1477,6 +1553,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_41"),
             kind: MaskWrite(
                 addr: "0xf80007a4",
                 mask: "0x00003fff",
@@ -1484,6 +1561,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_42"),
             kind: MaskWrite(
                 addr: "0xf80007a8",
                 mask: "0x00003fff",
@@ -1491,6 +1569,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_43"),
             kind: MaskWrite(
                 addr: "0xf80007ac",
                 mask: "0x00003fff",
@@ -1498,6 +1577,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_44"),
             kind: MaskWrite(
                 addr: "0xf80007b0",
                 mask: "0x00003fff",
@@ -1505,6 +1585,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_45"),
             kind: MaskWrite(
                 addr: "0xf80007b4",
                 mask: "0x00003fff",
@@ -1512,6 +1593,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_46"),
             kind: MaskWrite(
                 addr: "0xf80007b8",
                 mask: "0x00003fff",
@@ -1519,6 +1601,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_47"),
             kind: MaskWrite(
                 addr: "0xf80007bc",
                 mask: "0x00003fff",
@@ -1526,6 +1609,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_48"),
             kind: MaskWrite(
                 addr: "0xf80007c0",
                 mask: "0x00003fff",
@@ -1533,6 +1617,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_49"),
             kind: MaskWrite(
                 addr: "0xf80007c4",
                 mask: "0x00003fff",
@@ -1540,6 +1625,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_50"),
             kind: MaskWrite(
                 addr: "0xf80007c8",
                 mask: "0x00003fff",
@@ -1547,6 +1633,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_51"),
             kind: MaskWrite(
                 addr: "0xf80007cc",
                 mask: "0x00003fff",
@@ -1554,6 +1641,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_52"),
             kind: MaskWrite(
                 addr: "0xf80007d0",
                 mask: "0x00003fff",
@@ -1561,6 +1649,7 @@
             ),
         ),
         (
+            name: Some("MIO_PIN_53"),
             kind: MaskWrite(
                 addr: "0xf80007d4",
                 mask: "0x00003fff",
@@ -1568,10 +1657,43 @@
             ),
         ),
         (
+            name: Some("SD0_WP_CD_SEL"),
             kind: MaskWrite(
                 addr: "0xf8000830",
                 mask: "0x003f003f",
                 val: "0x00380037",
+            ),
+        ),
+        (
+            name: Some("SLCR Lock"),
+            kind: Write(
+                addr: "0xf8000004",
+                val: "0x0000767b",
+            ),
+        ),
+    ],
+    post_config_ops: [
+        (
+            name: Some("SLCR Unlock"),
+            kind: Write(
+                addr: "0xf8000008",
+                val: "0x0000df0d",
+            ),
+        ),
+        (
+            name: Some("LVL_SHFTR_EN"),
+            kind: MaskWrite(
+                addr: "0xf8000900",
+                mask: "0x0000000f",
+                val: "0x0000000f",
+            ),
+        ),
+        (
+            name: Some("FPGA_RST_CTRL"),
+            kind: MaskWrite(
+                addr: "0xf8000240",
+                mask: "0xffffffff",
+                val: "0x00000000",
             ),
         ),
         (
