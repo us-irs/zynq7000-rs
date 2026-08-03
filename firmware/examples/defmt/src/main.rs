@@ -6,7 +6,6 @@ use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use defmt_rtt as _;
 use zynq7000_hal::{
-    InteruptConfig,
     clocks::Clocks,
     gpio::{Output, PinState, mio},
     priv_tim::CpuPrivateTimer,
@@ -28,12 +27,8 @@ pub enum Lib {
 
 #[zynq7000_rt::entry]
 fn main() -> ! {
-    let dp = zynq7000_hal::init(zynq7000_hal::Config {
-        init_l2_cache: true,
-        level_shifter_config: Some(zynq7000_hal::LevelShifterConfig::EnableAll),
-        interrupt_config: Some(InteruptConfig::AllInterruptsToCpu0),
-    })
-    .expect("Failed to initialize Zynq7000");
+    let dp =
+        zynq7000_hal::init(zynq7000_hal::Config::default()).expect("Failed to initialize Zynq7000");
 
     defmt::println!("-- Zynq7000 defmt test application --");
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();

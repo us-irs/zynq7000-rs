@@ -39,12 +39,7 @@ fn entry_point() -> ! {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
-    let periphs = zynq7000_hal::init(zynq7000_hal::Config {
-        init_l2_cache: true,
-        level_shifter_config: Some(zynq7000_hal::LevelShifterConfig::EnableAll),
-        interrupt_config: Some(zynq7000_hal::InteruptConfig::AllInterruptsToCpu0),
-    })
-    .unwrap();
+    let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).unwrap();
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let mut clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 

@@ -74,12 +74,29 @@ pub enum InteruptConfig {
 }
 
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct Config {
     pub init_l2_cache: bool,
     /// If this has some value, it will configure the level shifter between PS and PL.
     pub level_shifter_config: Option<LevelShifterConfig>,
     /// If this has some value, it configures the GIC to pre-defined settings.
     pub interrupt_config: Option<InteruptConfig>,
+    /// The PL starts in reset state after power-up. A first-stage bootloader is expected to clear
+    /// this, but not every boot flow goes through one that does (e.g. JTAG-loaded applications), so
+    /// every application relying on this generic init routine gets it unconditionally. Calling this
+    /// when the PL is already out of reset is harmless.
+    pub deassert_pl_reset: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            init_l2_cache: true,
+            level_shifter_config: Some(LevelShifterConfig::EnableAll),
+            interrupt_config: Some(InteruptConfig::AllInterruptsToCpu0),
+            deassert_pl_reset: true,
+        }
+    }
 }
 
 /// Utility function to perform common initialization steps.
@@ -90,6 +107,13 @@ pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
     }
     if let Some(config) = config.level_shifter_config {
         configure_level_shifter(config);
+    }
+    if config.deassert_pl_reset {
+        // The PL is in reset state after power-up. A first-stage bootloader is expected to clear
+        // this, but not every boot flow goes through one that does (e.g. JTAG-loaded applications),
+        // so every application relying on this generic init routine gets it unconditionally. Calling
+        // this when the PL is already out of reset is harmless.
+        pl::deassert_reset();
     }
     if let Some(interrupt_config) = config.interrupt_config {
         let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
