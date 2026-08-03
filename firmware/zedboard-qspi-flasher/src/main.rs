@@ -9,9 +9,7 @@ use core::panic::PanicInfo;
 use log::{error, info};
 use z7_boot_image::BootHeader;
 use zedboard_bsp::qspi_spansion;
-use zynq7000_hal::{
-    BootMode, LevelShifterConfig, clocks, gpio, prelude::*, priv_tim, qspi, time::Hertz, uart,
-};
+use zynq7000_hal::{BootMode, clocks, gpio, prelude::*, priv_tim, qspi, time::Hertz, uart};
 use zynq7000_rt as _;
 
 // Define the clock frequency as a constant.
@@ -39,12 +37,7 @@ const INIT_STRING: &str = "-- Zynq 7000 Zedboard QSPI flasher --\n\r";
 
 #[zynq7000_rt::entry]
 fn main() -> ! {
-    let periphs = zynq7000_hal::init(zynq7000_hal::Config {
-        init_l2_cache: true,
-        level_shifter_config: Some(LevelShifterConfig::EnableAll),
-        interrupt_config: Some(zynq7000_hal::InteruptConfig::AllInterruptsToCpu0),
-    })
-    .unwrap();
+    let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).unwrap();
     let clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
     // Unwrap okay, we only call this once on core 0 here.

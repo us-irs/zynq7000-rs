@@ -6,7 +6,7 @@ use core::panic::PanicInfo;
 use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use log::error;
-use zynq7000_hal::{InteruptConfig, clocks, generic_interrupt_handler, gpio, gtc, time::Hertz};
+use zynq7000_hal::{clocks, generic_interrupt_handler, gpio, gtc, time::Hertz};
 
 // Define the clock frequency as a constant
 const PS_CLOCK_FREQUENCY: Hertz = Hertz::from_raw(33_333_300);
@@ -19,12 +19,7 @@ fn entry_point() -> ! {
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) -> ! {
-    let periphs = zynq7000_hal::init(zynq7000_hal::Config {
-        init_l2_cache: true,
-        level_shifter_config: Some(zynq7000_hal::LevelShifterConfig::EnableAll),
-        interrupt_config: Some(InteruptConfig::AllInterruptsToCpu0),
-    })
-    .unwrap();
+    let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).unwrap();
     let clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
     // Set up global timer counter and embassy time driver.

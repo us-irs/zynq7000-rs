@@ -24,6 +24,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- HAL init now brings out the PL out of reset by default.
+- HAL init configuration is now a non-exhaustive configuration structure with a `Default` impl.
 - Inside the `smoltcp` ethernet TX driver, only clean the cache.
 - UART TX Async and SPI Async API is `unsafe` now.
 - Asynch UART and SPI operations now borrow the passed buffer for their lifetime.
