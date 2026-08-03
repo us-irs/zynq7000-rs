@@ -2,7 +2,7 @@
 use std::{io::Read, path::Path};
 
 use clap::Parser as _;
-use zynq7000_boot_image::{BootHeader, FIXED_BOOT_HEADER_SIZE};
+use z7_boot_image::{BootHeader, FIXED_BOOT_HEADER_SIZE};
 
 #[derive(clap::Parser, Debug)]
 #[command(version, about)]

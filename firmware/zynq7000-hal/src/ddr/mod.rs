@@ -1,5 +1,5 @@
 //! # DDR module
-use arbitrary_int::u6;
+pub use arbitrary_int::u6;
 use zynq7000::ddrc::MmioRegisters;
 
 use crate::{

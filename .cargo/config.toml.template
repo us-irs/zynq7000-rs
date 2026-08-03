@@ -1,13 +1,20 @@
 [env]
 # The following two env variables need to be set for the supplied runner.sh script to work.
 
-# Absolute path to the Vitis install directory.
-# AMD_TOOLS = "/tools/2025.2/Vitis"
-# Absolute path to the PS7 initialization TCL script.
+# Absolute path to the Vivado install directory.
+# AMD_TOOLS = "/tools/2026.1/Vivado"
+
+# Path to the PS7 initialization TCL script. Can be given as a plain absolute path, or as a path
+# relative to this file's parent directory (i.e. this repository's root) using the `relative`
+# form cargo supports for [env] entries, e.g.:
+# TCL_INIT_SCRIPT = { value = "$sdt_dir/ps7_init.tcl", relative = true }
 # TCL_INIT_SCRIPT = "/home/$user/$project/$sdt_dir/ps7_init.tcl"
 
-# Absolute path to the Zynq bitstream file, which will be flashed to the target before
-# running the application. You only need to do this once for unchanged bitstream as long as you
-# do not reset the whole board.
+# Path to the Zynq bitstream file, which will be flashed to the target before running the
+# application. You only need to do this once for unchanged bitstream as long as you do not reset
+# the whole board. Also supports the relative form, e.g.:
+ZYNQ_BITSTREAM = { value = "zedboard-gateware/zedboard-rust.bit", relative = true }
 # ZYNQ_BITSTREAM = "/home/$user/$project/$sdt_dir/bitstream.bit"
-# HW_SERVER_IP = "localhost"
+
+# Allows running the hw_server on a different machine for remote debugging.
+HW_SERVER_IP = "localhost"

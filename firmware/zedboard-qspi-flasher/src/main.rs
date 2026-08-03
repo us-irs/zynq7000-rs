@@ -7,8 +7,8 @@ use aarch32_cpu::asm::nop;
 use arbitrary_int::{traits::Integer as _, u2};
 use core::panic::PanicInfo;
 use log::{error, info};
+use z7_boot_image::BootHeader;
 use zedboard_bsp::qspi_spansion;
-use zynq7000_boot_image::BootHeader;
 use zynq7000_hal::{
     BootMode, LevelShifterConfig, clocks, gpio, prelude::*, priv_tim, qspi, time::Hertz, uart,
 };

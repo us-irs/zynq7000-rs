@@ -13,8 +13,8 @@ use arbitrary_int::traits::Integer as _;
 use arbitrary_int::{u2, u6};
 use core::panic::PanicInfo;
 use log::{error, info};
+use z7_boot_image::DestinationDevice;
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
-use zynq7000_boot_image::DestinationDevice;
 use zynq7000_hal::clocks::ArmClocks;
 use zynq7000_hal::{
     BootMode,
@@ -106,7 +106,11 @@ fn main() -> ! {
     )
     .unwrap();
     logger_uart.write_all(b"-- Zedboard Rust FSBL --\n\r");
-    zynq7000_hal::log::uart_blocking::init_with_busy_flag(logger_uart, log::LevelFilter::Trace, true);
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(
+        logger_uart,
+        log::LevelFilter::Trace,
+        true,
+    );
 
     // Set up the global interrupt controller.
     let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
@@ -191,7 +195,7 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
     let mut boot_header_slice = unsafe {
         core::slice::from_raw_parts_mut(
             boot_bin_base_addr as *mut u8,
-            zynq7000_boot_image::FIXED_BOOT_HEADER_SIZE,
+            z7_boot_image::FIXED_BOOT_HEADER_SIZE,
         )
     };
     let read_guard = qspi.read_guard();
@@ -200,12 +204,12 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
         core::ptr::copy_nonoverlapping(
             QspiSpansionS25Fl256SLinearMode::BASE_ADDR as *mut u8,
             boot_header_slice.as_mut_ptr(),
-            zynq7000_boot_image::FIXED_BOOT_HEADER_SIZE,
+            z7_boot_image::FIXED_BOOT_HEADER_SIZE,
         );
     }
     drop(read_guard);
 
-    let boot_header = zynq7000_boot_image::BootHeader::new(boot_header_slice).unwrap();
+    let boot_header = z7_boot_image::BootHeader::new(boot_header_slice).unwrap();
     let fsbl_offset = boot_header.source_offset();
     boot_header_slice =
         unsafe { core::slice::from_raw_parts_mut(boot_bin_base_addr as *mut u8, fsbl_offset) };
@@ -214,15 +218,15 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
     let read_guard = qspi.read_guard();
     unsafe {
         core::ptr::copy_nonoverlapping(
-            (QspiSpansionS25Fl256SLinearMode::BASE_ADDR
-                + zynq7000_boot_image::FIXED_BOOT_HEADER_SIZE) as *mut u8,
-            boot_header_slice[zynq7000_boot_image::FIXED_BOOT_HEADER_SIZE..].as_mut_ptr(),
-            fsbl_offset - zynq7000_boot_image::FIXED_BOOT_HEADER_SIZE,
+            (QspiSpansionS25Fl256SLinearMode::BASE_ADDR + z7_boot_image::FIXED_BOOT_HEADER_SIZE)
+                as *mut u8,
+            boot_header_slice[z7_boot_image::FIXED_BOOT_HEADER_SIZE..].as_mut_ptr(),
+            fsbl_offset - z7_boot_image::FIXED_BOOT_HEADER_SIZE,
         );
     }
     drop(read_guard);
 
-    let boot_header = zynq7000_boot_image::BootHeader::new_unchecked(boot_header_slice);
+    let boot_header = z7_boot_image::BootHeader::new_unchecked(boot_header_slice);
 
     let mut name_buf: [u8; 256] = [0; 256];
     let mut opt_jump_addr = None;

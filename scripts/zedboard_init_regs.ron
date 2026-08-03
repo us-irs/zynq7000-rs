@@ -1,0 +1,1585 @@
+(
+    pll_init_ops: [
+        (
+            name: Some("SLCR Unlock"),
+            kind: Write(
+                addr: "0xf8000008",
+                val: "0x0000df0d",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000110",
+                mask: "0x003ffff0",
+                val: "0x000fa220",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000100",
+                mask: "0x0007f000",
+                val: "0x00027000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000100",
+                mask: "0x00000010",
+                val: "0x00000010",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000100",
+                mask: "0x00000001",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000100",
+                mask: "0x00000001",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskPoll(
+                addr: "0xf800010c",
+                mask: "0x00000001",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000100",
+                mask: "0x00000010",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000120",
+                mask: "0x1f003f30",
+                val: "0x1f000200",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000114",
+                mask: "0x003ffff0",
+                val: "0x0012c220",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000104",
+                mask: "0x0007f000",
+                val: "0x00020000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000104",
+                mask: "0x00000010",
+                val: "0x00000010",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000104",
+                mask: "0x00000001",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000104",
+                mask: "0x00000001",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskPoll(
+                addr: "0xf800010c",
+                mask: "0x00000002",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000104",
+                mask: "0x00000010",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000124",
+                mask: "0xfff00003",
+                val: "0x0c200003",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000118",
+                mask: "0x003ffff0",
+                val: "0x001452c0",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000108",
+                mask: "0x0007f000",
+                val: "0x0001e000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000108",
+                mask: "0x00000010",
+                val: "0x00000010",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000108",
+                mask: "0x00000001",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000108",
+                mask: "0x00000001",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskPoll(
+                addr: "0xf800010c",
+                mask: "0x00000004",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000108",
+                mask: "0x00000010",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("SLCR Lock"),
+            kind: Write(
+                addr: "0xf8000004",
+                val: "0x0000767b",
+            ),
+        ),
+    ],
+    clock_init_ops: [
+        (
+            name: Some("SLCR Unlock"),
+            kind: Write(
+                addr: "0xf8000008",
+                val: "0x0000df0d",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000128",
+                mask: "0x03f03f01",
+                val: "0x00700f01",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000138",
+                mask: "0x00000011",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000140",
+                mask: "0x03f03f71",
+                val: "0x00100801",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800014c",
+                mask: "0x00003f31",
+                val: "0x00000501",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000150",
+                mask: "0x00003f33",
+                val: "0x00001401",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000154",
+                mask: "0x00003f33",
+                val: "0x00000a03",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000158",
+                mask: "0x00003f33",
+                val: "0x00000601",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000168",
+                mask: "0x00003f31",
+                val: "0x00000501",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000170",
+                mask: "0x03f03f30",
+                val: "0x00200500",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80001c4",
+                mask: "0x00000001",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800012c",
+                mask: "0x01ffcccd",
+                val: "0x01fc444d",
+            ),
+        ),
+        (
+            name: Some("SLCR Lock"),
+            kind: Write(
+                addr: "0xf8000004",
+                val: "0x0000767b",
+            ),
+        ),
+    ],
+    ddr_init_ops: [
+        (
+            name: Some("DDRC Control"),
+            kind: MaskWrite(
+                addr: "0xf8006000",
+                mask: "0x0001ffff",
+                val: "0x00000080",
+            ),
+        ),
+        (
+            name: Some("Two Rank"),
+            kind: MaskWrite(
+                addr: "0xf8006004",
+                mask: "0x0007ffff",
+                val: "0x00001082",
+            ),
+        ),
+        (
+            name: Some("HPR"),
+            kind: MaskWrite(
+                addr: "0xf8006008",
+                mask: "0x03ffffff",
+                val: "0x03c0780f",
+            ),
+        ),
+        (
+            name: Some("LPR"),
+            kind: MaskWrite(
+                addr: "0xf800600c",
+                mask: "0x03ffffff",
+                val: "0x02001001",
+            ),
+        ),
+        (
+            name: Some("WR"),
+            kind: MaskWrite(
+                addr: "0xf8006010",
+                mask: "0x03ffffff",
+                val: "0x00014001",
+            ),
+        ),
+        (
+            name: Some("DRAM Reg0"),
+            kind: MaskWrite(
+                addr: "0xf8006014",
+                mask: "0x001fffff",
+                val: "0x0004159b",
+            ),
+        ),
+        (
+            name: Some("DRAM Reg1"),
+            kind: MaskWrite(
+                addr: "0xf8006018",
+                mask: "0xf7ffffff",
+                val: "0x44e458d3",
+            ),
+        ),
+        (
+            name: Some("DRAM Reg2"),
+            kind: MaskWrite(
+                addr: "0xf800601c",
+                mask: "0xffffffff",
+                val: "0x7282bce5",
+            ),
+        ),
+        (
+            name: Some("DRAM Reg3"),
+            kind: MaskWrite(
+                addr: "0xf8006020",
+                mask: "0x7fdffffc",
+                val: "0x270872d0",
+            ),
+        ),
+        (
+            name: Some("DRAM Reg4"),
+            kind: MaskWrite(
+                addr: "0xf8006024",
+                mask: "0x0fffffc3",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("DRAM Init Param"),
+            kind: MaskWrite(
+                addr: "0xf8006028",
+                mask: "0x00003fff",
+                val: "0x00002007",
+            ),
+        ),
+        (
+            name: Some("DRAM EMR"),
+            kind: MaskWrite(
+                addr: "0xf800602c",
+                mask: "0xffffffff",
+                val: "0x00000008",
+            ),
+        ),
+        (
+            name: Some("DRAM EMR MR"),
+            kind: MaskWrite(
+                addr: "0xf8006030",
+                mask: "0xffffffff",
+                val: "0x00040b30",
+            ),
+        ),
+        (
+            name: Some("DRAM Burst8 RDWR"),
+            kind: MaskWrite(
+                addr: "0xf8006034",
+                mask: "0x13ff3fff",
+                val: "0x000116d4",
+            ),
+        ),
+        (
+            name: Some("DRAM Disable DQ"),
+            kind: MaskWrite(
+                addr: "0xf8006038",
+                mask: "0x00000003",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("DRAM Addr Map Bank"),
+            kind: MaskWrite(
+                addr: "0xf800603c",
+                mask: "0x000fffff",
+                val: "0x00000777",
+            ),
+        ),
+        (
+            name: Some("DRAM Addr Map Col"),
+            kind: MaskWrite(
+                addr: "0xf8006040",
+                mask: "0xffffffff",
+                val: "0xfff00000",
+            ),
+        ),
+        (
+            name: Some("DRAM Addr Map Row"),
+            kind: MaskWrite(
+                addr: "0xf8006044",
+                mask: "0x0fffffff",
+                val: "0x0ff66666",
+            ),
+        ),
+        (
+            name: Some("DRAM ODT"),
+            kind: MaskWrite(
+                addr: "0xf8006048",
+                mask: "0x0003f03f",
+                val: "0x0003c008",
+            ),
+        ),
+        (
+            name: Some("PHY CMD Timeout"),
+            kind: MaskWrite(
+                addr: "0xf8006050",
+                mask: "0xff0f8fff",
+                val: "0x77010800",
+            ),
+        ),
+        (
+            name: Some("DLL Calib"),
+            kind: MaskWrite(
+                addr: "0xf8006058",
+                mask: "0x00010000",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("ODT Delay Hold"),
+            kind: MaskWrite(
+                addr: "0xf800605c",
+                mask: "0x0000ffff",
+                val: "0x00005003",
+            ),
+        ),
+        (
+            name: Some("CTRL Reg 1"),
+            kind: MaskWrite(
+                addr: "0xf8006060",
+                mask: "0x000017ff",
+                val: "0x0000003e",
+            ),
+        ),
+        (
+            name: Some("CTRL Reg 2"),
+            kind: MaskWrite(
+                addr: "0xf8006064",
+                mask: "0x00021fe0",
+                val: "0x00020000",
+            ),
+        ),
+        (
+            name: Some("CTRL Reg 3"),
+            kind: MaskWrite(
+                addr: "0xf8006068",
+                mask: "0x03ffffff",
+                val: "0x00284141",
+            ),
+        ),
+        (
+            name: Some("CTRL Reg 4"),
+            kind: MaskWrite(
+                addr: "0xf800606c",
+                mask: "0x0000ffff",
+                val: "0x00001610",
+            ),
+        ),
+        (
+            name: Some("CTRL Reg 5"),
+            kind: MaskWrite(
+                addr: "0xf8006078",
+                mask: "0x03ffffff",
+                val: "0x00466111",
+            ),
+        ),
+        (
+            name: Some("CTRL Reg 6"),
+            kind: MaskWrite(
+                addr: "0xf800607c",
+                mask: "0x000fffff",
+                val: "0x00032222",
+            ),
+        ),
+        (
+            name: Some("CHE T ZQ"),
+            kind: MaskWrite(
+                addr: "0xf80060a4",
+                mask: "0xffffffff",
+                val: "0x10200802",
+            ),
+        ),
+        (
+            name: Some("CHE T ZQ Short Interval"),
+            kind: MaskWrite(
+                addr: "0xf80060a8",
+                mask: "0x0fffffff",
+                val: "0x0690cb73",
+            ),
+        ),
+        (
+            name: Some("Deep Powerdown"),
+            kind: MaskWrite(
+                addr: "0xf80060ac",
+                mask: "0x000001ff",
+                val: "0x000001fe",
+            ),
+        ),
+        (
+            name: Some("Reg 2C"),
+            kind: MaskWrite(
+                addr: "0xf80060b0",
+                mask: "0x1fffffff",
+                val: "0x1cffffff",
+            ),
+        ),
+        (
+            name: Some("Reg 2D"),
+            kind: MaskWrite(
+                addr: "0xf80060b4",
+                mask: "0x00000200",
+                val: "0x00000200",
+            ),
+        ),
+        (
+            name: Some("DFI Timing"),
+            kind: MaskWrite(
+                addr: "0xf80060b8",
+                mask: "0x01ffffff",
+                val: "0x00200066",
+            ),
+        ),
+        (
+            name: Some("CHE ECC CTRL"),
+            kind: MaskWrite(
+                addr: "0xf80060c4",
+                mask: "0x00000003",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80060c8",
+                mask: "0x000000ff",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80060dc",
+                mask: "0x00000001",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80060f0",
+                mask: "0x0000ffff",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("ECC Scrub"),
+            kind: MaskWrite(
+                addr: "0xf80060f4",
+                mask: "0x0000000f",
+                val: "0x00000008",
+            ),
+        ),
+        (
+            name: Some("PHY Receiver Enable"),
+            kind: MaskWrite(
+                addr: "0xf8006114",
+                mask: "0x000000ff",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("PHY Config 0"),
+            kind: MaskWrite(
+                addr: "0xf8006118",
+                mask: "0x7fffffcf",
+                val: "0x40000001",
+            ),
+        ),
+        (
+            name: Some("PHY Config 1"),
+            kind: MaskWrite(
+                addr: "0xf800611c",
+                mask: "0x7fffffcf",
+                val: "0x40000001",
+            ),
+        ),
+        (
+            name: Some("PHY Config 2"),
+            kind: MaskWrite(
+                addr: "0xf8006120",
+                mask: "0x7fffffcf",
+                val: "0x40000001",
+            ),
+        ),
+        (
+            name: Some("PHY Config 3"),
+            kind: MaskWrite(
+                addr: "0xf8006124",
+                mask: "0x7fffffcf",
+                val: "0x40000001",
+            ),
+        ),
+        (
+            name: Some("PHY Init Ratio 0"),
+            kind: MaskWrite(
+                addr: "0xf800612c",
+                mask: "0x000fffff",
+                val: "0x00033c03",
+            ),
+        ),
+        (
+            name: Some("PHY Init Ratio 1"),
+            kind: MaskWrite(
+                addr: "0xf8006130",
+                mask: "0x000fffff",
+                val: "0x00034003",
+            ),
+        ),
+        (
+            name: Some("PHY Init Ratio 2"),
+            kind: MaskWrite(
+                addr: "0xf8006134",
+                mask: "0x000fffff",
+                val: "0x0002f400",
+            ),
+        ),
+        (
+            name: Some("PHY Init Ratio 3"),
+            kind: MaskWrite(
+                addr: "0xf8006138",
+                mask: "0x000fffff",
+                val: "0x00030400",
+            ),
+        ),
+        (
+            name: Some("PHY RD DQS Config 0"),
+            kind: MaskWrite(
+                addr: "0xf8006140",
+                mask: "0x000fffff",
+                val: "0x00000035",
+            ),
+        ),
+        (
+            name: Some("PHY RD DQS Config 1"),
+            kind: MaskWrite(
+                addr: "0xf8006144",
+                mask: "0x000fffff",
+                val: "0x00000035",
+            ),
+        ),
+        (
+            name: Some("PHY RD DQS Config 2"),
+            kind: MaskWrite(
+                addr: "0xf8006148",
+                mask: "0x000fffff",
+                val: "0x00000035",
+            ),
+        ),
+        (
+            name: Some("PHY RD DQS Config 3"),
+            kind: MaskWrite(
+                addr: "0xf800614c",
+                mask: "0x000fffff",
+                val: "0x00000035",
+            ),
+        ),
+        (
+            name: Some("PHY WR DQS Config 0"),
+            kind: MaskWrite(
+                addr: "0xf8006154",
+                mask: "0x000fffff",
+                val: "0x00000083",
+            ),
+        ),
+        (
+            name: Some("PHY WR DQS Config 1"),
+            kind: MaskWrite(
+                addr: "0xf8006158",
+                mask: "0x000fffff",
+                val: "0x00000083",
+            ),
+        ),
+        (
+            name: Some("PHY WR DQS Config 2"),
+            kind: MaskWrite(
+                addr: "0xf800615c",
+                mask: "0x000fffff",
+                val: "0x0000007f",
+            ),
+        ),
+        (
+            name: Some("PHY WR DQS Config 3"),
+            kind: MaskWrite(
+                addr: "0xf8006160",
+                mask: "0x000fffff",
+                val: "0x00000078",
+            ),
+        ),
+        (
+            name: Some("PHY WE Config 0"),
+            kind: MaskWrite(
+                addr: "0xf8006168",
+                mask: "0x001fffff",
+                val: "0x00000124",
+            ),
+        ),
+        (
+            name: Some("PHY WE Config 1"),
+            kind: MaskWrite(
+                addr: "0xf800616c",
+                mask: "0x001fffff",
+                val: "0x00000125",
+            ),
+        ),
+        (
+            name: Some("PHY WE Config 2"),
+            kind: MaskWrite(
+                addr: "0xf8006170",
+                mask: "0x001fffff",
+                val: "0x00000112",
+            ),
+        ),
+        (
+            name: Some("PHY WE Config 3"),
+            kind: MaskWrite(
+                addr: "0xf8006174",
+                mask: "0x001fffff",
+                val: "0x00000116",
+            ),
+        ),
+        (
+            name: Some("PHY WR Data Slv 0"),
+            kind: MaskWrite(
+                addr: "0xf800617c",
+                mask: "0x000fffff",
+                val: "0x000000c3",
+            ),
+        ),
+        (
+            name: Some("PHY WR Data Slv 1"),
+            kind: MaskWrite(
+                addr: "0xf8006180",
+                mask: "0x000fffff",
+                val: "0x000000c3",
+            ),
+        ),
+        (
+            name: Some("PHY WR Data Slv 2"),
+            kind: MaskWrite(
+                addr: "0xf8006184",
+                mask: "0x000fffff",
+                val: "0x000000bf",
+            ),
+        ),
+        (
+            name: Some("PHY WR Data Slv 3"),
+            kind: MaskWrite(
+                addr: "0xf8006188",
+                mask: "0x000fffff",
+                val: "0x000000b8",
+            ),
+        ),
+        (
+            name: Some("Reg64"),
+            kind: MaskWrite(
+                addr: "0xf8006190",
+                mask: "0x6ffffefe",
+                val: "0x00040080",
+            ),
+        ),
+        (
+            name: Some("Reg65"),
+            kind: MaskWrite(
+                addr: "0xf8006194",
+                mask: "0x000fffff",
+                val: "0x0001fc82",
+            ),
+        ),
+        (
+            name: Some("Page Mask"),
+            kind: MaskWrite(
+                addr: "0xf8006204",
+                mask: "0xffffffff",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("AXI Priority WR Port 0"),
+            kind: MaskWrite(
+                addr: "0xf8006208",
+                mask: "0x000703ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority WR Port 1"),
+            kind: MaskWrite(
+                addr: "0xf800620c",
+                mask: "0x000703ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority WR Port 2"),
+            kind: MaskWrite(
+                addr: "0xf8006210",
+                mask: "0x000703ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority WR Port 3"),
+            kind: MaskWrite(
+                addr: "0xf8006214",
+                mask: "0x000703ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority RD Port 0"),
+            kind: MaskWrite(
+                addr: "0xf8006218",
+                mask: "0x000f03ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority RD Port 1"),
+            kind: MaskWrite(
+                addr: "0xf800621c",
+                mask: "0x000f03ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority RD Port 2"),
+            kind: MaskWrite(
+                addr: "0xf8006220",
+                mask: "0x000f03ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("AXI Priority RD Port 3"),
+            kind: MaskWrite(
+                addr: "0xf8006224",
+                mask: "0x000f03ff",
+                val: "0x000003ff",
+            ),
+        ),
+        (
+            name: Some("LPDDR CTRL 0"),
+            kind: MaskWrite(
+                addr: "0xf80062a8",
+                mask: "0x00000ff5",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("LPDDR CTRL 1"),
+            kind: MaskWrite(
+                addr: "0xf80062ac",
+                mask: "0xffffffff",
+                val: "0x00000000",
+            ),
+        ),
+        (
+            name: Some("LPDDR CTRL 2"),
+            kind: MaskWrite(
+                addr: "0xf80062b0",
+                mask: "0x003fffff",
+                val: "0x00005125",
+            ),
+        ),
+        (
+            name: Some("LPDDR CTRL 3"),
+            kind: MaskWrite(
+                addr: "0xf80062b4",
+                mask: "0x0003ffff",
+                val: "0x000012a8",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Status"),
+            kind: MaskPoll(
+                addr: "0xf8000b74",
+                mask: "0x00002000",
+            ),
+        ),
+        (
+            name: Some("DDRC Control"),
+            kind: MaskWrite(
+                addr: "0xf8006000",
+                mask: "0x0001ffff",
+                val: "0x00000081",
+            ),
+        ),
+        (
+            kind: MaskPoll(
+                addr: "0xf8006054",
+                mask: "0x00000007",
+            ),
+        ),
+    ],
+    ddriob_init_ops: [
+        (
+            name: Some("SLCR Unlock"),
+            kind: Write(
+                addr: "0xf8000008",
+                val: "0x0000df0d",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Addr 0"),
+            kind: MaskWrite(
+                addr: "0xf8000b40",
+                mask: "0x00000fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Addr 1"),
+            kind: MaskWrite(
+                addr: "0xf8000b44",
+                mask: "0x00000fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Data 0"),
+            kind: MaskWrite(
+                addr: "0xf8000b48",
+                mask: "0x00000fff",
+                val: "0x00000672",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Data 1"),
+            kind: MaskWrite(
+                addr: "0xf8000b4c",
+                mask: "0x00000fff",
+                val: "0x00000672",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Diff 0"),
+            kind: MaskWrite(
+                addr: "0xf8000b50",
+                mask: "0x00000fff",
+                val: "0x00000674",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Diff 1"),
+            kind: MaskWrite(
+                addr: "0xf8000b54",
+                mask: "0x00000fff",
+                val: "0x00000674",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Clock"),
+            kind: MaskWrite(
+                addr: "0xf8000b58",
+                mask: "0x00000fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Addr"),
+            kind: MaskWrite(
+                addr: "0xf8000b5c",
+                mask: "0xffffffff",
+                val: "0x0018c61c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Data"),
+            kind: MaskWrite(
+                addr: "0xf8000b60",
+                mask: "0xffffffff",
+                val: "0x00f9861c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Diff"),
+            kind: MaskWrite(
+                addr: "0xf8000b64",
+                mask: "0xffffffff",
+                val: "0x00f9861c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Clock"),
+            kind: MaskWrite(
+                addr: "0xf8000b68",
+                mask: "0xffffffff",
+                val: "0x00f9861c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DDR Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b6c",
+                mask: "0x00007fff",
+                val: "0x00000260",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b70",
+                mask: "0x00000001",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b70",
+                mask: "0x00000021",
+                val: "0x00000020",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b70",
+                mask: "0x07feffff",
+                val: "0x00000823",
+            ),
+        ),
+        (
+            name: Some("SLCR Lock"),
+            kind: Write(
+                addr: "0xf8000004",
+                val: "0x0000767b",
+            ),
+        ),
+    ],
+    mio_init_ops: [
+        (
+            name: Some("SLCR Unlock"),
+            kind: Write(
+                addr: "0xf8000008",
+                val: "0x0000df0d",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000b00",
+                mask: "0x00000071",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Addr 0"),
+            kind: MaskWrite(
+                addr: "0xf8000b40",
+                mask: "0x00000fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Addr 1"),
+            kind: MaskWrite(
+                addr: "0xf8000b44",
+                mask: "0x00000fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Data 0"),
+            kind: MaskWrite(
+                addr: "0xf8000b48",
+                mask: "0x00000fff",
+                val: "0x00000672",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Data 1"),
+            kind: MaskWrite(
+                addr: "0xf8000b4c",
+                mask: "0x00000fff",
+                val: "0x00000672",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Diff 0"),
+            kind: MaskWrite(
+                addr: "0xf8000b50",
+                mask: "0x00000fff",
+                val: "0x00000674",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Diff 1"),
+            kind: MaskWrite(
+                addr: "0xf8000b54",
+                mask: "0x00000fff",
+                val: "0x00000674",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Clock"),
+            kind: MaskWrite(
+                addr: "0xf8000b58",
+                mask: "0x00000fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Addr"),
+            kind: MaskWrite(
+                addr: "0xf8000b5c",
+                mask: "0xffffffff",
+                val: "0x0018c61c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Data"),
+            kind: MaskWrite(
+                addr: "0xf8000b60",
+                mask: "0xffffffff",
+                val: "0x00f9861c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Diff"),
+            kind: MaskWrite(
+                addr: "0xf8000b64",
+                mask: "0xffffffff",
+                val: "0x00f9861c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB Drive Slew Clock"),
+            kind: MaskWrite(
+                addr: "0xf8000b68",
+                mask: "0xffffffff",
+                val: "0x00f9861c",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DDR Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b6c",
+                mask: "0x00007fff",
+                val: "0x00000260",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b70",
+                mask: "0x00000001",
+                val: "0x00000001",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b70",
+                mask: "0x00000021",
+                val: "0x00000020",
+            ),
+        ),
+        (
+            name: Some("DDRIOB DCI Control"),
+            kind: MaskWrite(
+                addr: "0xf8000b70",
+                mask: "0x07feffff",
+                val: "0x00000823",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000700",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000704",
+                mask: "0x00003fff",
+                val: "0x00000702",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000708",
+                mask: "0x00003fff",
+                val: "0x00000702",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800070c",
+                mask: "0x00003fff",
+                val: "0x00000702",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000710",
+                mask: "0x00003fff",
+                val: "0x00000702",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000714",
+                mask: "0x00003fff",
+                val: "0x00000702",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000718",
+                mask: "0x00003fff",
+                val: "0x00000702",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800071c",
+                mask: "0x00003fff",
+                val: "0x00000600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000720",
+                mask: "0x00003fff",
+                val: "0x00000700",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000724",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000728",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800072c",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000730",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000734",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000738",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800073c",
+                mask: "0x00003fff",
+                val: "0x00001600",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000740",
+                mask: "0x00003fff",
+                val: "0x00002902",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000744",
+                mask: "0x00003fff",
+                val: "0x00002902",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000748",
+                mask: "0x00003fff",
+                val: "0x00002902",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800074c",
+                mask: "0x00003fff",
+                val: "0x00002902",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000750",
+                mask: "0x00003fff",
+                val: "0x00002902",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000754",
+                mask: "0x00003fff",
+                val: "0x00002902",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000758",
+                mask: "0x00003fff",
+                val: "0x00000903",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800075c",
+                mask: "0x00003fff",
+                val: "0x00000903",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000760",
+                mask: "0x00003fff",
+                val: "0x00000903",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000764",
+                mask: "0x00003fff",
+                val: "0x00000903",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000768",
+                mask: "0x00003fff",
+                val: "0x00000903",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800076c",
+                mask: "0x00003fff",
+                val: "0x00000903",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000770",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000774",
+                mask: "0x00003fff",
+                val: "0x00000305",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000778",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800077c",
+                mask: "0x00003fff",
+                val: "0x00000305",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000780",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000784",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000788",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800078c",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000790",
+                mask: "0x00003fff",
+                val: "0x00000305",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000794",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000798",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf800079c",
+                mask: "0x00003fff",
+                val: "0x00000304",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007a0",
+                mask: "0x00003fff",
+                val: "0x00000380",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007a4",
+                mask: "0x00003fff",
+                val: "0x00000380",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007a8",
+                mask: "0x00003fff",
+                val: "0x00000380",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007ac",
+                mask: "0x00003fff",
+                val: "0x00000380",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007b0",
+                mask: "0x00003fff",
+                val: "0x00000380",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007b4",
+                mask: "0x00003fff",
+                val: "0x00000380",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007b8",
+                mask: "0x00003fff",
+                val: "0x00001200",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007bc",
+                mask: "0x00003fff",
+                val: "0x00000200",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007c0",
+                mask: "0x00003fff",
+                val: "0x000002e0",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007c4",
+                mask: "0x00003fff",
+                val: "0x000002e1",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007c8",
+                mask: "0x00003fff",
+                val: "0x00000200",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007cc",
+                mask: "0x00003fff",
+                val: "0x00000200",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007d0",
+                mask: "0x00003fff",
+                val: "0x00000280",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf80007d4",
+                mask: "0x00003fff",
+                val: "0x00000280",
+            ),
+        ),
+        (
+            kind: MaskWrite(
+                addr: "0xf8000830",
+                mask: "0x003f003f",
+                val: "0x00380037",
+            ),
+        ),
+        (
+            name: Some("SLCR Lock"),
+            kind: Write(
+                addr: "0xf8000004",
+                val: "0x0000767b",
+            ),
+        ),
+    ],
+)

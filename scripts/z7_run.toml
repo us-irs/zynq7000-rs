@@ -1,0 +1,28 @@
+# Example z7-run config file. Pass it with:
+#   z7-run --config z7_run.toml --regs <path-to-ron> <path-to-elf>
+#
+# Everything here is optional. Values left unset fall back to their env var
+# (ZYNQ_BITSTREAM / OPENFPGALOADER_BOARD) or built-in default, or the corresponding step
+# (bitstream flashing, serial console) is skipped entirely. The RON ops path is deliberately not
+# configurable here - pass it via --regs or the ZYNQ_REGS env var instead, since CLI args/env vars
+# are always resolved relative to the current directory, unlike paths inside this file.
+
+[fpga]
+# Path to the bitstream to load via openFPGALoader before the ELF is flashed.
+# Relative paths are resolved relative to this file's own directory, not the current directory.
+# Overridden by the ZYNQ_BITSTREAM env var when set.
+# bitstream = "zedboard-gateware/sdt_out/zedboard-rust.bit"
+
+# Board name passed to openFPGALoader via `-b`. Overridden by OPENFPGALOADER_BOARD when set.
+board = "zedboard"
+
+# Extra arguments appended to the openFPGALoader invocation, after `-b <board> <bitstream>`.
+args = []
+
+# Serial console to attach to (printing anything received to stdout) once every init/flash step
+# is done and the target is running. Uncomment and set `port` to enable it. There's no env var
+# override for this section: which port shows up depends on this machine's USB enumeration, not
+# on the board.
+[serial]
+port = "/dev/ttyACM0"
+baud_rate = 115200

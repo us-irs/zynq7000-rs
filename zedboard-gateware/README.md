@@ -6,13 +6,18 @@ by this library. To minimize the amount of HW designs required, one project is p
 The design was kept as generic as possible. In principle, it should be possible to adapt the
 hardware design to other boards with modifications.
 
+If you just want a pre-built bitstream and don't need to modify the hardware design, you don't
+need Vivado at all: run `just download-zed-gateware` from the repository root to download one
+directly into `zedboard-gateware/zedboard-rust.bit`.
+
 # Pre-Requisites
 
-- [Vivado installation](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html)
-  or [Vitis installation](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vitis.html)
-  which includes Vivado. This example design was created with/for Vivado 2025.2, but also might work
-  for newer versions. You might have to manually adjust some variables in `src/zedboard-bd.tcl`
-  for newer versions.
+- [Vivado installation](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vivado-design-tools.html).
+  This example design was created with/for Vivado 2025.2, but also might work for newer versions.
+  You might have to manually adjust some variables in `src/zedboard-bd.tcl` for newer versions.
+  A [Vitis installation](https://www.xilinx.com/support/download/index.html/content/xilinx/en/downloadNav/vitis.html)
+  (which includes Vivado) is only needed if you use the optional `sdtgen` flow described below -
+  the recommended workflow of unzipping the `*.xsa` directly does not require Vitis at all.
 
 # Loading the project and the block design with the GUI
 
@@ -52,8 +57,29 @@ inside the Vivado GUI and then exporting the hardware description via
 `File -> Export -> Export Hardware`. This allows to generate a `*.xsa` file which describes the
 hardware.
 
-After that, you can generate the SDT output folder which contains various useful files like
-the `ps7_init.tcl` script. The provided ` sdtgen.tcl` and `stdgen.py` script simplify this process.
+## Extracting `ps7_init.tcl` and the bitstream directly from the `*.xsa` (recommended)
+
+A `*.xsa` file is just a zip archive, so the easiest way to get at the `ps7_init.tcl` script and
+the bitstream is to unzip it directly - no Vitis/`sdtgen` invocation required:
+
+```sh
+unzip -l zedboard-rust/zedboard-rust.xsa
+```
+
+```sh
+unzip -o zedboard-rust/zedboard-rust.xsa ps7_init.tcl '*.bit' -d xsa_extract
+```
+
+This gives you the same `ps7_init.tcl` (and the `.bit` bitstream, named after the block design
+rather than the project) that the SDT flow below produces, in a `xsa_extract` folder - kept
+separate from `sdt_out` below since this isn't actually SDT output, just the raw files pulled out
+of the `*.xsa` archive - without needing a Vitis/AMD_TOOLS installation at all.
+
+## Generating the SDT folder via `sdtgen`
+
+Alternatively, you can generate the full SDT output folder, which contains the same
+`ps7_init.tcl` script plus some additional files (e.g. `zedboard.hwh`) that the simple unzip above
+doesn't give you. The provided `sdtgen.tcl` and `sdtgen.py` script simplify this process.
 
 For example, the following command generates the SDT output folder inside a folder
 named `sdt_out` for a hardware description files `zedboard-rust/zedboard-rust.xsa`,
@@ -65,5 +91,5 @@ export AMD_TOOLS="/tools/2025.2/Vitis"
 ```
 
 If you have already sourced the setting script, you do not have to set the `AMD_TOOLS` environment.
-Run `stdgen.py -h` for more information and configuration options. The `stdgen.py` is a helper
+Run `sdtgen.py -h` for more information and configuration options. The `sdtgen.py` is a helper
 script which will invoke `sdtgen.tcl` to generate the SDT.

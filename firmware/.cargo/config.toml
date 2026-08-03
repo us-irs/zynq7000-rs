@@ -1,4 +1,5 @@
 [target.armv7a-none-eabihf]
+# runner = "just run-tcl"
 runner = "just run"
 
 rustflags = [

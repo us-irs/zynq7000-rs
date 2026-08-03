@@ -11,7 +11,7 @@ keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-aarch32-cpu = { version = "0.3", features = ["critical-section-single-core"] }
+aarch32-cpu = { version = "0.4", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
@@ -43,5 +43,5 @@ embassy-net = { version = "0.9", features = ["dhcpv4", "packet-trace", "medium-e
 embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
 embassy-sync = { version = "0.8" }
 heapless = "0.9"
-axi-uartlite = { version = "0.1" }
-axi-uart16550 = { version = "0.1" }
+axi-uartlite = { version = "0.2" }
+axi-uart16550 = { version = "0.2" }

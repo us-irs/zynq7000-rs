@@ -266,7 +266,7 @@ async fn main(spawner: Spawner) -> ! {
     uartlite.enable_interrupt();
 
     let (clk_config, error) = axi_uart16550::ClockConfig::new_autocalc_with_error(
-        fugit_03::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
+        fugit::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
         uart_speed,
     )
     .unwrap();
@@ -406,7 +406,7 @@ async fn uartlite_task(uartlite: axi_uartlite::Tx) {
     );
     let mut idx = 0;
     let print_strs = [str0.as_bytes(), str1.as_bytes()];
-    let mut tx_async = axi_uartlite::tx_async::TxAsync::new(uartlite, 0).unwrap();
+    let mut tx_async = unsafe { axi_uartlite::tx_async::TxAsync::new(uartlite, 0) }.unwrap();
     loop {
         tx_async.write(print_strs[idx]).await;
         idx += 1;
@@ -443,7 +443,8 @@ async fn uart_0_task(uart_tx: zynq7000_hal::uart::Tx) {
 #[embassy_executor::task]
 async fn uart_16550_task(uart_tx: axi_uart16550::Tx) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    let mut tx_async = axi_uart16550::TxAsync::new(uart_tx, 0, embassy_time::Delay).unwrap();
+    let mut tx_async =
+        unsafe { axi_uart16550::TxAsync::new(uart_tx, 0, embassy_time::Delay) }.unwrap();
     let str0 = build_print_string("UART16550:", "Hello World");
     let str1 = build_print_string(
         "UART16550:",

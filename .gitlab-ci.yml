@@ -13,7 +13,7 @@ stages:
   before_script:
     - curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
   cache:
-    paths: 
+    paths:
       - .cargo/registry
       - .cargo/git
       - .cargo/bin
@@ -21,16 +21,23 @@ stages:
       - host/target/
     key: ${CI_COMMIT_REF_SLUG}
 
+# host workspace (z7-run) pulls in probe-rs, which links against libudev on Linux.
+.host_build_setup:
+  extends: .common_setup
+  before_script:
+    - !reference [.common_setup, before_script]
+    - apt-get update && apt-get install -y --no-install-recommends pkg-config libudev-dev
+
 check:
   stage: stage1
-  extends: .common_setup
+  extends: .host_build_setup
   script:
     - just check-dir firmware
     - just check-dir host
 
 build:
   stage: stage2
-  extends: .common_setup
+  extends: .host_build_setup
   script:
     - just build-zynq
     - just build-dir host
@@ -53,7 +60,7 @@ docs:
 
 clippy:
   stage: stage1
-  extends: .common_setup
+  extends: .host_build_setup
   script:
     - just clippy-dir firmware
     - just clippy-dir host
