@@ -82,10 +82,10 @@ struct Cli {
     #[arg(long)]
     probe: Option<DebugProbeSelector>,
 
-    /// JTAG clock speed in kHz. Overrides the config file's `probe.jtag_speed` when given. If
+    /// JTAG clock speed in kHz. Overrides the config file's `jtag_speed_khz` when given. If
     /// neither is set, the probe's own default speed is used.
     #[arg(long)]
-    jtag_speed: Option<u32>,
+    jtag_speed_khz: Option<u32>,
 }
 
 /// Config for things that don't belong on the command line, split by what they actually
@@ -100,10 +100,10 @@ struct Config {
     /// step is done and the target is running.
     #[serde(default)]
     serial: Option<SerialConfig>,
-    /// JTAG clock speed in kHz. Overridden by `--jtag-speed` when given; if neither is set, the
-    /// probe's own default speed is used.
+    /// JTAG clock speed in kHz. Overridden by `--jtag-speed-khz` when given; if neither is set,
+    /// the probe's own default speed is used.
     #[serde(default)]
-    jtag_speed: Option<u32>,
+    jtag_speed_khz: Option<u32>,
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -365,14 +365,14 @@ fn main() -> anyhow::Result<()> {
     let ps7_init_ops: PsInitOps = ron::from_str(&ron_str)
         .with_context(|| format!("failed to parse PS7 init ops file {}", regs.display()))?;
 
-    let jtag_speed = cli.jtag_speed.or(config.jtag_speed);
+    let jtag_speed_khz = cli.jtag_speed_khz.or(config.jtag_speed_khz);
 
     let lister = Lister::new();
     let mut probe = select_probe(&lister, cli.probe.as_ref())?;
     probe.select_protocol(WireProtocol::Jtag)?;
-    if let Some(jtag_speed) = jtag_speed {
-        tracing::info!("setting JTAG speed to {jtag_speed} kHz");
-        probe.set_speed(jtag_speed)?;
+    if let Some(jtag_speed_khz) = jtag_speed_khz {
+        tracing::info!("setting JTAG speed to {jtag_speed_khz} kHz");
+        probe.set_speed(jtag_speed_khz)?;
     }
 
     tracing::info!("attaching to target board");
@@ -431,8 +431,8 @@ fn main() -> anyhow::Result<()> {
         let lister = Lister::new();
         let mut probe = select_probe(&lister, cli.probe.as_ref())?;
         probe.select_protocol(WireProtocol::Jtag)?;
-        if let Some(jtag_speed) = jtag_speed {
-            probe.set_speed(jtag_speed)?;
+        if let Some(jtag_speed_khz) = jtag_speed_khz {
+            probe.set_speed(jtag_speed_khz)?;
         }
         session = probe.attach("X7Z", Permissions::default())?;
     }
