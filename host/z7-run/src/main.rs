@@ -1,17 +1,24 @@
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::Context;
+use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use probe_rs::{
     Core, MemoryInterface, Permissions,
     architecture::arm::dp::DpAddress,
-    flashing::{self, DownloadOptions, ElfLoader, ElfOptions},
+    flashing::{self, DownloadOptions, ElfLoader, ElfOptions, FlashProgress, ProgressEvent, ProgressOperation},
     probe::{DebugProbeSelector, Probe, WireProtocol, list::Lister},
 };
 use tracing_subscriber::EnvFilter;
 use z7_run_data::{PsInitOps, RegOp, RegOpKind};
+
+/// Default chunk size for RAM writes during `commit()`, in bytes. Without chunking, each RAM
+/// region is written to the target in one single call and progress jumps straight from 0% to
+/// 100% - see [`ProgressBars`]. Overridable via `--ram-chunk-size`.
+const DEFAULT_RAM_CHUNK_SIZE: u64 = 64 * 1024;
 
 /// Default `openFPGALoader` board name, used when `OPENFPGALOADER_BOARD` isn't set.
 const DEFAULT_OPENFPGALOADER_BOARD: &str = "zedboard";
@@ -82,10 +89,27 @@ struct Cli {
     #[arg(long)]
     probe: Option<DebugProbeSelector>,
 
+    /// Chunk size, in bytes, for writing the ELF into RAM. Smaller chunks give more granular
+    /// progress reporting at the cost of a bit of overhead. Defaults to
+    /// [`DEFAULT_RAM_CHUNK_SIZE`]; passing this explicitly as the same value as the ELF size (or
+    /// larger) writes each RAM region in one go, same as probe-rs's own `--ram-chunk-size` when
+    /// left unset, so progress then jumps straight to 100%.
+    #[arg(long)]
+    ram_chunk_size: Option<u64>,
+
+    /// Don't show a progress bar while flashing.
+    #[arg(long)]
+    no_progress: bool,
+
     /// JTAG clock speed in kHz. Overrides the config file's `jtag_speed_khz` when given. If
     /// neither is set, the probe's own default speed is used.
     #[arg(long)]
     jtag_speed_khz: Option<u32>,
+
+    /// Read the ELF back off the target after flashing and compare it against what was written.
+    /// Off by default, since verification takes roughly as long as the write itself.
+    #[arg(long)]
+    verify: bool,
 }
 
 /// Config for things that don't belong on the command line, split by what they actually
@@ -177,6 +201,81 @@ fn select_probe(lister: &Lister, selector: Option<&DebugProbeSelector>) -> anyho
                 .get(index)
                 .ok_or_else(|| anyhow::anyhow!("selection {index} is out of range"))?;
             Ok(probe.open()?)
+        }
+    }
+}
+
+/// Renders [`ProgressEvent`]s emitted by [`flashing::FlashLoader::commit`] as live terminal
+/// progress bars. probe-rs itself only ships this event stream (see `FlashProgress`) - the
+/// library deliberately stays UI-agnostic since consumers render it differently (the probe-rs
+/// CLI's own indicatif bars, the VS Code debug adapter, ...) - so there's no ready-made bar
+/// widget to reuse here. z7-run only ever flashes into RAM (no on-chip flash algorithm is
+/// involved), so in practice there's just one bar ("Writing RAM"); this stays generic over
+/// [`ProgressOperation`] regardless, in case a target/ELF combination ever exercises the flash
+/// erase/program/verify path too.
+struct FlashProgressBars {
+    multi_progress: MultiProgress,
+    bars: HashMap<&'static str, ProgressBar>,
+}
+
+impl FlashProgressBars {
+    fn new() -> Self {
+        Self {
+            multi_progress: MultiProgress::new(),
+            bars: HashMap::new(),
+        }
+    }
+
+    fn operation_label(operation: ProgressOperation) -> &'static str {
+        match operation {
+            ProgressOperation::Fill => "Reading flash",
+            ProgressOperation::Erase => "Erasing",
+            ProgressOperation::Program => "Programming",
+            ProgressOperation::Verify => "Verifying",
+            ProgressOperation::Ram => "Writing RAM",
+        }
+    }
+
+    fn bar_mut(&mut self, operation: ProgressOperation) -> &mut ProgressBar {
+        self.bars
+            .entry(Self::operation_label(operation))
+            .or_insert_with(ProgressBar::hidden)
+    }
+
+    fn handle(&mut self, event: ProgressEvent) {
+        match event {
+            ProgressEvent::FlashLayoutReady { .. } | ProgressEvent::Started(_) => {}
+            ProgressEvent::AddProgressBar { operation, total } => {
+                let bar = self.multi_progress.add(match total {
+                    // A length is promised, but only known for sure once flashing starts; start
+                    // at 1 so the bar doesn't render as already at 100%.
+                    Some(total) => ProgressBar::new(total.max(1)),
+                    None => ProgressBar::no_length(),
+                });
+                let template = if bar.length().is_some() {
+                    "{msg:>13.green.bold} {spinner} {percent:>3}% [{bar:20}] {bytes:>10} @ {bytes_per_sec:>12} (ETA {eta})"
+                } else {
+                    "{msg:>13.green.bold} {spinner} {elapsed}"
+                };
+                bar.set_style(
+                    ProgressStyle::with_template(template)
+                        .expect("static progress bar template is valid")
+                        .progress_chars("##-"),
+                );
+                bar.set_message(Self::operation_label(operation));
+                bar.enable_steady_tick(Duration::from_millis(100));
+                self.bars.insert(Self::operation_label(operation), bar);
+            }
+            ProgressEvent::Progress { operation, size, .. } => self.bar_mut(operation).inc(size),
+            ProgressEvent::Failed(operation) => self.bar_mut(operation).abandon(),
+            ProgressEvent::Finished(operation) => {
+                let bar = self.bar_mut(operation);
+                bar.set_length(bar.position());
+                bar.finish();
+            }
+            ProgressEvent::DiagnosticMessage { message } => {
+                let _ = self.multi_progress.println(message);
+            }
         }
     }
 }
@@ -441,20 +540,38 @@ fn main() -> anyhow::Result<()> {
     arm_if.select_debug_port(DpAddress::Default)?;
 
     let format = ElfLoader(ElfOptions::default());
+
+    // Must outlive `download_opts`: its `progress` field borrows this closure-captured state, and
+    // is used up to (and dropped as part of) `loader.commit()` below.
+    let mut progress_bars = (!cli.no_progress).then(FlashProgressBars::new);
+
     let mut download_opts = DownloadOptions::default();
-    download_opts.verify = true;
+    download_opts.verify = cli.verify;
     // The PS7 (DDR/clock) init above already brought DDR up. `commit()` treats an ELF with its
     // vector table in RAM as a "RAM boot" and does a full `reset_and_halt()` before writing to
     // RAM unless `skip_reset` is set, which would reset the DDR controller right before we write
     // the ELF into it. Just halting (no reset) keeps the DDR init intact.
     download_opts.skip_reset = true;
+    // Without chunking, each RAM region is written to the target in one single call and progress
+    // jumps straight from 0% to 100%.
+    download_opts.ram_chunk_size = Some(cli.ram_chunk_size.unwrap_or(DEFAULT_RAM_CHUNK_SIZE));
+    download_opts.progress = FlashProgress::new(|event| {
+        if let Some(progress_bars) = &mut progress_bars {
+            progress_bars.handle(event);
+        }
+    });
 
     tracing::info!("flashing ELF file: {}", cli.elf.display());
     let loader = flashing::build_loader(&mut session, &cli.elf, format, None)?;
     let vector_table_addr = loader
         .vector_table_addr()
         .with_context(|| "failed to determine vector table address from ELF")?;
+    let flash_timer = Instant::now();
     loader.commit(&mut session, download_opts)?;
+    tracing::info!(
+        "flashing finished in {:.2}s",
+        flash_timer.elapsed().as_secs_f32()
+    );
 
     session.prepare_running_on_ram(vector_table_addr, 0)?;
     let mut core = session.core(0)?;
