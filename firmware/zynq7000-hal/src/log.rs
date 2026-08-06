@@ -6,6 +6,7 @@ static LOGGER_INIT_DONE: AtomicBool = AtomicBool::new(false);
 
 const LOG_SEL_LOCKED: u8 = 1;
 const LOG_SEL_UNSAFE_SINGLE_CORE: u8 = 2;
+const LOG_SEL_ASYNC: u8 = 3;
 
 static LOG_SEL: AtomicU8 = AtomicU8::new(0);
 
@@ -200,6 +201,67 @@ pub mod uart_blocking {
             _ => (),
         }
     }
+
+    /// Writes formatted arguments to the active UART logger, bypassing the `log` crate: no
+    /// level prefix and no level filtering. Used by the [`crate::uprint`]/[`crate::uprintln`]
+    /// macros.
+    ///
+    /// The whole call is performed under a single lock/guard acquisition, so a line built from
+    /// multiple format arguments is not interleaved with a concurrent `log` call or another
+    /// `print`.
+    pub fn print(args: core::fmt::Arguments) {
+        match LOG_SEL.load(core::sync::atomic::Ordering::Relaxed) {
+            val if val == LOG_SEL_LOCKED => critical_section::with(|cs| {
+                let mut opt_logger = UART_LOGGER_BLOCKING.0.borrow(cs).borrow_mut();
+                if let Some(logger) = opt_logger.as_mut() {
+                    let _ = logger.write_fmt(args);
+                }
+            }),
+            val if val == LOG_SEL_UNSAFE_SINGLE_CORE => {
+                if let Some(_guard) = UartGuard::new(&UART_LOGGER_UNSAFE_SINGLE_THREAD.busy) {
+                    let uart_mut =
+                        unsafe { &mut *UART_LOGGER_UNSAFE_SINGLE_THREAD.uart.get() }.as_mut();
+                    if let Some(uart) = uart_mut {
+                        let _ = uart.write_fmt(args);
+                    }
+                }
+            }
+            _ => (),
+        }
+    }
+}
+
+#[doc(hidden)]
+pub fn _print(args: core::fmt::Arguments) {
+    match LOG_SEL.load(core::sync::atomic::Ordering::Relaxed) {
+        val if val == LOG_SEL_ASYNC => asynch::print(args),
+        _ => uart_blocking::print(args),
+    }
+}
+
+/// Writes directly to the currently active logger, with no line ending appended and no `log`
+/// crate level prefix or filtering.
+///
+/// This works with whichever logger backend was initialized: [`uart_blocking::init_with_locks`],
+/// [`uart_blocking::init_with_busy_flag`], or the asynchronous ring buffer logger
+/// ([`asynch::init_generic`] / [`asynch::init_with_uart_tx`]). If no logger has been initialized
+/// yet, this is a no-op.
+#[macro_export]
+macro_rules! uprint {
+    ($($arg:tt)*) => {
+        $crate::log::_print(format_args!($($arg)*))
+    };
+}
+
+/// Like [`uprint`], but appends `\r\n`.
+#[macro_export]
+macro_rules! uprintln {
+    () => {
+        $crate::uprint!("\r\n")
+    };
+    ($($arg:tt)*) => {
+        $crate::log::_print(format_args!("{}\r\n", format_args!($($arg)*)))
+    };
 }
 
 /// Logger module which logs into a pipe to allow asynchronous logging handling.
@@ -268,12 +330,38 @@ pub mod asynch {
         fn flush(&self) {}
     }
 
+    /// Writes formatted arguments into the logger pipe, bypassing the `log` crate: no level
+    /// prefix and no level filtering. Used by the [`crate::uprint`]/[`crate::uprintln`] macros.
+    pub fn print(args: core::fmt::Arguments) {
+        if LOGGER.pipe.borrow().is_none() {
+            return;
+        }
+        critical_section::with(|cs| {
+            let mut buf = LOGGER.buf.borrow(cs).borrow_mut();
+            buf.clear();
+            let _ = buf.write_fmt(args);
+
+            let mut written = 0;
+
+            let pipe_writer_ref = LOGGER.pipe.borrow();
+            let pipe_writer = pipe_writer_ref.as_ref().unwrap();
+            while let Ok(written_in_this_call) = pipe_writer.try_write(&buf.as_bytes()[written..])
+            {
+                written += written_in_this_call;
+                if written >= buf.len() {
+                    break;
+                }
+            }
+        });
+    }
+
     pub fn init_generic(
         level: LevelFilter,
     ) -> Option<embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>> {
         if super::LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
             return None;
         }
+        super::LOG_SEL.swap(super::LOG_SEL_ASYNC, core::sync::atomic::Ordering::Relaxed);
         let (reader, writer) = PIPE.take().split();
         LOGGER.pipe.borrow_mut().replace(writer);
         set_logger(&LOGGER).unwrap();
