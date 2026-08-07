@@ -8,7 +8,8 @@ clap = { version = "4", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # probe-rs = { path = "../../../probe-rs/probe-rs" }
-probe-rs = { git = "https://github.com/robamu/probe-rs.git", branch = "test" }
+# probe-rs = { git = "https://github.com/robamu/probe-rs.git", branch = "master" }
+probe-rs = { git = "https://github.com/probe-rs/probe-rs.git", rev = "96f32174cba6ec0a3d2f9097572ea8ec82ffb2f6" }
 # probe-rs = { version = "0.32" }
 anyhow = { version = "1" }
 ron = { version = "0.12" }
