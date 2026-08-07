@@ -9,7 +9,10 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use probe_rs::{
     Core, MemoryInterface, Permissions,
     architecture::arm::dp::DpAddress,
-    flashing::{self, DownloadOptions, ElfLoader, ElfOptions, FlashProgress, ProgressEvent, ProgressOperation},
+    flashing::{
+        self, DownloadOptions, ElfLoader, ElfOptions, FlashProgress, ProgressEvent,
+        ProgressOperation,
+    },
     probe::{DebugProbeSelector, Probe, WireProtocol, list::Lister},
 };
 use tracing_subscriber::EnvFilter;
@@ -266,7 +269,9 @@ impl FlashProgressBars {
                 bar.enable_steady_tick(Duration::from_millis(100));
                 self.bars.insert(Self::operation_label(operation), bar);
             }
-            ProgressEvent::Progress { operation, size, .. } => self.bar_mut(operation).inc(size),
+            ProgressEvent::Progress {
+                operation, size, ..
+            } => self.bar_mut(operation).inc(size),
             ProgressEvent::Failed(operation) => self.bar_mut(operation).abandon(),
             ProgressEvent::Finished(operation) => {
                 let bar = self.bar_mut(operation);
