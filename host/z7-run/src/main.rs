@@ -9,7 +9,10 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use probe_rs::{
     Core, MemoryInterface, Permissions,
     architecture::arm::dp::DpAddress,
-    flashing::{self, DownloadOptions, ElfLoader, ElfOptions, FlashProgress, ProgressEvent, ProgressOperation},
+    flashing::{
+        self, DownloadOptions, ElfLoader, ElfOptions, FlashProgress, ProgressEvent,
+        ProgressOperation,
+    },
     probe::{DebugProbeSelector, Probe, WireProtocol, list::Lister},
 };
 use tracing_subscriber::EnvFilter;
@@ -266,7 +269,9 @@ impl FlashProgressBars {
                 bar.enable_steady_tick(Duration::from_millis(100));
                 self.bars.insert(Self::operation_label(operation), bar);
             }
-            ProgressEvent::Progress { operation, size, .. } => self.bar_mut(operation).inc(size),
+            ProgressEvent::Progress {
+                operation, size, ..
+            } => self.bar_mut(operation).inc(size),
             ProgressEvent::Failed(operation) => self.bar_mut(operation).abandon(),
             ProgressEvent::Finished(operation) => {
                 let bar = self.bar_mut(operation);
@@ -547,11 +552,6 @@ fn main() -> anyhow::Result<()> {
 
     let mut download_opts = DownloadOptions::default();
     download_opts.verify = cli.verify;
-    // The PS7 (DDR/clock) init above already brought DDR up. `commit()` treats an ELF with its
-    // vector table in RAM as a "RAM boot" and does a full `reset_and_halt()` before writing to
-    // RAM unless `skip_reset` is set, which would reset the DDR controller right before we write
-    // the ELF into it. Just halting (no reset) keeps the DDR init intact.
-    download_opts.skip_reset = true;
     // Without chunking, each RAM region is written to the target in one single call and progress
     // jumps straight from 0% to 100%.
     download_opts.ram_chunk_size = Some(cli.ram_chunk_size.unwrap_or(DEFAULT_RAM_CHUNK_SIZE));
