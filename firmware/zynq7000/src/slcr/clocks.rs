@@ -104,6 +104,7 @@ pub struct PllStatus {
 }
 
 #[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
+#[derive(PartialEq, Eq)]
 pub struct FpgaClockControl {
     // Reset value 0x1
     #[bits(20..=25, rw)]
@@ -113,6 +114,15 @@ pub struct FpgaClockControl {
     divisor_0: u6,
     #[bits(4..=5, rw)]
     srcsel: SrcSelIo,
+}
+
+impl Default for FpgaClockControl {
+    fn default() -> Self {
+        Self::ZERO
+            .with_divisor_1(u6::new(1))
+            .with_divisor_0(u6::new(0x18))
+            .with_srcsel(SrcSelIo::IoPll)
+    }
 }
 
 #[derive(derive_mmio::Mmio)]

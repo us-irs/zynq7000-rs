@@ -14,6 +14,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-cpu = { version = "0.4" }
 zynq7000 = { path = "../zynq7000", version = "0.4" }
 zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.2" }
+z7-clock-calc = { path = "../../host/z7-clock-calc", version = "0.1" }
 static_assertions = "1.1"
 bitbybit = "2"
 arbitrary-int = "2"
@@ -50,7 +51,7 @@ defmt = { version = "1", optional = true }
 
 [features]
 default = ["eth-cache-maintenance"]
-alloc = []
+alloc = ["z7-clock-calc/alloc"]
 defmt = ["dep:defmt", "fugit/defmt", "zynq7000/defmt"]
 std = ["thiserror/std", "alloc"]
 

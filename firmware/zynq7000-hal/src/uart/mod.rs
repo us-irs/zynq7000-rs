@@ -221,8 +221,8 @@ pub const MAX_BAUD_RATE: u32 = 6240000;
 /// Based on values provided by the vendor library.
 pub const MIN_BAUD_RATE: u32 = 110;
 
-/// Maximum acceptable baud rate error rate (0.5 %).
-pub const MAX_BAUDERROR_RATE: f32 = 0.005;
+/// Maximum acceptable baud rate error, as a fraction (0.5 %).
+pub use z7_clock_calc::uart::MAX_BAUDERROR_RATE;
 
 /// Parity configuration.
 #[derive(Debug, Default, Clone, Copy)]
@@ -273,28 +273,14 @@ pub fn calculate_viable_configs(
     mut uart_clk: Hertz,
     clk_sel: ClockSelect,
     target_baud: u32,
-) -> alloc::vec::Vec<(ClockConfig, f64)> {
-    let mut viable_cfgs = alloc::vec::Vec::new();
+) -> alloc::vec::Vec<(ClockConfig, f32)> {
     if clk_sel == ClockSelect::UartRefClkDiv8 {
         uart_clk /= 8;
     }
-    let mut current_clk_config = ClockConfig::default();
-    for bdiv in 4..u8::MAX {
-        let cd = round(uart_clk.to_raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64))
-            as u64;
-        if cd > u16::MAX as u64 {
-            continue;
-        }
-        current_clk_config.cd = cd as u16;
-        current_clk_config.bdiv = bdiv;
-        let baud = current_clk_config.actual_baud(uart_clk);
-        let error = ((baud - target_baud as f64).abs() / target_baud as f64) * 100.0;
-        if error < MAX_BAUDERROR_RATE as f64 {
-            viable_cfgs.push((current_clk_config, error));
-        }
-    }
-
-    viable_cfgs
+    z7_clock_calc::uart::viable_baud_divisors(uart_clk, target_baud)
+        .into_iter()
+        .map(|d| (ClockConfig::new(d.cd, d.bdiv).unwrap(), d.error))
+        .collect()
 }
 
 /// Calculate the clock configuration for the smallest error to reach the desired target
@@ -305,33 +291,15 @@ pub fn calculate_raw_baud_cfg_smallest_error(
     mut uart_clk: Hertz,
     clk_sel: ClockSelect,
     target_baud: u32,
-) -> Result<(ClockConfig, f64), DivisorZero> {
+) -> Result<(ClockConfig, f32), DivisorZero> {
     if target_baud == 0 {
         return Err(DivisorZero);
     }
     if clk_sel == ClockSelect::UartRefClkDiv8 {
         uart_clk /= 8;
     }
-    let mut current_clk_config = ClockConfig::default();
-    let mut best_clk_config = ClockConfig::default();
-    let mut smallest_error: f64 = 100.0;
-    for bdiv in 4..u8::MAX {
-        let cd = round(uart_clk.to_raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64))
-            as u64;
-        if cd > u16::MAX as u64 {
-            continue;
-        }
-        current_clk_config.cd = cd as u16;
-        current_clk_config.bdiv = bdiv;
-        let baud = current_clk_config.actual_baud(uart_clk);
-        let error = ((baud - target_baud as f64).abs() / target_baud as f64) * 100.0;
-        if error < smallest_error {
-            best_clk_config = current_clk_config;
-            smallest_error = error;
-        }
-    }
-
-    Ok((best_clk_config, smallest_error))
+    let result = z7_clock_calc::uart::best_baud_divisors(uart_clk, target_baud);
+    Ok((ClockConfig::new(result.cd, result.bdiv)?, result.error))
 }
 
 impl ClockConfig {
@@ -352,7 +320,7 @@ impl ClockConfig {
     pub fn new_autocalc_with_error(
         io_clks: &IoClocks,
         target_baud: u32,
-    ) -> Result<(Self, f64), DivisorZero> {
+    ) -> Result<(Self, f32), DivisorZero> {
         Self::new_autocalc_generic(io_clks, ClockSelect::UartRefClk, target_baud)
     }
 
@@ -361,7 +329,7 @@ impl ClockConfig {
         io_clks: &IoClocks,
         clk_sel: ClockSelect,
         target_baud: u32,
-    ) -> Result<(Self, f64), DivisorZero> {
+    ) -> Result<(Self, f32), DivisorZero> {
         Self::new_autocalc_with_raw_clk(io_clks.uart_clk(), clk_sel, target_baud)
     }
 
@@ -370,7 +338,7 @@ impl ClockConfig {
         uart_clk: Hertz,
         clk_sel: ClockSelect,
         target_baud: u32,
-    ) -> Result<(Self, f64), DivisorZero> {
+    ) -> Result<(Self, f32), DivisorZero> {
         calculate_raw_baud_cfg_smallest_error(uart_clk, clk_sel, target_baud)
     }
 
@@ -799,7 +767,6 @@ mod tests {
     use super::*;
     use approx::abs_diff_eq;
     use fugit::HertzU32;
-    use zynq7000::uart::ClockSelect;
 
     const REF_UART_CLK: HertzU32 = HertzU32::from_raw(50_000_000);
     const REF_UART_CLK_DIV_8: HertzU32 = HertzU32::from_raw(6_250_000);
@@ -844,24 +811,7 @@ mod tests {
         assert!(abs_diff_eq!(actual_baud, 925925.92, epsilon = 0.01));
     }
 
-    #[test]
-    fn test_best_calc_0() {
-        let result =
-            ClockConfig::new_autocalc_with_raw_clk(REF_UART_CLK, ClockSelect::UartRefClk, 600);
-        assert!(result.is_ok());
-        let (cfg, _error) = result.unwrap();
-        assert_eq!(cfg.cd(), 499);
-        assert_eq!(cfg.bdiv(), 166);
-    }
-
-    #[test]
-    #[cfg(feature = "alloc")]
-    fn test_viable_config_calculation() {
-        let cfgs = calculate_viable_configs(REF_UART_CLK, ClockSelect::UartRefClk, 115200);
-        assert!(
-            cfgs.iter()
-                .find(|(cfg, _error)| { cfg.cd() == 62 && cfg.bdiv() == 6 })
-                .is_some()
-        );
-    }
+    // The autocalc search itself (previously test_best_calc_0 / test_viable_config_calculation)
+    // is tested in the `z7-clock-calc` crate, which - unlike this one - can build and run its
+    // test suite on the host.
 }

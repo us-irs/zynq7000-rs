@@ -1,6 +1,7 @@
 //! # Clock module
 use arbitrary_int::{prelude::*, u6};
 
+pub mod fpga;
 pub mod pll;
 
 pub use zynq7000::slcr::clocks::CpuClockRatio;
@@ -273,7 +274,9 @@ pub struct Clocks {
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockModuleId {
+    Pll,
     Ddr,
     Arm,
     Smc,
@@ -290,16 +293,19 @@ pub enum ClockModuleId {
 }
 
 #[derive(Debug)]
-pub struct DivisorZero(pub ClockModuleId);
+pub struct DivisorZeroError(pub ClockModuleId);
+
+impl From<ClockModuleId> for DivisorZeroError {
+    fn from(value: ClockModuleId) -> Self {
+        Self(value)
+    }
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum ClockReadError {
-    /// The feedback value for the PLL clock output calculation is zero.
-    #[error("PLL feedback divisor is zero")]
-    PllFeedbackZero,
     /// Detected a divisor of zero.
     #[error("divisor is zero")]
-    DivisorZero(DivisorZero),
+    DivisorZero(DivisorZeroError),
     /// Detected a divisor that is not even and should be.
     #[error("divisor is not even")]
     DivisorNotEven,
@@ -326,7 +332,7 @@ impl Clocks {
             || io_pll_cfg.fdiv().as_u32() == 0
             || ddr_pll_cfg.fdiv().as_u32() == 0
         {
-            return Err(ClockReadError::PllFeedbackZero);
+            return Err(ClockReadError::DivisorZero(ClockModuleId::Pll.into()));
         }
         let arm_pll_out = ps_clk_freq * arm_pll_cfg.fdiv().into();
         let io_pll_out = ps_clk_freq * io_pll_cfg.fdiv().into();
@@ -341,7 +347,9 @@ impl Clocks {
         };
         let clk_sel = clk_regs.read_clk_ratio_select();
         if arm_clk_ctrl.divisor().as_u32() == 0 {
-            return Err(ClockReadError::DivisorZero(DivisorZero(ClockModuleId::Arm)));
+            return Err(ClockReadError::DivisorZero(DivisorZeroError(
+                ClockModuleId::Arm,
+            )));
         }
         let arm_clk_divided = arm_base_clk / arm_clk_ctrl.divisor().as_u32();
         let arm_clks = match clk_sel.sel() {
@@ -365,7 +373,9 @@ impl Clocks {
 
         let ddr_clk_ctrl = clk_regs.read_ddr_clk_ctrl();
         if ddr_clk_ctrl.div_3x_clk().as_u32() == 0 || ddr_clk_ctrl.div_2x_clk().as_u32() == 0 {
-            return Err(ClockReadError::DivisorZero(DivisorZero(ClockModuleId::Ddr)));
+            return Err(ClockReadError::DivisorZero(DivisorZeroError(
+                ClockModuleId::Ddr,
+            )));
         }
         let ddr_clks = DdrClocks {
             ref_clk: ddr_pll_out,
@@ -377,7 +387,7 @@ impl Clocks {
                                                  id: ClockModuleId|
          -> Result<Hertz, ClockReadError> {
             if single_block.divisor().as_u32() == 0 {
-                return Err(ClockReadError::DivisorZero(DivisorZero(id)));
+                return Err(ClockReadError::DivisorZero(DivisorZeroError(id)));
             }
             Ok(match single_block.srcsel() {
                 zynq7000::slcr::clocks::SrcSelIo::IoPll
@@ -396,7 +406,7 @@ impl Clocks {
                                                id: ClockModuleId|
          -> Result<Hertz, ClockReadError> {
             if dual_block.divisor().as_u32() == 0 {
-                return Err(ClockReadError::DivisorZero(DivisorZero(id)));
+                return Err(ClockReadError::DivisorZero(DivisorZeroError(id)));
             }
             Ok(match dual_block.srcsel() {
                 zynq7000::slcr::clocks::SrcSelIo::IoPll
@@ -432,14 +442,16 @@ impl Clocks {
             zynq7000::slcr::clocks::SrcSelIo::DdrPll => ddr_pll_out,
         };
         if can_clk_ctrl.divisor_0().as_u32() == 0 || can_clk_ctrl.divisor_1().as_u32() == 0 {
-            return Err(ClockReadError::DivisorZero(DivisorZero(ClockModuleId::Can)));
+            return Err(ClockReadError::DivisorZero(DivisorZeroError(
+                ClockModuleId::Can,
+            )));
         }
         let can_clk =
             can_clk_ref_clk / can_clk_ctrl.divisor_0().as_u32() / can_clk_ctrl.divisor_1().as_u32();
 
         let trace_clk_ctrl = clk_regs.read_dbg_clk_ctrl();
         if trace_clk_ctrl.divisor().as_u32() == 0 {
-            return Err(ClockReadError::DivisorZero(DivisorZero(
+            return Err(ClockReadError::DivisorZero(DivisorZeroError(
                 ClockModuleId::Trace,
             )));
         }
@@ -464,7 +476,7 @@ impl Clocks {
                 if fpga_clk_ctrl.divisor_0().as_u32() == 0
                     || fpga_clk_ctrl.divisor_1().as_u32() == 0
                 {
-                    return Err(ClockReadError::DivisorZero(DivisorZero(
+                    return Err(ClockReadError::DivisorZero(DivisorZeroError(
                         ClockModuleId::Fpga,
                     )));
                 }
@@ -542,7 +554,7 @@ impl Clocks {
         &self,
         reg: GigEthClockControl,
         module: ClockModuleId,
-    ) -> Result<Hertz, DivisorZero> {
+    ) -> Result<Hertz, DivisorZeroError> {
         let source_clk = match reg.srcsel() {
             zynq7000::slcr::clocks::SrcSelIo::IoPll
             | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => self.io_pll_out,
@@ -551,11 +563,11 @@ impl Clocks {
         };
         let div0 = reg.divisor_0().as_u32();
         if div0 == 0 {
-            return Err(DivisorZero(module));
+            return Err(DivisorZeroError(module));
         }
         let div1 = reg.divisor_1().as_u32();
         if div1 == 0 {
-            return Err(DivisorZero(module));
+            return Err(DivisorZeroError(module));
         }
         Ok(source_clk / reg.divisor_0().as_u32() / reg.divisor_1().as_u32())
     }
@@ -568,7 +580,7 @@ impl Clocks {
     /// It should be noted that the GEM has a separate TX and RX clock.
     /// The reference clock will only be the RX clock in loopback mode. For the TX block,
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
-    pub fn calculate_gem_0_ref_clock(&self) -> Result<Hertz, DivisorZero> {
+    pub fn calculate_gem_0_ref_clock(&self) -> Result<Hertz, DivisorZeroError> {
         let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
         self.calculate_gem_ref_clock(clk_regs.read_gem_0_clk_ctrl(), ClockModuleId::Gem0)
     }
@@ -581,7 +593,7 @@ impl Clocks {
     /// It should be noted that the GEM has a separate TX and RX clock.
     /// The reference clock will only be the RX clock in loopback mode. For the TX block,
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
-    pub fn calculate_gem_1_ref_clock(&self) -> Result<Hertz, DivisorZero> {
+    pub fn calculate_gem_1_ref_clock(&self) -> Result<Hertz, DivisorZeroError> {
         let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
         self.calculate_gem_ref_clock(clk_regs.read_gem_0_clk_ctrl(), ClockModuleId::Gem1)
     }

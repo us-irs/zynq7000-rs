@@ -20,6 +20,7 @@ use zynq7000_hal::{
     BootMode,
     clocks::{
         Clocks,
+        fpga::{self, FpgaClockConfig},
         pll::{PllConfig, configure_arm_pll, configure_io_pll},
     },
     ddr::{DdrClockSetupConfig, configure_ddr_for_ddr3, memtest},
@@ -134,6 +135,12 @@ fn main() -> ! {
         &zedboard_bsp::ddrc_config_autogen::DDRC_CONFIG_ZEDBOARD,
     );
     info!("DDR init done.");
+
+    // The PL is still held in reset at this point (see the `pl::deassert_reset` call further
+    // down), so there is no glitch risk in writing the FCLK divider registers here.
+    fpga::configure(
+        FpgaClockConfig::calculate_default(PS_CLK).expect("FPGA clock calculation failed"),
+    );
 
     info!("L2 cache init..");
     // Set up the L2 cache now that the DDR is in normal operation mode.

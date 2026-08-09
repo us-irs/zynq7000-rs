@@ -2,13 +2,14 @@
 INIT_SCRIPT := justfile_directory() / "scripts/zynq7000-init.py"
 GDB_CMD := justfile_directory() / "firmware/gdb.gdb"
 
-all: check build check-fmt clippy docs-zynq
+all: check build check-fmt clippy test docs-zynq
 check: (check-dir "firmware") (check-dir "host")
 clean: (clean-dir "firmware") (clean-dir "host")
 build: build-zynq (build-dir "host")
 fmt: (fmt-dir "firmware") (fmt-dir "host")
 check-fmt: (check-fmt-dir "firmware") (check-fmt-dir "host")
 clippy: (clippy-dir "firmware") (clippy-dir "host")
+test: test-clock-calc test-run-data
 
 prepare-repo: download-zed-gateware
   cd {{justfile_directory()}}/host/z7-run && cargo install --path .
@@ -16,6 +17,22 @@ prepare-repo: download-zed-gateware
 # Download a pre-built bitstream
 download-zed-gateware:
     curl -L -o {{justfile_directory()}}/zedboard-gateware/zedboard-rust.bit "https://www.dropbox.com/scl/fi/oos5l6qknb4nom7tvbx1t/zedboard-rust.bit?rlkey=ikjec7e6v6rdih7hbti4jhet3&st=av4wf83u&dl=1"
+
+# Export the zedboard-rust Vivado project as a *.xsa hardware platform (zedboard-rust.xsa),
+# including the bitstream. Requires that the project has already been implemented (`impl_1`) and
+# a bitstream generated, e.g. via the Vivado GUI, and that `vivado` is on PATH.
+[working-directory: 'zedboard-gateware']
+export-hw:
+  vivado -mode batch -source export-hw.tcl
+
+# Unzip ps7_init.tcl and the bitstream out of zedboard-rust.xsa, into the zedboard-rust folder
+# next to the xsa itself.
+[working-directory: 'zedboard-gateware']
+extract-hw:
+  unzip -o zedboard-rust/zedboard-rust.xsa ps7_init.tcl '*.bit' -d zedboard-rust
+
+# Export the hardware platform from Vivado and extract ps7_init.tcl/the bitstream from it in one go.
+export-zed-gateware: export-hw extract-hw
 
 check-dir target:
   cd {{target}} && cargo check
@@ -40,6 +57,16 @@ fmt-dir target:
 
 clippy-dir target:
   cd {{target}} && cargo clippy -- -D warnings
+
+# Run the z7-clock-calc test suite (the pure clock/divisor calculators used by
+# zynq7000-hal). zynq7000-hal itself cannot build for the host target - see
+# host/z7-clock-calc/src/lib.rs - which is why these calculators were split out into
+# their own crate in the first place.
+test-clock-calc:
+  cd {{justfile_directory()}}/host/z7-clock-calc && cargo test --features alloc
+
+test-run-data:
+  cd {{justfile_directory()}}/host/z7-run-data && cargo test
 
 [working-directory: 'firmware']
 docs-zynq: docs-pac docs-hal
