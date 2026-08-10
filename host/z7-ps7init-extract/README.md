@@ -29,6 +29,11 @@ JTAG via probe-rs) rather than for on-target firmware, since some of these regis
 particular the PLL control registers) need to be written multiple times in sequence to bring the
 hardware up correctly, not just poked with a single final value.
 
+The RON file (`z7_init_regs.ron`) containing these op sequences is always generated and is the
+format consumed by the [`z7-run`](../z7-run) host tool, which reads it to replay the PS7
+(PLL/clock/DDR/post-config) init sequence directly over JTAG instead of running a `ps7_init.tcl`
+script through `xsct`/`hw_server`.
+
 For example, assuming that there is a `ps7init.tcl` script in the current directory, you can use
 
 ```sh

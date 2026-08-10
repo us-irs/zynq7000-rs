@@ -56,6 +56,10 @@ It also contains the following helper crates:
 - The [`z7-ps7init-extract`](./host/z7-ps7init-extract)
   tool allows extracting configuration from the AMD generated `ps7init.tcl` file which contains
   static configuration parameters for DDR initialization.
+- The [`z7-run`](./host/z7-run)
+  tool is a native Rust flashing/debugging tool which uses `probe-rs` to talk to a JTAG debug
+  probe directly, without needing `xsct` or `hw_server`. See the
+  [dedicated section below](#flashing-running-and-debugging-the-software---z7-run-app) for details.
 
 # Using the `.cargo/config.toml` file
 
