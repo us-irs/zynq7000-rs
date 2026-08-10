@@ -17,6 +17,22 @@ prepare-repo: download-zed-gateware
 download-zed-gateware:
     curl -L -o {{justfile_directory()}}/zedboard-gateware/zedboard-rust.bit "https://www.dropbox.com/scl/fi/oos5l6qknb4nom7tvbx1t/zedboard-rust.bit?rlkey=ikjec7e6v6rdih7hbti4jhet3&st=av4wf83u&dl=1"
 
+# Export the zedboard-rust Vivado project as a *.xsa hardware platform (zedboard-rust.xsa),
+# including the bitstream. Requires that the project has already been implemented (`impl_1`) and
+# a bitstream generated, e.g. via the Vivado GUI, and that `vivado` is on PATH.
+[working-directory: 'zedboard-gateware']
+export-hw:
+  vivado -mode batch -source export-hw.tcl
+
+# Unzip ps7_init.tcl and the bitstream out of zedboard-rust.xsa, into the zedboard-rust folder
+# next to the xsa itself.
+[working-directory: 'zedboard-gateware']
+extract-hw:
+  unzip -o zedboard-rust/zedboard-rust.xsa ps7_init.tcl '*.bit' -d zedboard-rust
+
+# Export the hardware platform from Vivado and extract ps7_init.tcl/the bitstream from it in one go.
+export-zed-gateware: export-hw extract-hw
+
 check-dir target:
   cd {{target}} && cargo check
 
