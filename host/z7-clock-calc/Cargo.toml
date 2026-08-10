@@ -1,0 +1,13 @@
+[package]
+name = "z7-clock-calc"
+version = "0.1.0"
+edition = "2024"
+description = "Pure clock/divisor search calculators used by zynq7000-hal, split into their own crate so they can be unit-tested on the host (zynq7000-hal cannot build for the host target)"
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+fugit = "0.4"
+libm = "0.2"
+
+[features]
+alloc = []

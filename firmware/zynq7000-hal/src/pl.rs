@@ -7,6 +7,28 @@ use zynq7000::slcr::reset::FpgaResetControl;
 
 use crate::slcr::Slcr;
 
+/// Put the PL into reset.
+///
+/// Useful to hold the PL in a safe state while reconfiguring the FPGA output clocks (see
+/// [crate::clocks::fpga::configure]) if it might already be running, to avoid glitching
+/// FCLK into live logic.
+pub fn assert_reset() {
+    // Safety: We only touch the PL reset register here.
+    unsafe {
+        Slcr::with(|slcr| {
+            slcr.reset_ctrl().write_fpga(
+                FpgaResetControl::builder()
+                    .with_zero_block_0(u17::ZERO)
+                    .with_fpga_3(true)
+                    .with_fpga_2(true)
+                    .with_fpga_1(true)
+                    .with_fpga_0(true)
+                    .build(),
+            );
+        })
+    };
+}
+
 /// Put the PL out of reset.
 ///
 /// The PL is in reset state after power-up. This method should be called in the first-stage

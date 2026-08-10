@@ -2,13 +2,14 @@
 INIT_SCRIPT := justfile_directory() / "scripts/zynq7000-init.py"
 GDB_CMD := justfile_directory() / "firmware/gdb.gdb"
 
-all: check build check-fmt clippy docs-zynq
+all: check build check-fmt clippy test docs-zynq
 check: (check-dir "firmware") (check-dir "host")
 clean: (clean-dir "firmware") (clean-dir "host")
 build: build-zynq (build-dir "host")
 fmt: (fmt-dir "firmware") (fmt-dir "host")
 check-fmt: (check-fmt-dir "firmware") (check-fmt-dir "host")
 clippy: (clippy-dir "firmware") (clippy-dir "host")
+test: test-clock-calc test-run-data
 
 prepare-repo: download-zed-gateware
   cd {{justfile_directory()}}/host/z7-run && cargo install --path .
@@ -56,6 +57,16 @@ fmt-dir target:
 
 clippy-dir target:
   cd {{target}} && cargo clippy -- -D warnings
+
+# Run the z7-clock-calc test suite (the pure clock/divisor calculators used by
+# zynq7000-hal). zynq7000-hal itself cannot build for the host target - see
+# host/z7-clock-calc/src/lib.rs - which is why these calculators were split out into
+# their own crate in the first place.
+test-clock-calc:
+  cd {{justfile_directory()}}/host/z7-clock-calc && cargo test --features alloc
+
+test-run-data:
+  cd {{justfile_directory()}}/host/z7-run-data && cargo test
 
 [working-directory: 'firmware']
 docs-zynq: docs-pac docs-hal

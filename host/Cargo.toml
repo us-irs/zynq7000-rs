@@ -3,6 +3,7 @@ resolver = "3"
 members = [
   "boot-image-test",
   "mmu-table-gen",
+  "z7-clock-calc",
   "z7-ps7init-extract",
   "z7-boot-image",
   "z7-run",
