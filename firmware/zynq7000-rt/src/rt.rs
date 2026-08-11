@@ -158,6 +158,31 @@ initialize:
     stm     r0!, {{r3}}
     b       0b
 data_init_done:
+    /* Zero .ocm.bss and initialize .ocm.data, mirroring .bss/.data above but for statics
+       placed in OCM via `#[unsafe(link_section = ".ocm.bss")]` / `".ocm.data"`. Projects that
+       don't define real `.ocm.bss`/`.ocm.data` output sections get zero-length PROVIDE'd
+       defaults for these symbols from their `memory.x`, making these loops a no-op. */
+    ldr     r0, =_socmbss
+    ldr     r1, =_eocmbss
+    mov     r2, 0
+0:
+    cmp     r1, r0
+    beq     1f
+    stm     r0!, {{r2}}
+    b       0b
+1:
+    ldr     r0, =_socmdata
+    ldr     r1, =_eocmdata
+    ldr     r2, =_siocmdata
+    cmp     r0, r2
+    beq     ocm_data_init_done
+0:
+    cmp     r1, r0
+    beq     ocm_data_init_done
+    ldm     r2!, {{r3}}
+    stm     r0!, {{r3}}
+    b       0b
+ocm_data_init_done:
     /* enable MMU and cache */
     /* MMU Table is in .data, so this needs to be performed after .data is relocated */
     /* (Even if in most cases, .data is already in RAM and relocation is a no-op) */

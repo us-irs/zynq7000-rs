@@ -89,7 +89,8 @@ fn main() {
     let attr_shared_dev = stringify!(section_attrs::SHAREABLE_DEVICE);
     let attr_sram = stringify!(section_attrs::SRAM);
     let attr_qspi = stringify!(section_attrs::QSPI_XIP);
-    let attr_ocm_high = stringify!(section_attrs::OCM_MAPPED_HIGH);
+    let attr_ocm_high = stringify!(section_attrs::OCM);
+    let attr_first_segment = stringify!(section_attrs::FIRST_SEGMENT);
 
     assert_eq!(
         1 + DDR_FULL_ACCESSIBLE
@@ -137,10 +138,10 @@ fn main() {
 
     writeln!(
         buf_writer,
-        "// First DDR segment, OCM memory (0x0000_0000 - 0x0010_0000)"
+        "// First DDR segment and/or OCM memory (0x0000_0000 - 0x0010_0000)"
     )
     .unwrap();
-    write_l1_section!(buf_writer, offset, attr_ddr);
+    write_l1_section!(buf_writer, offset, attr_first_segment);
 
     offset += ONE_MB;
     writeln!(buf_writer, "// DDR memory (0x00100000 - 0x4000_0000)").unwrap();

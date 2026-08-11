@@ -7,8 +7,8 @@ use zynq7000_mmu::L1Table;
 ///
 /// 4096 entries, each covering 1MB of the address space.
 pub static MMU_L1_PAGE_TABLE: L1Table = L1Table::new([
-    // First DDR segment, OCM memory (0x0000_0000 - 0x0010_0000)
-    L1Section::new_with_addr_and_attrs(0x00000000, section_attrs::DDR),
+    // First DDR segment and/or OCM memory (0x0000_0000 - 0x0010_0000)
+    L1Section::new_with_addr_and_attrs(0x00000000, section_attrs::FIRST_SEGMENT),
     // DDR memory (0x00100000 - 0x4000_0000)
     L1Section::new_with_addr_and_attrs(0x00100000, section_attrs::DDR),
     L1Section::new_with_addr_and_attrs(0x00200000, section_attrs::DDR),
@@ -4118,5 +4118,5 @@ pub static MMU_L1_PAGE_TABLE: L1Table = L1Table::new([
     L1Section::new_with_addr_and_attrs(0xffd00000, section_attrs::UNASSIGNED_RESERVED),
     L1Section::new_with_addr_and_attrs(0xffe00000, section_attrs::UNASSIGNED_RESERVED),
     // OCM High (0xFFF0_0000 - 0xFFFF_FFFF)
-    L1Section::new_with_addr_and_attrs(0xfff00000, section_attrs::OCM_MAPPED_HIGH),
+    L1Section::new_with_addr_and_attrs(0xfff00000, section_attrs::OCM),
 ]);

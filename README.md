@@ -83,7 +83,7 @@ rustflags = [
   "-Ctarget-cpu=cortex-a9",
   "-Ctarget-feature=+vfp3",
   "-Ctarget-feature=+neon",
-  "-Clink-arg=-Tlink.x",
+  "-Clink-arg=-Tz7link.x",
   # If this is not enabled, debugging / stepping can become problematic.
   "-Cforce-frame-pointers=yes",
   # Can be useful for debugging.
