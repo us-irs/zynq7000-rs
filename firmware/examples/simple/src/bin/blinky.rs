@@ -9,7 +9,7 @@ use zynq7000::Peripherals;
 use zynq7000_hal::{
     clocks::Clocks,
     gpio::{Output, PinState, mio},
-    l2_cache,
+    l2_cache, mmu,
     priv_tim::CpuPrivateTimer,
     time::Hertz,
     uart,
@@ -33,6 +33,9 @@ pub enum Lib {
 
 #[zynq7000_rt::entry]
 fn main() -> ! {
+    unsafe {
+        mmu::init();
+    }
     l2_cache::init_with_defaults(&mut unsafe { zynq7000::l2_cache::Registers::new_mmio_fixed() });
     match LIB {
         Lib::Pac => {

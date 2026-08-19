@@ -23,6 +23,172 @@
 //! of 1 MB, it is not possible to define separate regions for them. For region
 //! 0xFFF00000 - 0xFFFFFFFF, 0xFFF00000 to 0xFFFB0000 is reserved but due to 1MB
 //! granual size, it is not possible to define separate region for it.
+//!
+//! ## Cache maintenance
+//!
+//! Placing a buffer in OCM does **not** exempt it from cache maintenance if it's used as a DMA
+//! target/source. The `OCM` MMU attribute (see [`section_attrs::OCM`]) is inner
+//! write-back-cacheable, outer non-cacheable: the L1 (inner) cache still caches it exactly like
+//! DDR does, so DMA engines (which write to/read from physical memory directly, bypassing the
+//! cache) can still see stale data or have their writes clobbered by a later cache write-back,
+//! same as for any other cacheable memory. The difference from DDR is only that the L2 (outer)
+//! half of cache maintenance is unnecessary for OCM, since the L2 never caches it in the first
+//! place, use the `_inner`-only variants in [`crate::cache`] (e.g.
+//! [`crate::cache::invalidate_data_cache_range_inner`],
+//! [`crate::cache::clean_data_cache_range_inner`]) for OCM buffers instead of the full
+//! inner+outer functions used for DDR buffers, to skip that wasted L2 work. See the `zedboard`
+//! `axi-dma` example for a side-by-side comparison of both.
+
+use aarch32_cpu::mmu::L1Section;
+use aarch32_cpu::{
+    asm::{dsb, isb},
+    cache::clean_and_invalidate_l1_data_cache,
+    mmu::SectionAttributes,
+    register::{BpIAll, TlbIAll},
+};
+use core::cell::UnsafeCell;
+
+pub const NUM_L1_PAGE_TABLE_ENTRIES: usize = 4096;
+
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+#[error("address is not aligned to 1MB boundary")]
+pub struct AddrNotAlignedToOneMb;
+
+/// Raw L1 table wrapper.
+///
+/// You can use [L1Table] to create a static global L1 table, which can be shared and updated
+/// without requiring a static mutable global.
+#[repr(C, align(16384))]
+pub struct L1TableRaw(pub [L1Section; NUM_L1_PAGE_TABLE_ENTRIES]);
+
+impl L1TableRaw {
+    #[inline(always)]
+    pub const fn as_ptr(&self) -> *const u32 {
+        self.0.as_ptr() as *const _
+    }
+
+    #[inline(always)]
+    pub const fn as_mut_ptr(&mut self) -> *mut u32 {
+        self.0.as_mut_ptr() as *mut _
+    }
+
+    pub fn update(
+        &mut self,
+        addr: u32,
+        section_attrs: SectionAttributes,
+    ) -> Result<(), AddrNotAlignedToOneMb> {
+        if addr & 0x000F_FFFF != 0 {
+            return Err(AddrNotAlignedToOneMb);
+        }
+        let index = addr as usize / 0x10_0000;
+        self.0[index].set_section_attrs(section_attrs);
+
+        // The Zynq 7000 has a 32 kB 4-way associative cache with a line length of 32 bytes.
+        // 4-way associative cache: A == 2
+        // 32 bytes line length: N == 5
+        // 256 (32kB / (32 * 4)) sets: S == 8
+        clean_and_invalidate_l1_data_cache::<2, 5, 8>();
+        TlbIAll::write();
+        BpIAll::write();
+        dsb();
+        isb();
+
+        Ok(())
+    }
+}
+
+/// This is a thin helper structure to allow declaring one static global L1 table
+/// while also allowing mutable access to it without requiring static mutables.
+///
+/// The L1 table is usually expected as some data structure at a certain address which can be
+/// declared with initial values and placed inside the .data section.
+#[repr(transparent)]
+pub struct L1Table(pub UnsafeCell<L1TableRaw>);
+
+unsafe impl Sync for L1Table {}
+
+impl L1Table {
+    #[inline]
+    pub const fn new(l1_table: [L1Section; NUM_L1_PAGE_TABLE_ENTRIES]) -> L1Table {
+        L1Table(UnsafeCell::new(L1TableRaw(l1_table)))
+    }
+}
+
+/// Wrapper structure to modify the L1 table given a mutable reference to the table.
+pub struct L1TableWrapper<'a>(pub &'a mut L1TableRaw);
+
+impl<'a> L1TableWrapper<'a> {
+    pub fn new(l1_table: &'a mut L1TableRaw) -> L1TableWrapper<'a> {
+        L1TableWrapper(l1_table)
+    }
+}
+
+impl L1TableWrapper<'_> {
+    pub fn update(
+        &mut self,
+        addr: u32,
+        section_attrs: SectionAttributes,
+    ) -> Result<(), AddrNotAlignedToOneMb> {
+        self.0.update(addr, section_attrs)
+    }
+}
+
+/// Initialize the global MMU table.
+///
+/// # Safety
+///
+/// Must only be called ONCE per core during program initialization
+pub unsafe fn init() {
+    unsafe {
+        set_mmu();
+        enable_mmu_and_cache();
+    }
+}
+
+/// Set the MMU base register to the global MMU table.
+///
+/// # Safety
+///
+/// Must only be called ONCE per core during program initialization
+pub unsafe fn set_mmu() {
+    let ttbr0 = aarch32_cpu::register::Ttbr0::new_with_raw_value(0)
+        .with_address(super::mmu_table::MMU_L1_PAGE_TABLE.0.get() as usize)
+        .with_irgn(false)
+        .with_nos(false)
+        .with_rgn(aarch32_cpu::register::ttbr0::Region::WriteBackWriteAllocCacheable)
+        .with_s(true)
+        .with_c(true);
+    unsafe { aarch32_cpu::register::Ttbr0::write(ttbr0) }
+}
+
+/// Enable the MMU and the cache
+///
+/// # Safety
+///
+/// Must only be called ONCE per core during program initialization
+pub unsafe fn enable_mmu_and_cache() {
+    // Enable Manager access to Domain 0
+    aarch32_cpu::register::Dacr::modify(|d| {
+        d.set_d(0, aarch32_cpu::register::dacr::DomainAccess::Manager);
+    });
+    // This function contains the barrier we need to flush the pipeline
+    aarch32_cpu::register::Sctlr::modify(|s| {
+        // Enable I-Cache
+        s.set_i(true);
+        // Enable D-Cache
+        s.set_c(true);
+        // Enable MMU
+        s.set_m(true);
+    });
+}
+
+/// Retrieves a mutable reference to the MMU L1 page table.
+pub fn mmu_l1_table_mut() -> L1TableWrapper<'static> {
+    let mmu_table = super::mmu_table::MMU_L1_PAGE_TABLE.0.get();
+    // Safety: We retrieve a reference to the MMU page table singleton.
+    L1TableWrapper::new(unsafe { &mut *mmu_table })
+}
+
 pub const MAX_DDR_SIZE: usize = 0x4000_0000;
 pub const ONE_MB: usize = 0x10_0000;
 
@@ -90,17 +256,13 @@ pub mod section_attrs {
     use arbitrary_int::u4;
 
     pub const DEFAULT_DOMAIN: u4 = u4::new(0b0000);
-    // DDR is in different domain, but all domains are set as manager domains during run-time
-    // initialization.
-    pub const DDR_DOMAIN: u4 = u4::new(0b1111);
 
     pub const DDR: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
         shareable: true,
         access: AccessPermissions::FullAccess,
-        // Manager domain
-        domain: DDR_DOMAIN,
+        domain: DEFAULT_DOMAIN,
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::CacheableMemory {
             inner: CachePolicy::WriteBackWriteAlloc,
@@ -152,7 +314,9 @@ pub mod section_attrs {
     pub const OCM: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
-        shareable: false,
+        // Matches the real ps7_init.tcl/Xilinx boot.S reference: the low OCM alias is marked
+        // shareable there too, so this stays SCU snoop-coherent between the two cores' L1 caches.
+        shareable: true,
         access: AccessPermissions::FullAccess,
         domain: DEFAULT_DOMAIN,
         execute_never: false,
@@ -175,27 +339,4 @@ pub mod section_attrs {
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::StronglyOrdered.as_raw(),
     };
-}
-
-/// Load the MMU translation table base address into the MMU.
-///
-/// # Safety
-///
-/// This function is unsafe because it directly writes to the MMU related registers. It has to be
-/// called once in the boot code before enabling the MMU, and it should be called while the MMU is
-/// disabled.
-#[unsafe(no_mangle)]
-#[cfg(feature = "rt")]
-unsafe extern "C" fn load_mmu_table() {
-    // if usize != u32 we are on the wrong platform...
-    let table_base = crate::mmu_table::MMU_L1_PAGE_TABLE.0.get().addr() as u32;
-
-    unsafe {
-        core::arch::asm!(
-            "orr {0}, {0}, #0x5B",     // Outer-cacheable, WB
-            "mcr p15, 0, {0}, c2, c0, 0", // Load table pointer
-            inout(reg) table_base => _,
-            options(nostack, preserves_flags)
-        );
-    }
 }

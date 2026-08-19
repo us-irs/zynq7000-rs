@@ -8,14 +8,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
-## Changed
+## Removed
 
-- Changed default mapping of first 1 MB segment to use OCM attributes.
+- Removed MMU table setup. The `mmu`/`mmu_table` modules, `mmu_l1_table_mut()` and the assembly
+  that enabled the MMU in `rt.rs` are gone, along with the now-unused `zynq7000-mmu` dependency.
+  This now lives in `zynq7000-hal` and must be called explicitly from Rust instead of running
+  unconditionally during startup.
 
 ## Added
 
-- Added `first-segment-ddr-attr` which can be used to use DDR attributes for the first segment
-  to allow accessing DDR through address 0x8000 to 0x10_0000
 - Added `z7link.x`, a complete linker script shipped by this crate which supersedes
   `aarch32-rt`'s `link.x` (projects now pass `-Clink-arg=-Tz7link.x` instead of `-Tlink.x`). It
   is a copy of `aarch32-rt/link.x` with two new output sections, `.ocm.data` and `.ocm.bss`,
@@ -31,6 +32,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Fixed
 
+- The SCU invalidate in `rt.rs` now only runs on the primary core. Xilinx's boot.S guards this
+  the same way: repeating it on a secondary core after the primary has started caching wipes the
+  SCU's snoop tracking, breaking cache coherency between the cores (CR#1109723).
 - The `OCM` MMU section attribute used an incorrect inner cache policy
   (`WriteThroughNoWriteAlloc`), which caused instability for code, data and stacks actually
   running from OCM (observed as an OCM-only project failing to boot). Changed to

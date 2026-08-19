@@ -14,7 +14,6 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-rt = { version = "0.4", optional = true, features = ["fpu-d32"] }
 aarch32-cpu = { version = "0.4" }
 arbitrary-int = "2"
-zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.2" }
 
 [build-dependencies]
 arm-targets = { version = "0.4" }
@@ -22,11 +21,6 @@ arm-targets = { version = "0.4" }
 [features]
 default = ["rt"]
 rt = ["dep:aarch32-rt"]
-# This feature can be enabled if the DDR is accessed through memory addresses 0x8000 to 0x0010_0000.
-# In this case, the MMU attribute for the first segment is the DDR memory attribute (outer and
-# inner cache maintenance). Otherwise, the OCM attribute (inner cache maintenance only) will be
-# used.
-first-segment-ddr-attr = []
 
 [package.metadata.docs.rs]
 targets = ["armv7a-none-eabihf"]

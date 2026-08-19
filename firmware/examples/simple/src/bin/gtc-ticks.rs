@@ -11,7 +11,7 @@ use zynq7000_hal::{
     gic,
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
-    l2_cache,
+    l2_cache, mmu,
     prelude::*,
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
@@ -24,6 +24,9 @@ static MS_TICKS: AtomicU64 = AtomicU64::new(0);
 
 #[zynq7000_rt::entry]
 fn main() -> ! {
+    unsafe {
+        mmu::init();
+    }
     let mut dp = zynq7000::Peripherals::take().unwrap();
     l2_cache::init_with_defaults(&mut dp.l2c);
 
