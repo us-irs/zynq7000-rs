@@ -5,9 +5,9 @@
 #![no_std]
 #![no_main]
 
-use aarch32_cpu::asm::nop;
+// Import for shared panic handler and exception handlers.
+use zedboard_smp as _;
 use core::cell::RefCell;
-use core::panic::PanicInfo;
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use critical_section::Mutex;
 use log::{error, info, warn};
@@ -16,16 +16,14 @@ use zynq7000_hal::{
     clocks::Clocks,
     gpio::{GpioPins, Output, PinState},
     priv_tim::CpuPrivateTimer,
-    time::Hertz,
     uart::{ClockConfig, Config, Uart},
 };
 
 use zynq7000_rt as _;
 
-const INIT_STRING: &str = "-- Zynq 7000 Zedboard bare-metal SMP example --\n\r";
+use zedboard_smp::{Handoff, PS_CLOCK_FREQUENCY};
 
-// Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
-const PS_CLOCK_FREQUENCY: Hertz = Hertz::from_raw(33_333_333);
+const INIT_STRING: &str = "-- Zynq 7000 Zedboard bare-metal SMP example --\n\r";
 
 // --- CPU1 boot handshake ---
 
@@ -57,7 +55,7 @@ const CS_MUTEX_LOOPS: u32 = 1000;
 /// CPU1's status LEDs (EMIO pins 0-7), constructed on CPU0 and handed off to CPU1 through this
 /// static before CPU1 is released via `start_core1`. Needs `Output`/`LowLevelGpio` to be `Send`
 /// to move across cores like this.
-static EMIO_LEDS: Mutex<RefCell<Option<[Output; 8]>>> = Mutex::new(RefCell::new(None));
+static EMIO_LEDS: Handoff<[Output; 8]> = Handoff::new();
 
 /// Runs the atomic fetch-add and critical-section increment loops that both cores perform on
 /// the shared statics above, to check that both mechanisms work correctly across cores.
@@ -99,9 +97,7 @@ fn main() -> ! {
     let emio_leds: [Output; 8] = core::array::from_fn(|i| {
         Output::new_for_emio(gpio_pins.emio.take(i).unwrap(), PinState::Low)
     });
-    critical_section::with(|cs| {
-        *EMIO_LEDS.borrow_ref_mut(cs) = Some(emio_leds);
-    });
+    EMIO_LEDS.put(emio_leds);
 
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
@@ -157,9 +153,13 @@ fn main() -> ! {
 /// [`zynq7000_rt::smp::start_core1`].
 #[unsafe(no_mangle)]
 pub extern "C" fn kmain_secondary() {
-    unsafe {
-        zynq7000_hal::mmu::init();
-    }
+    // No interrupts are used on CPU1 here (only blocking, polling-based delays), so the GIC is
+    // left alone.
+    zynq7000_hal::init_secondary_core(zynq7000_hal::SecondaryCoreConfig {
+        init_gic: false,
+        ..Default::default()
+    })
+    .unwrap();
 
     CORE1_BOOTED.store(true, Ordering::SeqCst);
 
@@ -169,12 +169,7 @@ pub extern "C" fn kmain_secondary() {
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     let mut priv_tim = CpuPrivateTimer::take(clocks.arm_clocks()).unwrap();
 
-    let mut emio_leds: [Output; 8] = critical_section::with(|cs| {
-        EMIO_LEDS
-            .borrow_ref_mut(cs)
-            .take()
-            .expect("CPU0 must construct EMIO_LEDS before releasing CPU1")
-    });
+    let mut emio_leds: [Output; 8] = EMIO_LEDS.take();
 
     let mut led_idx = 0;
     loop {
@@ -182,41 +177,4 @@ pub extern "C" fn kmain_secondary() {
         led_idx = (led_idx + 1) % emio_leds.len();
         priv_tim.delay_ms(200);
     }
-}
-
-#[zynq7000_rt::irq]
-pub fn irq_handler() {
-    // Safety: Called here once.
-    let result = unsafe { zynq7000_hal::generic_interrupt_handler() };
-    if let Err(e) = result {
-        panic!("Generic interrupt handler failed handling {:?}", e);
-    }
-}
-
-#[zynq7000_rt::exception(DataAbort)]
-fn data_abort_handler(_faulting_addr: usize) -> ! {
-    loop {
-        nop();
-    }
-}
-
-#[zynq7000_rt::exception(Undefined)]
-fn undefined_handler(_faulting_addr: usize) -> ! {
-    loop {
-        nop();
-    }
-}
-
-#[zynq7000_rt::exception(PrefetchAbort)]
-fn prefetch_handler(_faulting_addr: usize) -> ! {
-    loop {
-        nop();
-    }
-}
-
-/// Panic handler
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {info:?}");
-    loop {}
 }

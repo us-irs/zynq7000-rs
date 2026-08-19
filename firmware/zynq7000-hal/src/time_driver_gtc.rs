@@ -7,7 +7,7 @@ use critical_section::{CriticalSection, Mutex};
 use embassy_time_driver::{Driver, TICK_HZ, time_driver_impl};
 use once_cell::sync::OnceCell;
 
-use crate::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
+use crate::{CoreId, clocks::ArmClocks, core_id, gtc::GlobalTimerCounter, time::Hertz};
 
 static SCALE: OnceCell<u64> = OnceCell::new();
 static CPU_3X2X_CLK: OnceCell<Hertz> = OnceCell::new();
@@ -44,14 +44,14 @@ pub fn init(arm_clocks: &ArmClocks, gtc: GlobalTimerCounter) {
 ///
 /// Needs to be called once in the global timer interrupt.
 pub unsafe fn on_interrupt() {
-    unsafe { GTC_TIME_DRIVER.on_interrupt() };
+    unsafe { GTC_TIME_DRIVER.on_interrupt(core_id()) };
 }
 
 pub struct TimeDriverGtc {
     timer: Mutex<RefCell<GlobalTimerCounter>>,
     // Timestamp at which to fire alarm. u64::MAX if no alarm is scheduled.
-    alarms: Mutex<AlarmState>,
-    queue: Mutex<RefCell<embassy_time_queue_utils::Queue>>,
+    alarms: Mutex<[AlarmState; 2]>,
+    queue: Mutex<RefCell<[embassy_time_queue_utils::Queue; 2]>>,
 }
 
 impl TimeDriverGtc {
@@ -87,24 +87,25 @@ impl TimeDriverGtc {
     ///
     /// This function has to be called once for interrupt ID
     /// [crate::hal::gic::PpiInterrupt::GlobalTimer].
-    pub unsafe fn on_interrupt(&self) {
+    pub unsafe fn on_interrupt(&self, core_id: CoreId) {
         critical_section::with(|cs| {
-            self.trigger_alarm(cs);
+            self.trigger_alarm(core_id, cs);
         })
     }
 
-    fn set_alarm(&self, cs: CriticalSection, timestamp: u64) -> bool {
+    fn set_alarm(&self, core_id: CoreId, cs: CriticalSection, timestamp: u64) -> bool {
+        let index = core_id as usize;
         if SCALE.get().is_none() {
             return false;
         }
         let mut gtc = self.timer.borrow(cs).borrow_mut();
         let alarm = &self.alarms.borrow(cs);
-        alarm.timestamp.set(timestamp);
+        alarm[index].timestamp.set(timestamp);
 
         let t = self.now();
         if timestamp <= t {
             gtc.disable_interrupt();
-            alarm.timestamp.set(u64::MAX);
+            alarm[index].timestamp.set(u64::MAX);
             return false;
         }
 
@@ -128,27 +129,20 @@ impl TimeDriverGtc {
         true
     }
 
-    fn trigger_alarm(&self, cs: CriticalSection) {
+    fn trigger_alarm(&self, core_id: CoreId, cs: CriticalSection) {
+        let core_id_raw = core_id as usize;
         let mut gtc = self.timer.borrow(cs).borrow_mut();
         gtc.disable_interrupt();
         drop(gtc);
 
         let alarm = &self.alarms.borrow(cs);
         // Setting the maximum value disables the alarm.
-        alarm.timestamp.set(u64::MAX);
+        alarm[core_id_raw].timestamp.set(u64::MAX);
 
         // Call after clearing alarm, so the callback can set another alarm.
-        let mut next = self
-            .queue
-            .borrow(cs)
-            .borrow_mut()
-            .next_expiration(self.now());
-        while !self.set_alarm(cs, next) {
-            next = self
-                .queue
-                .borrow(cs)
-                .borrow_mut()
-                .next_expiration(self.now());
+        let mut next = self.queue.borrow(cs).borrow_mut()[core_id_raw].next_expiration(self.now());
+        while !self.set_alarm(core_id, cs, next) {
+            next = self.queue.borrow(cs).borrow_mut()[core_id_raw].next_expiration(self.now());
         }
     }
 }
@@ -167,13 +161,15 @@ impl Driver for TimeDriverGtc {
     }
 
     fn schedule_wake(&self, at: u64, waker: &core::task::Waker) {
+        let core_id = core_id();
+        let core_id_raw = core_id as usize;
         critical_section::with(|cs| {
             let mut queue = self.queue.borrow(cs).borrow_mut();
 
-            if queue.schedule_wake(at, waker) {
-                let mut next = queue.next_expiration(self.now());
-                while !self.set_alarm(cs, next) {
-                    next = queue.next_expiration(self.now());
+            if queue[core_id_raw].schedule_wake(at, waker) {
+                let mut next = queue[core_id_raw].next_expiration(self.now());
+                while !self.set_alarm(core_id, cs, next) {
+                    next = queue[core_id_raw].next_expiration(self.now());
                 }
             }
         })
@@ -185,6 +181,6 @@ time_driver_impl!(
     // We assume ownership of the GTC, so it is okay to steal here.
     static GTC_TIME_DRIVER: TimeDriverGtc = TimeDriverGtc {
         timer: Mutex::new(RefCell::new(unsafe { GlobalTimerCounter::steal_fixed(None)})),
-        alarms: Mutex::new(AlarmState::new()),
-        queue: Mutex::new(RefCell::new(embassy_time_queue_utils::Queue::new())),
+        alarms: Mutex::new([const { AlarmState::new() }; 2]),
+        queue: Mutex::new(RefCell::new([const { embassy_time_queue_utils::Queue::new() }; 2])),
 });

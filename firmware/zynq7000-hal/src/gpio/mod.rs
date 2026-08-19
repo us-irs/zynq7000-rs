@@ -310,6 +310,16 @@ impl Output {
     pub fn set_high(&mut self) {
         self.0.set_high();
     }
+
+    #[inline]
+    pub fn is_set_low(&self) -> bool {
+        self.0.is_set_low()
+    }
+
+    #[inline]
+    pub fn is_set_high(&self) -> bool {
+        self.0.is_set_high()
+    }
 }
 
 impl embedded_hal::digital::ErrorType for Output {
