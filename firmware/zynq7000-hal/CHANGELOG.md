@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+## Added
+
+- Added `cache::invalidate_data_cache_range_inner`, `cache::clean_data_cache_range_inner` and
+  `cache::clean_and_invalidate_data_cache_range_inner`, which perform only the L1 (inner) half
+  of cache maintenance. Useful for memory the L2 doesn't cache in the first place (e.g. OCM
+  mapped with an outer-non-cacheable attribute), where the L2 half of the existing combined
+  functions would just be wasted work. The existing `invalidate_data_cache_range`,
+  `clean_data_cache_range` and `clean_and_invalidate_data_cache_range` now reuse these new
+  functions internally for their inner-cache steps instead of duplicating the loops.
+
 ## Fixed
 
 - Bugfix for DDR initialization: `calibrate_iob_impedance_for_ddr3` and `calibrate_iob_impedance`
@@ -21,6 +31,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Do not reset the UART on TX future creation anymore, which lead to glitches and invalid data.
 - Robustness improvements for the asynchronous UART TX module.
 - SPI1 AMBA clock control bits are now enabled and disabled properly
+- `calculate_gem_1_ref_clock` read the GEM0 clock control register instead of GEM1's.
+- `FpgaClockConfig::calculate`/`calculate_generic` now return `DivisorZeroError` for a zero
+  target clock instead of panicking on divide by zero.
 
 ## Changed
 

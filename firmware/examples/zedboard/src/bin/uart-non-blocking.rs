@@ -32,10 +32,10 @@ use axi_uartlite::AxiUartlite;
 use core::{cell::RefCell, panic::PanicInfo};
 use critical_section::Mutex;
 use embassy_executor::Spawner;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, pipe::Pipe};
 use embassy_time::{Duration, Ticker};
 use embedded_alloc::LlffHeap as Heap;
 use embedded_io::Write as _;
-use heapless::spsc::Queue;
 use log::{info, warn};
 use zynq7000_hal::{
     BootMode,
@@ -84,24 +84,19 @@ pub const UART_SPEED: u32 = 115_200;
 
 const RB_SIZE: usize = 512;
 
-// These queues are used to send all data received in the UART interrupt handlers to the main
-// processing thread.
-static QUEUE_UART_0: static_cell::ConstStaticCell<heapless::spsc::Queue<u8, RB_SIZE>> =
-    static_cell::ConstStaticCell::new(Queue::new());
-static QUEUE_UARTLITE: static_cell::ConstStaticCell<heapless::spsc::Queue<u8, RB_SIZE>> =
-    static_cell::ConstStaticCell::new(Queue::new());
-static QUEUE_UART16550: static_cell::ConstStaticCell<heapless::spsc::Queue<u8, RB_SIZE>> =
-    static_cell::ConstStaticCell::new(Queue::new());
+// These pipes carry all data received in the UART interrupt handlers to the main processing
+// thread.
+static RX_PIPE_UART_0: Pipe<CriticalSectionRawMutex, RB_SIZE> = Pipe::new();
+static RX_PIPE_UARTLITE: Pipe<CriticalSectionRawMutex, RB_SIZE> = Pipe::new();
+static RX_PIPE_UART16550: Pipe<CriticalSectionRawMutex, RB_SIZE> = Pipe::new();
 
-// Those are all used by the interrupt handler, so we have to do the Mutex dance.
+// Used by the interrupt handler, so we have to do the Mutex dance.
 static RX_UART_0: Mutex<RefCell<Option<zynq7000_hal::uart::Rx>>> = Mutex::new(RefCell::new(None));
 
-static UART_0_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
-    Mutex::new(RefCell::new(None));
-static UARTLITE_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
-    Mutex::new(RefCell::new(None));
-static UART16550_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
-    Mutex::new(RefCell::new(None));
+static TOKEN_UARTLITE: once_cell::sync::OnceCell<axi_uartlite::TxToken> =
+    once_cell::sync::OnceCell::new();
+static TOKEN_UART16550: once_cell::sync::OnceCell<axi_uart16550::TxToken> =
+    once_cell::sync::OnceCell::new();
 
 /// Entry point which calls the embassy main method.
 #[zynq7000_rt::entry]
@@ -301,20 +296,11 @@ async fn main(spawner: Spawner) -> ! {
     let (uart_0_tx, mut uart_0_rx) = uart_0.split();
     let (uartlite_tx, _uartlite_rx) = uartlite.split();
     let (uart_16550_tx, mut uart_16550_rx) = _uart_16550.split();
-    let (uart_0_prod, mut uart_0_cons) = QUEUE_UART_0.take().split();
-    let (uartlite_prod, mut uartlite_cons) = QUEUE_UARTLITE.take().split();
-    let (uart16550_prod, mut uart16550_cons) = QUEUE_UART16550.take().split();
     // Use our helper function to start RX handling.
     uart_0_rx.start_interrupt_driven_reception(0xFF);
     // Use our helper function to start RX handling.
     uart_16550_rx.start_interrupt_driven_reception();
     critical_section::with(|cs| {
-        UART_0_PROD.borrow(cs).borrow_mut().replace(uart_0_prod);
-        UARTLITE_PROD.borrow(cs).borrow_mut().replace(uartlite_prod);
-        UART16550_PROD
-            .borrow(cs)
-            .borrow_mut()
-            .replace(uart16550_prod);
         RX_UART_0.borrow(cs).borrow_mut().replace(uart_0_rx);
     });
     spawner.spawn(led_task(mio_led, emio_leds).unwrap());
@@ -337,11 +323,7 @@ async fn main(spawner: Spawner) -> ! {
 
     let mut ticker = Ticker::every(Duration::from_millis(200));
     loop {
-        let read_bytes = uart_0_cons.len();
-        (0..read_bytes).for_each(|i| {
-            read_buf[i] = unsafe { uart_0_cons.dequeue_unchecked() };
-        });
-        if read_bytes > 0 {
+        if let Ok(read_bytes) = RX_PIPE_UART_0.try_read(&mut read_buf) {
             info!("Received {read_bytes} bytes on UART0");
             info!(
                 "Data: {:?}",
@@ -349,11 +331,7 @@ async fn main(spawner: Spawner) -> ! {
             );
         }
 
-        let read_bytes = uartlite_cons.len();
-        (0..read_bytes).for_each(|i| {
-            read_buf[i] = unsafe { uartlite_cons.dequeue_unchecked() };
-        });
-        if read_bytes > 0 {
+        if let Ok(read_bytes) = RX_PIPE_UARTLITE.try_read(&mut read_buf) {
             info!("Received {read_bytes} bytes on UARTLITE");
             info!(
                 "Data: {:?}",
@@ -361,11 +339,7 @@ async fn main(spawner: Spawner) -> ! {
             );
         }
 
-        let read_bytes = uart16550_cons.len();
-        (0..read_bytes).for_each(|i| {
-            read_buf[i] = unsafe { uart16550_cons.dequeue_unchecked() };
-        });
-        if read_bytes > 0 {
+        if let Ok(read_bytes) = RX_PIPE_UART16550.try_read(&mut read_buf) {
             info!("Received {read_bytes} bytes on UART16550");
             info!(
                 "Data: {:?}",
@@ -406,7 +380,9 @@ async fn uartlite_task(uartlite: axi_uartlite::Tx) {
     );
     let mut idx = 0;
     let print_strs = [str0.as_bytes(), str1.as_bytes()];
-    let mut tx_async = unsafe { axi_uartlite::tx_async::TxAsync::new(uartlite, 0) }.unwrap();
+    let mut tx_async = uartlite.into_async(0).expect("creating async TX failed");
+    let token = tx_async.token();
+    TOKEN_UARTLITE.set(token).expect("setting token failed");
     loop {
         tx_async.write(print_strs[idx]).await;
         idx += 1;
@@ -443,8 +419,12 @@ async fn uart_0_task(uart_tx: zynq7000_hal::uart::Tx) {
 #[embassy_executor::task]
 async fn uart_16550_task(uart_tx: axi_uart16550::Tx) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    let mut tx_async =
-        unsafe { axi_uart16550::TxAsync::new(uart_tx, 0, embassy_time::Delay) }.unwrap();
+
+    let mut tx_async = uart_tx
+        .into_async(0, embassy_time::Delay)
+        .expect("creating async TX failed");
+    let token = tx_async.token();
+    TOKEN_UART16550.set(token).expect("setting token failed");
     let str0 = build_print_string("UART16550:", "Hello World");
     let str1 = build_print_string(
         "UART16550:",
@@ -472,23 +452,40 @@ pub fn irq_handler() {
     }
 }
 
+/// Writes as much of `data` into `pipe` as fits. `Pipe::try_write` only writes a single
+/// contiguous chunk of its ring buffer, so it can return short purely because of the buffer's
+/// wrap point, not because it's actually full. Loop past that, as the crate's own docs advise.
+fn write_to_pipe(pipe: &Pipe<CriticalSectionRawMutex, RB_SIZE>, data: &[u8]) -> usize {
+    let mut written = 0;
+    while written < data.len() {
+        match pipe.try_write(&data[written..]) {
+            Ok(n) => written += n,
+            Err(_) => break,
+        }
+    }
+    written
+}
+
 fn on_interrupt_axi_uartlite() {
     let mut buf = [0; axi_uartlite::FIFO_DEPTH];
     let mut rx = unsafe { axi_uartlite::Rx::steal(AXI_UARTLITE_BASE_ADDR as usize) };
     // Handle RX first: Empty the FIFO content into local buffer.
     let read_bytes = rx.on_interrupt_rx(&mut buf);
-    // Handle TX next: Handle pending asynchronous TX operations.
-    let mut tx = unsafe { axi_uartlite::Tx::steal(AXI_UARTLITE_BASE_ADDR as usize) };
-    axi_uartlite::on_interrupt_tx(&mut tx, 0);
+    // Handle TX next: Handle pending asynchronous TX operations. The token is only set once
+    // uartlite_task runs, which does not happen for every UART_MODE, so the interrupt can fire
+    // before that (the TX FIFO is empty at reset).
+    if let Some(token) = TOKEN_UARTLITE.get() {
+        unsafe { axi_uartlite::on_interrupt_tx(token) };
+    }
     // Send received RX data to main task.
     if read_bytes > 0 {
-        critical_section::with(|cs| {
-            let mut prod_ref_mut = UARTLITE_PROD.borrow(cs).borrow_mut();
-            let prod = prod_ref_mut.as_mut().unwrap();
-            (0..read_bytes).for_each(|i| {
-                prod.enqueue(buf[i]).expect("failed to enqueue byte");
-            });
-        });
+        let written = write_to_pipe(&RX_PIPE_UARTLITE, &buf[0..read_bytes]);
+        if written < read_bytes {
+            warn!(
+                "UARTLITE RX pipe full, dropped {} bytes",
+                read_bytes - written
+            );
+        }
     }
 }
 
@@ -499,30 +496,33 @@ fn on_interrupt_axi_16550() {
     let iir = rx.read_iir();
     if let Ok(int_id) = iir.int_id() {
         match int_id {
-            axi_uart16550::registers::InterruptId2::ReceiverLineStatus => {
+            axi_uart16550::InterruptId2::ReceiverLineStatus => {
                 let errors = rx.on_interrupt_receiver_line_status(iir);
                 warn!("Receiver line status error: {errors:?}");
             }
-            axi_uart16550::registers::InterruptId2::RxDataAvailable
-            | axi_uart16550::registers::InterruptId2::CharTimeout => {
+            axi_uart16550::InterruptId2::RxDataAvailable
+            | axi_uart16550::InterruptId2::CharTimeout => {
                 read_bytes = rx.on_interrupt_data_available_or_char_timeout(int_id, &mut buf);
             }
-            axi_uart16550::registers::InterruptId2::ThrEmpty => {
-                let mut tx = unsafe { axi_uart16550::Tx::steal(AXI_UAR16550_BASE_ADDR as usize) };
-                axi_uart16550::tx_async::on_interrupt_tx(&mut tx, 0);
+            axi_uart16550::InterruptId2::ThrEmpty => {
+                // The token is only set once uart_16550_task runs, which does not happen for
+                // every UART_MODE.
+                if let Some(token) = TOKEN_UART16550.get() {
+                    unsafe { axi_uart16550::tx_async::on_interrupt_tx(token) };
+                }
             }
-            axi_uart16550::registers::InterruptId2::ModemStatus => (),
+            axi_uart16550::InterruptId2::ModemStatus => (),
         }
     }
     // Send received RX data to main task.
     if read_bytes > 0 {
-        critical_section::with(|cs| {
-            let mut prod_ref_mut = UART16550_PROD.borrow(cs).borrow_mut();
-            let prod = prod_ref_mut.as_mut().unwrap();
-            (0..read_bytes).for_each(|i| {
-                prod.enqueue(buf[i]).expect("failed to enqueue byte");
-            });
-        });
+        let written = write_to_pipe(&RX_PIPE_UART16550, &buf[0..read_bytes]);
+        if written < read_bytes {
+            warn!(
+                "UART16550 RX pipe full, dropped {} bytes",
+                read_bytes - written
+            );
+        }
     }
 }
 
@@ -543,13 +543,10 @@ fn on_interrupt_uart_0() {
     unsafe { zynq7000_hal::uart::on_interrupt_tx(zynq7000_hal::uart::UartId::Uart0) };
     // Send received RX data to main task.
     if read_bytes > 0 {
-        critical_section::with(|cs| {
-            let mut prod_ref_mut = UART_0_PROD.borrow(cs).borrow_mut();
-            let prod = prod_ref_mut.as_mut().unwrap();
-            (0..read_bytes).for_each(|i| {
-                prod.enqueue(buf[i]).expect("failed to enqueue byte");
-            });
-        });
+        let written = write_to_pipe(&RX_PIPE_UART_0, &buf[0..read_bytes]);
+        if written < read_bytes {
+            warn!("UART0 RX pipe full, dropped {} bytes", read_bytes - written);
+        }
     }
 }
 

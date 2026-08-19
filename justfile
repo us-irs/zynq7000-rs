@@ -34,6 +34,26 @@ extract-hw:
 # Export the hardware platform from Vivado and extract ps7_init.tcl/the bitstream from it in one go.
 export-zed-gateware: export-hw extract-hw
 
+# Re-generate src/zedboard-bd.tcl from the block design and strip machine-specific memory-init
+# config (CONFIG.Coe_File paths, CONFIG.Load_Init_File) so the checked-in tcl stays portable.
+# Assumes `vivado` is already on PATH (e.g. settings64.sh/settings64.bat already sourced).
+[working-directory: 'zedboard-gateware']
+export-bd: && clean-bd
+  vivado -mode batch -source export-bd.tcl
+
+clean-bd:
+  sed -i '/CONFIG.Coe_File/d; s/CONFIG.Load_Init_File {true}/CONFIG.Load_Init_File {false}/' zedboard-gateware/src/zedboard-bd.tcl
+
+# Copy the impl_1 bitstream out to zedboard-rust.bit, next to the xsa/project.
+[working-directory: 'zedboard-gateware']
+export-bit:
+  vivado -mode batch -source export-bit.tcl
+
+# Open the zedboard-rust Vivado project in the GUI. Assumes `vivado` is already on PATH.
+[working-directory: 'zedboard-gateware']
+vivado-gui:
+  vivado zedboard-rust/zedboard-rust.xpr
+
 check-dir target:
   cd {{target}} && cargo check
 

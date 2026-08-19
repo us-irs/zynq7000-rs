@@ -50,6 +50,9 @@ impl FpgaClockConfig {
             SrcSelIo::ArmPll => arm_pll_out,
             SrcSelIo::DdrPll => ddr_pll_out,
         };
+        if clks.iter().any(|clk| clk.to_raw() == 0) {
+            return Err(DivisorZeroError(super::ClockModuleId::Fpga));
+        }
         let mut clock_config: [FpgaClockControl; 4] =
             [FpgaClockControl::default().with_srcsel(src_sel); 4];
         let mut divisors = [z7_clock_calc::fpga::DivisorPair { div0: 1, div1: 1 }; 4];

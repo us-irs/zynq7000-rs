@@ -595,6 +595,6 @@ impl Clocks {
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
     pub fn calculate_gem_1_ref_clock(&self) -> Result<Hertz, DivisorZeroError> {
         let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
-        self.calculate_gem_ref_clock(clk_regs.read_gem_0_clk_ctrl(), ClockModuleId::Gem1)
+        self.calculate_gem_ref_clock(clk_regs.read_gem_1_clk_ctrl(), ClockModuleId::Gem1)
     }
 }

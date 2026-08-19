@@ -6,7 +6,7 @@ rustflags = [
   "-Ctarget-cpu=cortex-a9",
   "-Ctarget-feature=+vfp3",
   "-Ctarget-feature=+neon",
-  "-Clink-arg=-Tlink.x",
+  "-Clink-arg=-Tz7link.x",
 
   # Breaks builds not using/including defmt..
   # "-Clink-arg=-Tdefmt.x",

@@ -30,7 +30,7 @@ embedded-hal-bus = { version = "0.3", features = ["async"] }
 embedded-hal-async = "1"
 dummy-pin = "1"
 fugit = "0.4"
-fugit-03 = { version = "0.3", package = "fugit" }
+once_cell = { version = "1.21", default-features = false }
 embedded-graphics = "0.8"
 log = "0.4"
 ssd1306 = { version = "0.10", features = ["async"] }
@@ -43,5 +43,6 @@ embassy-net = { version = "0.9", features = ["dhcpv4", "packet-trace", "medium-e
 embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
 embassy-sync = { version = "0.8" }
 heapless = "0.9"
-axi-uartlite = { version = "0.2" }
-axi-uart16550 = { version = "0.2" }
+axi-uartlite = { version = "0.3" }
+axi-uart16550 = { version = "0.3" }
+axi-dma = { version = "0.1" }

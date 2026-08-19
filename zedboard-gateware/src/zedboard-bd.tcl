@@ -20,7 +20,7 @@ set script_folder [_tcl::get_script_folder]
 ################################################################
 # Check if script is running in correct Vivado version.
 ################################################################
-set scripts_vivado_version 2025.2
+set scripts_vivado_version 2026.1
 set current_vivado_version [version -short]
 
 if { [string first $scripts_vivado_version $current_vivado_version] == -1 } {
@@ -144,6 +144,7 @@ xilinx.com:inline_hdl:ilslice:1.0\
 xilinx.com:inline_hdl:ilconcat:1.0\
 xilinx.com:inline_hdl:ilconstant:1.0\
 xilinx.com:ip:smartconnect:1.0\
+xilinx.com:ip:axi_dma:7.1\
 "
 
    set list_ips_missing ""
@@ -296,6 +297,7 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_ENET_RESET_SELECT {Share reset pin} \
     CONFIG.PCW_EN_EMIO_ENET0 {0} \
     CONFIG.PCW_EN_EMIO_GPIO {1} \
+    CONFIG.PCW_EN_EMIO_I2C1 {0} \
     CONFIG.PCW_EN_EMIO_SPI0 {1} \
     CONFIG.PCW_EN_EMIO_SPI1 {0} \
     CONFIG.PCW_EN_EMIO_TTC0 {1} \
@@ -304,6 +306,7 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_EN_EMIO_WP_SDIO0 {0} \
     CONFIG.PCW_EN_ENET0 {1} \
     CONFIG.PCW_EN_GPIO {1} \
+    CONFIG.PCW_EN_I2C1 {0} \
     CONFIG.PCW_EN_QSPI {1} \
     CONFIG.PCW_EN_SDIO0 {1} \
     CONFIG.PCW_EN_SPI0 {1} \
@@ -320,6 +323,7 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_GPIO_EMIO_GPIO_WIDTH {64} \
     CONFIG.PCW_GPIO_MIO_GPIO_ENABLE {1} \
     CONFIG.PCW_GPIO_MIO_GPIO_IO {MIO} \
+    CONFIG.PCW_I2C1_PERIPHERAL_ENABLE {0} \
     CONFIG.PCW_I2C_RESET_ENABLE {1} \
     CONFIG.PCW_IRQ_F2P_INTR {1} \
     CONFIG.PCW_MIO_0_IOTYPE {LVCMOS 3.3V} \
@@ -538,6 +542,7 @@ proc create_root_design { parentCell } {
     CONFIG.PCW_USB_RESET_ENABLE {1} \
     CONFIG.PCW_USB_RESET_SELECT {Share reset pin} \
     CONFIG.PCW_USE_FABRIC_INTERRUPT {1} \
+    CONFIG.PCW_USE_S_AXI_GP0 {1} \
   ] $processing_system7_0
 
 
@@ -650,13 +655,16 @@ proc create_root_design { parentCell } {
   # Create instance: smartconnect_0, and set properties
   set smartconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect:1.0 smartconnect_0 ]
   set_property -dict [list \
-    CONFIG.NUM_MI {2} \
+    CONFIG.ADVANCED_PROPERTIES {__experimental_features__ {legacy_low_area_mode 1}} \
+    CONFIG.NUM_MI {3} \
     CONFIG.NUM_SI {1} \
   ] $smartconnect_0
 
 
   # Create instance: IRQ_F2P, and set properties
   set IRQ_F2P [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconcat:1.0 IRQ_F2P ]
+  set_property CONFIG.NUM_PORTS {4} $IRQ_F2P
+
 
   # Create instance: OLED_DC, and set properties
   set OLED_DC [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 OLED_DC ]
@@ -702,12 +710,27 @@ proc create_root_design { parentCell } {
   set_property CONFIG.CONST_VAL {0} $ilconstant_3
 
 
+  # Create instance: axi_dma_0, and set properties
+  set axi_dma_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_dma:7.1 axi_dma_0 ]
+  set_property CONFIG.c_include_sg {0} $axi_dma_0
+
+
+  # Create instance: smartconnect_1, and set properties
+  set smartconnect_1 [ create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect:1.0 smartconnect_1 ]
+  set_property CONFIG.ADVANCED_PROPERTIES {__experimental_features__ {legacy_low_area_mode 1}} $smartconnect_1
+
+
   # Create interface connections
+  connect_bd_intf_net -intf_net axi_dma_0_M_AXIS_MM2S [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S] [get_bd_intf_pins axi_dma_0/S_AXIS_S2MM]
+  connect_bd_intf_net -intf_net axi_dma_0_M_AXI_MM2S [get_bd_intf_pins axi_dma_0/M_AXI_MM2S] [get_bd_intf_pins smartconnect_1/S00_AXI]
+  connect_bd_intf_net -intf_net axi_dma_0_M_AXI_S2MM [get_bd_intf_pins axi_dma_0/M_AXI_S2MM] [get_bd_intf_pins smartconnect_1/S01_AXI]
   connect_bd_intf_net -intf_net processing_system7_0_DDR [get_bd_intf_ports DDR] [get_bd_intf_pins processing_system7_0/DDR]
   connect_bd_intf_net -intf_net processing_system7_0_FIXED_IO [get_bd_intf_ports FIXED_IO] [get_bd_intf_pins processing_system7_0/FIXED_IO]
   connect_bd_intf_net -intf_net processing_system7_0_M_AXI_GP0 [get_bd_intf_pins processing_system7_0/M_AXI_GP0] [get_bd_intf_pins smartconnect_0/S00_AXI]
   connect_bd_intf_net -intf_net smartconnect_0_M00_AXI [get_bd_intf_pins smartconnect_0/M00_AXI] [get_bd_intf_pins axi_uartlite_0/S_AXI]
   connect_bd_intf_net -intf_net smartconnect_0_M01_AXI [get_bd_intf_pins smartconnect_0/M01_AXI] [get_bd_intf_pins axi_uart16550_0/S_AXI]
+  connect_bd_intf_net -intf_net smartconnect_0_M02_AXI [get_bd_intf_pins smartconnect_0/M02_AXI] [get_bd_intf_pins axi_dma_0/S_AXI_LITE]
+  connect_bd_intf_net -intf_net smartconnect_1_M00_AXI [get_bd_intf_pins smartconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_GP0]
 
   # Create port connections
   connect_bd_net -net BTTNS_1  [get_bd_ports BTTNS] \
@@ -724,6 +747,10 @@ proc create_root_design { parentCell } {
   [get_bd_ports OLED_VDD]
   connect_bd_net -net SWITCHES_1  [get_bd_ports SWITCHES] \
   [get_bd_pins EMIO_I_0/In0]
+  connect_bd_net -net axi_dma_0_mm2s_introut  [get_bd_pins axi_dma_0/mm2s_introut] \
+  [get_bd_pins IRQ_F2P/In2]
+  connect_bd_net -net axi_dma_0_s2mm_introut  [get_bd_pins axi_dma_0/s2mm_introut] \
+  [get_bd_pins IRQ_F2P/In3]
   connect_bd_net -net axi_uart16550_0_ip2intc_irpt  [get_bd_pins axi_uart16550_0/ip2intc_irpt] \
   [get_bd_pins IRQ_F2P/In1]
   connect_bd_net -net axi_uart16550_0_sout  [get_bd_pins axi_uart16550_0/sout] \
@@ -743,8 +770,8 @@ proc create_root_design { parentCell } {
   connect_bd_net -net ilconstant_2_dout  [get_bd_pins ilconstant_2/dout] \
   [get_bd_pins processing_system7_0/SPI0_SS_I]
   connect_bd_net -net ilconstant_3_dout  [get_bd_pins ilconstant_3/dout] \
-  [get_bd_pins processing_system7_0/SPI0_MOSI_I] \
-  [get_bd_pins processing_system7_0/SPI0_SCLK_I]
+  [get_bd_pins processing_system7_0/SPI0_SCLK_I] \
+  [get_bd_pins processing_system7_0/SPI0_MOSI_I]
   connect_bd_net -net ilslice_0_Dout  [get_bd_pins UART_MUX/Dout] \
   [get_bd_pins uart_mux_0/sel]
   connect_bd_net -net ilslice_0_Dout1  [get_bd_pins LEDS/Dout] \
@@ -752,12 +779,17 @@ proc create_root_design { parentCell } {
   connect_bd_net -net ilslice_0_Dout2  [get_bd_pins OLED_DC/Dout] \
   [get_bd_ports OLED_DC]
   connect_bd_net -net processing_system7_0_FCLK_CLK0  [get_bd_pins processing_system7_0/FCLK_CLK0] \
-  [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] \
   [get_bd_pins rst_ps7_0_100M/slowest_sync_clk] \
-  [get_bd_pins axi_uartlite_0/s_axi_aclk] \
-  [get_bd_pins axi_uart16550_0/s_axi_aclk] \
   [get_bd_pins uart_mux_0/sys_clk] \
-  [get_bd_pins smartconnect_0/aclk]
+  [get_bd_pins axi_dma_0/s_axi_lite_aclk] \
+  [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] \
+  [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] \
+  [get_bd_pins axi_uart16550_0/s_axi_aclk] \
+  [get_bd_pins axi_uartlite_0/s_axi_aclk] \
+  [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] \
+  [get_bd_pins processing_system7_0/S_AXI_GP0_ACLK] \
+  [get_bd_pins smartconnect_0/aclk] \
+  [get_bd_pins smartconnect_1/aclk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N  [get_bd_pins processing_system7_0/FCLK_RESET0_N] \
   [get_bd_pins rst_ps7_0_100M/ext_reset_in]
   connect_bd_net -net processing_system7_0_GPIO_O  [get_bd_pins processing_system7_0/GPIO_O] \
@@ -772,8 +804,9 @@ proc create_root_design { parentCell } {
   connect_bd_net -net processing_system7_0_UART0_TX  [get_bd_pins processing_system7_0/UART0_TX] \
   [get_bd_pins uart_mux_0/uart_0_tx]
   connect_bd_net -net rst_ps7_0_100M_peripheral_aresetn  [get_bd_pins rst_ps7_0_100M/peripheral_aresetn] \
-  [get_bd_pins axi_uartlite_0/s_axi_aresetn] \
+  [get_bd_pins axi_dma_0/axi_resetn] \
   [get_bd_pins axi_uart16550_0/s_axi_aresetn] \
+  [get_bd_pins axi_uartlite_0/s_axi_aresetn] \
   [get_bd_pins smartconnect_0/aresetn]
   connect_bd_net -net rx_in_0_1  [get_bd_ports UART_rxd] \
   [get_bd_pins uart_mux_0/rx_in]
@@ -786,10 +819,10 @@ proc create_root_design { parentCell } {
   connect_bd_net -net uart_mux_0_uart_2_rx  [get_bd_pins uart_mux_0/uart_2_rx] \
   [get_bd_pins axi_uart16550_0/sin]
   connect_bd_net -net xlconstant_1_dout1  [get_bd_pins ilconstant_1/dout] \
-  [get_bd_pins axi_uart16550_0/rin] \
-  [get_bd_pins axi_uart16550_0/dsrn] \
   [get_bd_pins axi_uart16550_0/ctsn] \
-  [get_bd_pins axi_uart16550_0/dcdn]
+  [get_bd_pins axi_uart16550_0/dcdn] \
+  [get_bd_pins axi_uart16550_0/dsrn] \
+  [get_bd_pins axi_uart16550_0/rin]
   connect_bd_net -net xlslice_1_Dout  [get_bd_pins EMIO_O_0/Dout] \
   [get_bd_pins EMIO_I/In0] \
   [get_bd_pins UART_MUX/Din] \
@@ -800,8 +833,19 @@ proc create_root_design { parentCell } {
   [get_bd_pins OLED_VBAT/Din]
 
   # Create address segments
+  assign_bd_address -offset 0x40400000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_dma_0/S_AXI_LITE/Reg] -force
   assign_bd_address -offset 0x43C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_uart16550_0/S_AXI/Reg] -force
   assign_bd_address -offset 0x42C00000 -range 0x00010000 -target_address_space [get_bd_addr_spaces processing_system7_0/Data] [get_bd_addr_segs axi_uartlite_0/S_AXI/Reg] -force
+  assign_bd_address -offset 0x00000000 -range 0x20000000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_DDR_LOWOCM] -force
+  assign_bd_address -offset 0xFC000000 -range 0x01000000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_QSPI_LINEAR] -force
+  assign_bd_address -offset 0x00000000 -range 0x20000000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_S2MM] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_DDR_LOWOCM] -force
+  assign_bd_address -offset 0xFC000000 -range 0x01000000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_S2MM] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_QSPI_LINEAR] -force
+
+  # Exclude Address Segments
+  exclude_bd_addr_seg -offset 0xE0000000 -range 0x00400000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_IOP]
+  exclude_bd_addr_seg -offset 0x40000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_MM2S] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_M_AXI_GP0]
+  exclude_bd_addr_seg -offset 0xE0000000 -range 0x00400000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_S2MM] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_IOP]
+  exclude_bd_addr_seg -offset 0x40000000 -range 0x40000000 -target_address_space [get_bd_addr_spaces axi_dma_0/Data_S2MM] [get_bd_addr_segs processing_system7_0/S_AXI_GP0/GP0_M_AXI_GP0]
 
 
   # Restore current instance
