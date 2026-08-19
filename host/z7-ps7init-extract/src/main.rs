@@ -10,7 +10,14 @@ const DDRC_ADDR_RANGE: RangeInclusive<u32> = 0xf800_6000..=0xf800_62b4;
 // registers proper, and was previously being cut off (range used to end at 0xF8000B6C), silently
 // dropping the writes that actually kick off DCI calibration for the DDR pads' drive
 // strength/termination.
-const DDRIOB_ADDR_RANGE: RangeInclusive<u32> = 0xf800_0b40..=0xf800_0b74;
+//
+// Starts at 0xF8000B00 (GPIOB_CTRL), not 0xF8000B40: GPIOB_CTRL's VREF_EN bit has to be set
+// before the DCI Control trigger below runs, since DCI calibration only runs once, using
+// whatever VREF state exists at trigger time - previously starting the range at 0xF8000B40 cut
+// this off too, leaving any HSTL I/O bank (e.g. the one used by RGMII Ethernet) calibrated
+// without a reference voltage. Basic switching (MDIO, link negotiation) still worked, but real
+// data transfer was signal-integrity-marginal enough to break things like DHCP.
+const DDRIOB_ADDR_RANGE: RangeInclusive<u32> = 0xf800_0b00..=0xf800_0b74;
 
 // PLL_INIT_OPS and CLOCK_INIT_OPS naturally include their own SLCR unlock/lock bracket, because
 // those addresses fall inside the (unfiltered) PLL/clock proc bodies. ddriob_init_ops doesn't:

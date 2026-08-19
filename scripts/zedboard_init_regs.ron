@@ -961,6 +961,14 @@
             ),
         ),
         (
+            name: Some("GPIOB_CTRL"),
+            kind: MaskWrite(
+                addr: "0xf8000b00",
+                mask: "0x00000071",
+                val: "0x00000001",
+            ),
+        ),
+        (
             name: Some("DDRIOB Addr 0"),
             kind: MaskWrite(
                 addr: "0xf8000b40",
