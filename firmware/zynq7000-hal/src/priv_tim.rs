@@ -9,6 +9,42 @@ use crate::{clocks::ArmClocks, time::Hertz};
 static CORE_0_TIM_TAKEN: AtomicBool = AtomicBool::new(false);
 static CORE_1_TIM_TAKEN: AtomicBool = AtomicBool::new(false);
 
+/// Thin, ownership-tracked wrapper around the raw CPU private timer register block, sharing
+/// its per-core exclusivity tracking with [`CpuPrivateTimer`].
+pub struct CpuPrivateTimerRegs(pub zynq7000::priv_tim::MmioRegisters<'static>);
+
+unsafe impl Send for CpuPrivateTimerRegs {}
+
+impl CpuPrivateTimerRegs {
+    /// Take the CPU private timer for a given core.
+    ///
+    /// This function can only be called once for each given core.
+    pub fn take() -> Option<Self> {
+        let mpidr = aarch32_cpu::register::mpidr::Mpidr::read();
+        let core = mpidr.0 & 0xff;
+        if core != 0 && core != 1 {
+            return None;
+        }
+        if (core == 0 && CORE_0_TIM_TAKEN.swap(true, core::sync::atomic::Ordering::Relaxed))
+            || (core == 1 && CORE_1_TIM_TAKEN.swap(true, core::sync::atomic::Ordering::Relaxed))
+        {
+            return None;
+        }
+
+        Some(Self::steal())
+    }
+
+    /// Create a new CPU private timer driver.
+    ///
+    /// # Safety
+    ///
+    /// This function allows to potentially create an arbitrary amount of timers for both cores.
+    /// It also does not check the current core ID.
+    pub const fn steal() -> Self {
+        Self(unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() })
+    }
+}
+
 /// High-level CPU private timer driver.
 pub struct CpuPrivateTimer {
     regs: zynq7000::priv_tim::MmioRegisters<'static>,
@@ -24,17 +60,7 @@ impl CpuPrivateTimer {
     ///
     /// This function can only be called once for each given core.
     pub fn take(clocks: &ArmClocks) -> Option<Self> {
-        let mpidr = aarch32_cpu::register::mpidr::Mpidr::read();
-        let core = mpidr.0 & 0xff;
-        if core != 0 && core != 1 {
-            return None;
-        }
-        if (core == 0 && CORE_0_TIM_TAKEN.swap(true, core::sync::atomic::Ordering::Relaxed))
-            || (core == 1 && CORE_1_TIM_TAKEN.swap(true, core::sync::atomic::Ordering::Relaxed))
-        {
-            return None;
-        }
-
+        let _ = CpuPrivateTimerRegs::take()?;
         Some(Self::steal(clocks))
     }
 
@@ -65,10 +91,29 @@ impl CpuPrivateTimer {
         self.regs.write_counter(value);
     }
 
+    /// Enable interrupts.
+    #[inline]
+    pub fn enable_interrupt(&mut self) {
+        self.regs
+            .modify_control(|val| val.with_interrupt_enable(true));
+    }
+
     /// Read the current counter value.
     #[inline]
     pub fn counter(&self) -> u32 {
         self.regs.read_counter()
+    }
+
+    /// Mutable access to the raw register block.
+    #[inline]
+    pub fn regs_mut(&mut self) -> &mut zynq7000::priv_tim::MmioRegisters<'static> {
+        &mut self.regs
+    }
+
+    /// Read-only access to the raw register block.
+    #[inline]
+    pub fn regs(&self) -> &zynq7000::priv_tim::MmioRegisters<'static> {
+        &self.regs
     }
 
     /// Delay for a given number of milliseconds.

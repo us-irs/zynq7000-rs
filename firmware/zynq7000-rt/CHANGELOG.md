@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+## Added
+
+- Added an `smp` module: `smp::start_core1` releases CPU1 from the boot ROM's park loop via the
+  mailbox+SEV protocol, dispatching it to a `kmain_secondary` entry point. Startup assembly is
+  now SMP-aware: only the primary core zeroes `.bss`/`.data`, and every core computes its stack
+  pointer from its real MPIDR index instead of assuming core 0. `z7link.x` provides a default
+  weak `kmain_secondary`, so existing single-core binaries still link without defining one.
+
 ## Removed
 
 - Removed MMU table setup. The `mmu`/`mmu_table` modules, `mmu_l1_table_mut()` and the assembly

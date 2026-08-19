@@ -5,7 +5,6 @@ use core::cell::{Cell, RefCell};
 
 use critical_section::{CriticalSection, Mutex};
 use embassy_time_driver::{Driver, TICK_HZ, time_driver_impl};
-use embassy_time_queue_utils::Queue;
 use once_cell::sync::OnceCell;
 
 use crate::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
@@ -48,14 +47,14 @@ pub unsafe fn on_interrupt() {
     unsafe { GTC_TIME_DRIVER.on_interrupt() };
 }
 
-pub struct GtcTimerDriver {
-    gtc: Mutex<RefCell<GlobalTimerCounter>>,
+pub struct TimeDriverGtc {
+    timer: Mutex<RefCell<GlobalTimerCounter>>,
     // Timestamp at which to fire alarm. u64::MAX if no alarm is scheduled.
     alarms: Mutex<AlarmState>,
-    queue: Mutex<RefCell<Queue>>,
+    queue: Mutex<RefCell<embassy_time_queue_utils::Queue>>,
 }
 
-impl GtcTimerDriver {
+impl TimeDriverGtc {
     /// This is the initialization method for the embassy time driver.
     ///
     /// # Safety
@@ -98,7 +97,7 @@ impl GtcTimerDriver {
         if SCALE.get().is_none() {
             return false;
         }
-        let mut gtc = self.gtc.borrow(cs).borrow_mut();
+        let mut gtc = self.timer.borrow(cs).borrow_mut();
         let alarm = &self.alarms.borrow(cs);
         alarm.timestamp.set(timestamp);
 
@@ -130,7 +129,7 @@ impl GtcTimerDriver {
     }
 
     fn trigger_alarm(&self, cs: CriticalSection) {
-        let mut gtc = self.gtc.borrow(cs).borrow_mut();
+        let mut gtc = self.timer.borrow(cs).borrow_mut();
         gtc.disable_interrupt();
         drop(gtc);
 
@@ -154,7 +153,7 @@ impl GtcTimerDriver {
     }
 }
 
-impl Driver for GtcTimerDriver {
+impl Driver for TimeDriverGtc {
     #[inline]
     fn now(&self) -> u64 {
         if SCALE.get().is_none() {
@@ -181,10 +180,11 @@ impl Driver for GtcTimerDriver {
     }
 }
 
+#[cfg(feature = "time-driver-gtc")]
 time_driver_impl!(
     // We assume ownership of the GTC, so it is okay to steal here.
-    static GTC_TIME_DRIVER: GtcTimerDriver = GtcTimerDriver {
-        gtc: Mutex::new(RefCell::new(unsafe { GlobalTimerCounter::steal_fixed(None)})),
+    static GTC_TIME_DRIVER: TimeDriverGtc = TimeDriverGtc {
+        timer: Mutex::new(RefCell::new(unsafe { GlobalTimerCounter::steal_fixed(None)})),
         alarms: Mutex::new(AlarmState::new()),
-        queue: Mutex::new(RefCell::new(Queue::new())),
+        queue: Mutex::new(RefCell::new(embassy_time_queue_utils::Queue::new())),
 });

@@ -4,7 +4,8 @@
 //! [provided by Xilinx](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S)
 //! but does NOT provide the L2 cache initialization.
 //!
-//! The boot routine includes stack, MMU and .bss/.data section initialization.
+//! The boot routine includes stack and .bss/.data section initialization. The MMU is not set up
+//! here, see `zynq7000_hal::mmu`.
 use aarch32_rt as _;
 
 // Start-up code for Armv7-A
@@ -21,7 +22,6 @@ core::arch::global_asm!(
 .set SLCRCPURSTReg,         (0xF8000000 + 0x244)           /*(XPS_SYS_CTRL_BASEADDR + A9_CPU_RST_CTRL_OFFSET)*/
 .set EFUSEStatus,           (0xF800D000 + 0x10)            /*(XPS_EFUSE_BASEADDR + EFUSE_STATUS_OFFSET)*/
 
-.set CRValMmuCac,           0b01000000000101  /* Enable IDC, and MMU */
 .set CRValHiVectorAddr,     0b10000000000000  /* Set the Vector address to high, 0xFFFF0000 */
 
 .set SLCRlockKey,           0x767B      /* SLCR lock key */
@@ -103,8 +103,10 @@ skip_scu_invalidate:
     bic     r0, r0, #0x1      /* clear bit 0 */
     mcr     p15, 0, r0, c1, c0, 0   /* write value back */
 
-    /* We must set the core number for this function */
-    mov     r0,#0
+    /* Each core must pass its own core index (from MPIDR) to this function, since the
+       per-mode stack pointer computed depends on it. */
+    mrc     p15,0,r0,c0,c0,5
+    and     r0, r0, #0x3
     bl      _stack_setup_preallocated
 
     // set scu enable bit in scu
@@ -142,7 +144,13 @@ skip_scu_invalidate:
     bic     r0, r0, #0x100      /* enable asynchronous abort exception */
     msr     cpsr_xsf, r0
 
-    /* Zero BSS and initialize data before calling any function which might require them. */
+    /* Zero BSS and initialize data before calling any function which might require them.
+       Only core 0 does this: any other core is only ever released after core 0's
+       application may already be running and mutating this same memory. */
+    mrc     p15,0,r0,c0,c0,5
+    and     r0, r0, #0x3
+    cmp     r0, #0
+    bne     core_jump
 
     // Initialise .bss
     ldr     r0, =__sbss
@@ -193,10 +201,21 @@ data_init_done:
     b       0b
 
 ocm_data_init_done:
+core_jump:
+    // Jump to application. Every core reaches this same point (a secondary core skips
+    // straight here from the BSS/data zero check above), so a fresh MPIDR read decides whether
+    // to call `kmain` or `kmain_secondary`. See `zynq7000_hal::mmu` for enabling the MMU.
+    mrc     p15,0,r0,c0,c0,5
+    and     r0, r0, #0x3
+    cmp     r0, #0
+    bne     start_kmain_secondary
+
     // Jump to application
-    // Load CPU ID 0, which will be used as a function argument to the boot_core function.
-    mov     r0, #0x0
     bl      kmain
+    // In case the application returns, loop forever
+    b       .
+start_kmain_secondary:
+    bl      kmain_secondary
     // In case the application returns, loop forever
     b       .
 .size _start, . - _start

@@ -158,6 +158,21 @@ impl GlobalTimerCounter {
             ctrl
         });
     }
+
+    /// Delay for a given number of milliseconds.
+    pub fn delay_ms(&mut self, ms: u32) {
+        <Self as embedded_hal::delay::DelayNs>::delay_ms(self, ms);
+    }
+
+    /// Delay for a given number of microseconds.
+    pub fn delay_us(&mut self, us: u32) {
+        <Self as embedded_hal::delay::DelayNs>::delay_us(self, us);
+    }
+
+    /// Delay for a given number of nanoseconds.
+    pub fn delay_ns(&mut self, ns: u32) {
+        <Self as embedded_hal::delay::DelayNs>::delay_ns(self, ns);
+    }
 }
 
 /// GTC can also be used for blocking delays.
