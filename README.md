@@ -20,10 +20,9 @@ This workspace contains libraries and application which can only be run on the t
   run-time crate containing basic low-level startup code necessary to boot a Rust app on the
   Zynq7000.
 - The [`zynq7000`](./firmware/zynq7000) PAC crate containing basic low-level register access API.
-- The [`zynq7000-mmu`](./firmware/zynq7000-mmu)
-  crate containing common MMU abstractions used by both the HAL and the run-time crate.
 - The [`zynq7000-hal`](./firmware/zynq7000-hal) HAL crate containing higher-level abstractions on
-  top of the PAC register crate and also contains embassy time drivers.
+  top of the PAC register crate, including the MMU abstractions, and also contains embassy time
+  drivers.
 
 This project was developed using a Zedboard, so there are several crates available targeted towards
 this board:

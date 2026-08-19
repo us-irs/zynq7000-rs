@@ -14,6 +14,10 @@
 //! * `7z010-7z007s-clg225`  - Chip variant which has a lower pin count
 //! * `time-driver-gtc` - Access to the `embassy-time` driver API which uses the global timer
 //!   counter (GTC).
+//! * `alloc` - Enables `extern crate alloc` and APIs which need it
+//! * `first-segment-ddr-attr` - Maps the first 1 MB MMU segment with the DDR memory attribute
+//!   instead of the OCM one, to allow accessing DDR through addresses 0x8000 to 0x10_0000. See
+//!   [`mmu::section_attrs::FIRST_SEGMENT`].
 //!
 //! ## Examples
 //!
@@ -42,6 +46,8 @@ pub mod i2c;
 pub mod interrupt;
 pub mod l2_cache;
 pub mod log;
+pub mod mmu;
+pub mod mmu_table;
 pub mod pl;
 pub mod prelude;
 pub mod priv_tim;
@@ -86,6 +92,10 @@ pub struct Config {
     /// every application relying on this generic init routine gets it unconditionally. Calling this
     /// when the PL is already out of reset is harmless.
     pub deassert_pl_reset: bool,
+    /// If true, calls [`mmu::init`] to set up and enable the MMU and cache. The run-time
+    /// startup code no longer does this itself, so this must be enabled (or `mmu::init` called
+    /// manually) for the MMU to be active at all.
+    pub mmu_init: bool,
 }
 
 impl Default for Config {
@@ -95,12 +105,19 @@ impl Default for Config {
             level_shifter_config: Some(LevelShifterConfig::EnableAll),
             interrupt_config: Some(InteruptConfig::AllInterruptsToCpu0),
             deassert_pl_reset: true,
+            mmu_init: true,
         }
     }
 }
 
 /// Utility function to perform common initialization steps.
 pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
+    if config.mmu_init {
+        // Safety: Initialization function is only called once.
+        unsafe {
+            crate::mmu::init();
+        }
+    }
     let mut periphs = zynq7000::Peripherals::take().ok_or(InitError::PeripheralsAlreadyTaken)?;
     if config.init_l2_cache {
         l2_cache::init_with_defaults(&mut periphs.l2c);

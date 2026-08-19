@@ -118,9 +118,9 @@ fn main() {
     )
     .unwrap();
 
+    writeln!(buf_writer, "use crate::mmu::L1Table;").unwrap();
     writeln!(buf_writer, "use crate::mmu::section_attrs;").unwrap();
     writeln!(buf_writer, "use cortex_ar::mmu::L1Section;").unwrap();
-    writeln!(buf_writer, "use zynq7000_mmu::L1Table;").unwrap();
     writeln!(buf_writer).unwrap();
 
     writeln!(buf_writer, "/// MMU Level 1 Page table.").unwrap();

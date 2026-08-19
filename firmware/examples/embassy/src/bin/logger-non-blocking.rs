@@ -8,15 +8,12 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_io::Write;
 use log::info;
-use zynq7000::Peripherals;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
     generic_interrupt_handler,
-    gic::Configurator,
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
-    l2_cache,
     time::Hertz,
     uart::{self, ClockConfig, Config, TxAsync, Uart},
 };
@@ -34,31 +31,22 @@ fn entry_point() -> ! {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
-    let mut dp = Peripherals::take().unwrap();
-    l2_cache::init_with_defaults(&mut dp.l2c);
+    let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).unwrap();
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
-    // Set up the global interrupt controller.
-    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
-    gic.enable_all_interrupts();
-    gic.set_all_spi_interrupt_targets_cpu0();
-    gic.enable();
-    unsafe {
-        gic.enable_interrupts();
-    }
     // Set up global timer counter and embassy time driver.
-    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
     zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
-    let mio_pins = mio::Pins::new(dp.gpio);
+    let mio_pins = mio::Pins::new(periphs.gpio);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
     let mut uart = Uart::new_with_mio_for_uart_1(
-        dp.uart_1,
+        periphs.uart_1,
         Config::new_with_clk_config(uart_clk_config),
         (mio_pins.mio48, mio_pins.mio49),
     )

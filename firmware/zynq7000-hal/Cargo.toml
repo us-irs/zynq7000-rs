@@ -13,7 +13,6 @@ categories = ["embedded", "no-std", "hardware-support"]
 [dependencies]
 aarch32-cpu = { version = "0.4" }
 zynq7000 = { path = "../zynq7000", version = "0.4" }
-zynq7000-mmu = { path = "../zynq7000-mmu", version = "0.2" }
 z7-clock-calc = { path = "../../host/z7-clock-calc", version = "0.1" }
 static_assertions = "1.1"
 bitbybit = "2"
@@ -53,10 +52,15 @@ defmt = { version = "1", optional = true }
 default = ["eth-cache-maintenance"]
 alloc = ["z7-clock-calc/alloc"]
 defmt = ["dep:defmt", "fugit/defmt", "zynq7000/defmt"]
-std = ["thiserror/std", "alloc"]
 
 # Activates the embassy-time support using the global timer counter.
 time-driver-gtc = ["dep:embassy-time-driver", "dep:embassy-time-queue-utils", "dep:once_cell"]
+
+# This feature can be enabled if the DDR is accessed through memory addresses 0x8000 to 0x0010_0000.
+# In this case, the MMU attribute for the first segment is the DDR memory attribute (outer and
+# inner cache maintenance). Otherwise, the OCM attribute (inner cache maintenance only) will be
+# used.
+first-segment-ddr-attr = []
 
 # These devices have a lower pin count.
 7z010-7z007s-clg225 = []

@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+## Changed
+
+- Merged the `zynq7000-mmu` crate into `mmu`. The `L1Table`, `L1TableRaw` and `L1TableWrapper`
+  types now live here directly, since this HAL was their only remaining consumer.
+- Moved MMU table setup here from `zynq7000-rt`. The `mmu` and `mmu_table` modules and the
+  `first-segment-ddr-attr` feature now live in this crate. Enabling the MMU used to happen
+  unconditionally in the run-time startup assembly, it is now an explicit Rust call gated by
+  the new `Config::mmu_init` flag, which `init()` runs by default. The first 1 MB segment now
+  defaults to the OCM attribute rather than DDR, matching that move.
+
 ## Added
 
 - Added `cache::invalidate_data_cache_range_inner`, `cache::clean_data_cache_range_inner` and
@@ -18,8 +28,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   `clean_data_cache_range` and `clean_and_invalidate_data_cache_range` now reuse these new
   functions internally for their inner-cache steps instead of duplicating the loops.
 
+## Removed
+
+- Removed the `std` feature. `thiserror/std` needs `extern crate std`, which this crate's only
+  supported target (`armv7a-none-eabihf`) can never provide, so the feature could not build.
+
 ## Fixed
 
+- `DDR` MMU sections used domain 15, but `enable_mmu_and_cache()` only grants Manager access to
+  domain 0. All sections now use domain 0, matching what's actually enabled and avoiding a domain
+  fault on DDR access.
+- Marked the `OCM` MMU section attribute as shareable, matching the Xilinx `ps7_init.tcl`/boot.S
+  reference. Keeps the low OCM alias snoop-coherent between the two cores' L1 caches.
 - Bugfix for DDR initialization: `calibrate_iob_impedance_for_ddr3` and `calibrate_iob_impedance`
   now expect a `zynq7000::slcr::ddriob::DdrControl` input argument. This register write was
   missing

@@ -90,8 +90,8 @@ test-run-data:
 
 [working-directory: 'firmware']
 docs-zynq: docs-pac docs-hal
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-mmu
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt
+
 [working-directory: 'firmware']
 docs-pac:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000

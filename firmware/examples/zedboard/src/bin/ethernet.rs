@@ -37,20 +37,18 @@ use zedboard_bsp::phy_marvell;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
     eth::{
         AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, embassy_net::InterruptResult,
     },
     generic_interrupt_handler,
-    gic::{Configurator, Interrupt},
-    gpio::{GpioPins, Output, PinState},
+    gic::Interrupt,
+    gpio,
     gtc::GlobalTimerCounter,
-    l2_cache,
-    uart::{ClockConfig, Config, Uart},
+    mmu::{mmu_l1_table_mut, section_attrs::SHAREABLE_DEVICE},
+    uart,
 };
 
-use zynq7000::{Peripherals, slcr::LevelShifterConfig};
-use zynq7000_rt::{self as _, mmu::section_attrs::SHAREABLE_DEVICE, mmu_l1_table_mut};
+use zynq7000_rt as _;
 
 const USE_DHCP: bool = true;
 const UDP_AND_TCP_PORT: u16 = 8000;
@@ -202,11 +200,7 @@ async fn tcp_task(mut tcp: TcpSocket<'static>) -> ! {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
-    let mut dp = Peripherals::take().unwrap();
-    l2_cache::init_with_defaults(&mut dp.l2c);
-
-    // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterConfig::EnableAll);
+    let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).expect("HAL init failed");
 
     // Configure the uncached memory region using the MMU.
     mmu_l1_table_mut()
@@ -215,27 +209,20 @@ async fn main(spawner: Spawner) -> ! {
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
-    // Set up the global interrupt controller.
-    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
-    gic.enable_all_interrupts();
-    gic.set_all_spi_interrupt_targets_cpu0();
-    gic.enable();
-    unsafe {
-        gic.enable_interrupts();
-    }
-    let gpio_pins = GpioPins::new(dp.gpio);
+
+    let gpio_pins = gpio::GpioPins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
-    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
     zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
-    let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
+    let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mut uart = Uart::new_with_mio_for_uart_1(
-        dp.uart_1,
-        Config::new_with_clk_config(uart_clk_config),
+    let mut uart = uart::Uart::new_with_mio_for_uart_1(
+        periphs.uart_1,
+        uart::Config::new_with_clk_config(uart_clk_config),
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
     .unwrap();
@@ -269,7 +256,7 @@ async fn main(spawner: Spawner) -> ! {
     tx_descr_ref.init_or_reset();
 
     // Unwrap okay, this is a valid peripheral.
-    let eth_ll = EthernetLowLevel::new(dp.eth_0).unwrap();
+    let eth_ll = EthernetLowLevel::new(periphs.eth_0).unwrap();
     let mod_id = eth_ll.regs.read_module_id();
     info!("Ethernet Module ID: {mod_id:?}");
     assert_eq!(mod_id, 0x20118);
@@ -387,7 +374,7 @@ async fn main(spawner: Spawner) -> ! {
     spawner.spawn(udp_task(udp_socket).unwrap());
     spawner.spawn(tcp_task(tcp_socket).unwrap());
 
-    let mut mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
+    let mut mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
 
     let mut ip_mode = IpMode::LinkDown;
     let mut transmitted_frames = 0;

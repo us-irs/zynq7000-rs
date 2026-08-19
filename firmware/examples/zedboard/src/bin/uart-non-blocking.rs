@@ -40,11 +40,10 @@ use log::{info, warn};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter, generic_interrupt_handler,
+    generic_interrupt_handler,
     gic::{Configurator, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
-    l2_cache,
     time::Hertz,
     uart::{self, ClockConfig, Config, Uart},
 };
@@ -62,7 +61,6 @@ const INIT_STRING: &str = "-- Zynq 7000 Zedboard non-blocking UART example --\n\
 #[global_allocator]
 static HEAP: Heap = Heap::empty();
 
-use zynq7000::{Peripherals, slcr::LevelShifterConfig};
 use zynq7000_rt as _;
 
 // Define the clock frequency as a constant
@@ -165,16 +163,16 @@ impl UartMultiplexer {
 
 #[embassy_executor::main]
 async fn main(spawner: Spawner) -> ! {
-    let mut dp = Peripherals::take().unwrap();
-    l2_cache::init_with_defaults(&mut dp.l2c);
-
-    // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterConfig::EnableAll);
+    // Custom GIC setup below (PL interrupt sensitivity), so the default interrupt config is
+    // skipped here and done manually afterward instead.
+    let mut hal_config = zynq7000_hal::Config::default();
+    hal_config.interrupt_config = None;
+    let periphs = zynq7000_hal::init(hal_config).unwrap();
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(periphs.gicc, periphs.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     // AXI UARTLite documentation mentions that a rising-edge sensitive interrupt is generated,
@@ -186,10 +184,10 @@ async fn main(spawner: Spawner) -> ! {
     unsafe {
         gic.enable_interrupts();
     }
-    let mut gpio_pins = GpioPins::new(dp.gpio);
+    let mut gpio_pins = GpioPins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
-    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
     zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
@@ -197,7 +195,7 @@ async fn main(spawner: Spawner) -> ! {
         .unwrap()
         .0;
     let mut log_uart = Uart::new_with_mio_for_uart_1(
-        dp.uart_1,
+        periphs.uart_1,
         Config::new_with_clk_config(uart_clk_config),
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
@@ -252,8 +250,11 @@ async fn main(spawner: Spawner) -> ! {
         .unwrap()
         .0;
     // UART0 routed through EMIO to PL pins.
-    let uart_0 =
-        Uart::new_with_emio(dp.uart_0, Config::new_with_clk_config(uart0_clk_config)).unwrap();
+    let uart_0 = Uart::new_with_emio(
+        periphs.uart_0,
+        Config::new_with_clk_config(uart0_clk_config),
+    )
+    .unwrap();
     // Safety: Valid address of AXI UARTLITE.
     let mut uartlite = unsafe { AxiUartlite::new(AXI_UARTLITE_BASE_ADDR) };
     // We need to call this before splitting the structure, because the interrupt signal is

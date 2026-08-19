@@ -2,7 +2,6 @@
 resolver = "3"
 members = [
   "zynq7000-rt",
-  "zynq7000-mmu",
   "zynq7000",
   "zynq7000-hal",
 

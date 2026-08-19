@@ -13,7 +13,7 @@
 //! Some major differences to the startup code provided by AMD:
 //!
 //! - No L2 cache initialization is performed.
-//! - MMU table is specified as Rust code.
+//! - MMU table is NOT part of the run-time and must be done in Rust code.
 //! - Modification to the stack setup code, because a different linker script is used.
 //!
 //! ## Linker script
@@ -148,38 +148,10 @@
 //! doesn't use OCM placement at all, `OCM` can just be aliased to any other region you already
 //! have, e.g. `REGION_ALIAS("OCM", DATA);`. Nothing will actually be placed there, so the two
 //! sections end up zero-sized and cost nothing.
-//!
-//! ### Cache maintenance
-//!
-//! Placing a buffer in OCM does **not** exempt it from cache maintenance if it's used as a DMA
-//! target/source. The `OCM` MMU attribute (see [`mmu::section_attrs::OCM`]) is inner
-//! write-back-cacheable, outer non-cacheable: the L1 (inner) cache still caches it exactly like
-//! DDR does, so DMA engines (which write to/read from physical memory directly, bypassing the
-//! cache) can still see stale data or have their writes clobbered by a later cache write-back,
-//! same as for any other cacheable memory. The difference from DDR is only that the L2 (outer)
-//! half of cache maintenance is unnecessary for OCM, since the L2 never caches it in the first
-//! place — use the `_inner`-only variants in `zynq7000_hal::cache` (e.g.
-//! `invalidate_data_cache_range_inner`, `clean_data_cache_range_inner`) for OCM buffers instead
-//! of the full inner+outer functions used for DDR buffers, to skip that wasted L2 work. See the
-//! `zedboard` `axi-dma` example for a side-by-side comparison of both.
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 #[cfg(all(feature = "rt", arm_profile = "a"))]
 pub use aarch32_rt::*;
 
-#[cfg(feature = "rt")]
-use zynq7000_mmu::L1TableWrapper;
-
-pub mod mmu;
-#[cfg(all(feature = "rt", arm_profile = "a"))]
-mod mmu_table;
 #[cfg(all(feature = "rt", arm_profile = "a"))]
 pub mod rt;
-
-/// Retrieves a mutable reference to the MMU L1 page table.
-#[cfg(all(feature = "rt", arm_profile = "a"))]
-pub fn mmu_l1_table_mut() -> L1TableWrapper<'static> {
-    let mmu_table = mmu_table::MMU_L1_PAGE_TABLE.0.get();
-    // Safety: We retrieve a reference to the MMU page table singleton.
-    L1TableWrapper::new(unsafe { &mut *mmu_table })
-}

@@ -18,16 +18,14 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter, generic_interrupt_handler,
-    gic::Configurator,
+    generic_interrupt_handler,
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
-    i2c, l2_cache,
+    i2c,
     time::Hertz,
     uart,
 };
 
-use zynq7000::{Peripherals, slcr::LevelShifterConfig};
 use zynq7000_rt as _;
 
 // Define the clock frequency as a constant
@@ -42,28 +40,15 @@ fn entry_point() -> ! {
 
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) -> ! {
-    let mut dp = Peripherals::take().unwrap();
-    l2_cache::init_with_defaults(&mut dp.l2c);
-
-    // Enable PS-PL level shifters.
-    configure_level_shifter(LevelShifterConfig::EnableAll);
+    let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).unwrap();
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    // Set up the global interrupt controller.
-    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
-    gic.enable_all_interrupts();
-    gic.set_all_spi_interrupt_targets_cpu0();
-    gic.enable();
-    unsafe {
-        gic.enable_interrupts();
-    }
-
-    let mut gpio_pins = GpioPins::new(dp.gpio);
+    let mut gpio_pins = GpioPins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
-    let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
+    let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
     zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
@@ -71,7 +56,7 @@ async fn main(_spawner: Spawner) -> ! {
         .unwrap()
         .0;
     let mut uart = uart::Uart::new_with_mio_for_uart_1(
-        dp.uart_1,
+        periphs.uart_1,
         uart::Config::new_with_clk_config(uart_clk_config),
         (gpio_pins.mio.mio48, gpio_pins.mio.mio49),
     )
@@ -97,7 +82,7 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
     let i2c = i2c::I2c::new_with_mio(
-        dp.i2c_1,
+        periphs.i2c_1,
         clk_config,
         (gpio_pins.mio.mio12, gpio_pins.mio.mio13),
     )

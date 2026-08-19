@@ -77,10 +77,19 @@ initialize:
     ldr     r0, =_vector_table
     mcr     p15, 0, r0, c12, c0, 0
 
-    /* Invalidate scu */
+    /* Invalidate scu. Primary core only: Xilinx's own reference boot.S guards this with
+       `#if USE_AMP!=1` and skips it on secondary cores, since it invalidates the SCU's snoop
+       tag tracking, and a second core repeating it after the primary has already started
+       caching things wipes out the SCU's record of what the primary has cached, breaking the
+       coherency it's supposed to provide (their commit message cites this exact bug, CR#1109723). */
+    mrc     p15,0,r0,c0,c0,5
+    and     r0, r0, #0x3
+    cmp     r0, #0
+    bne     skip_scu_invalidate
     ldr     r7, =0xf8f0000c
     ldr     r6, =0xffff
     str     r6, [r7]
+skip_scu_invalidate:
 
     /* Invalidate caches and TLBs */
     mov     r0,#0       /* r0 = 0  */
@@ -182,21 +191,8 @@ data_init_done:
     ldm     r2!, {{r3}}
     stm     r0!, {{r3}}
     b       0b
+
 ocm_data_init_done:
-    /* enable MMU and cache */
-    /* MMU Table is in .data, so this needs to be performed after .data is relocated */
-    /* (Even if in most cases, .data is already in RAM and relocation is a no-op) */
-    bl      load_mmu_table
-
-    mvn     r0,#0       /* Load MMU domains -- all ones=manager */
-    mcr     p15,0,r0,c3,c0,0
-
-    /* Enable mmu, icache and dcache */
-    ldr     r0,=CRValMmuCac
-    mcr     p15,0,r0,c1,c0,0    /* Enable cache and MMU */
-    dsb                         /* dsb  allow the MMU to start up */
-    isb                         /* isb  flush prefetch buffer */
-
     // Jump to application
     // Load CPU ID 0, which will be used as a function argument to the boot_core function.
     mov     r0, #0x0
