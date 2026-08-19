@@ -578,6 +578,14 @@ fn main() -> anyhow::Result<()> {
 
     tracing::info!("running core");
     core.run()?;
+    drop(core);
+
+    // On a JtagCascaded (dual Cortex-A9) target, CPU1 shows up as a separate debug core that
+    // hw_server/the probe may halt on attach independently of CPU0. Our own boot code releases
+    // CPU1 from the boot ROM's park loop via the mailbox+SEV protocol, but that has no effect if
+    // CPU1 is sitting halted at the debug level, so make sure it's running too.
+    let mut core1 = session.core(1)?;
+    core1.run()?;
 
     if let Some(serial) = &config.serial {
         attach_serial_console(serial)?;

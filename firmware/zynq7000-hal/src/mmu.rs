@@ -180,6 +180,8 @@ pub unsafe fn enable_mmu_and_cache() {
         // Enable MMU
         s.set_m(true);
     });
+    aarch32_cpu::asm::dsb();
+    aarch32_cpu::asm::isb();
 }
 
 /// Retrieves a mutable reference to the MMU L1 page table.

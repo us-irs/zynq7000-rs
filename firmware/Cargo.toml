@@ -17,6 +17,11 @@ members = [
 exclude = [
   # Exclude, can not be built with debug optimization level, too large.
   "zedboard-fsbl",
+  # Exclude: needs aarch32-cpu's `critical-section-multi-core` feature, which conflicts with
+  # every other example's `critical-section-single-core` under workspace feature unification
+  # (both call `critical_section::set_impl!`, so enabling both at once is a hard duplicate-
+  # symbol error, not just a behavior difference).
+  "examples/zedboard-smp",
 ]
 
 # cargo build/run

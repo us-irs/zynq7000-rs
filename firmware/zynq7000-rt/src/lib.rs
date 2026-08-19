@@ -155,3 +155,5 @@ pub use aarch32_rt::*;
 
 #[cfg(all(feature = "rt", arm_profile = "a"))]
 pub mod rt;
+#[cfg(all(feature = "rt", arm_profile = "a"))]
+pub mod smp;

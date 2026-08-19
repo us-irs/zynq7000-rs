@@ -285,6 +285,9 @@ PROVIDE(_pack_stacks = 0);
 
 /* Weak aliases for ASM default handlers */
 PROVIDE(_start                      = _default_start);
+/* Secondary core entry point. `_start` always branches here for any non-zero MPIDR core, so
+   every binary needs this symbol resolved even if it never actually releases a second core. */
+PROVIDE(kmain_secondary             = _default_kmain_secondary);
 PROVIDE(_asm_undefined_handler      = _asm_default_undefined_handler);
 PROVIDE(_asm_svc_handler            = _asm_default_svc_handler);
 PROVIDE(_asm_hvc_handler            = _asm_default_hvc_handler);

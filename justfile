@@ -64,6 +64,10 @@ build-dir target:
 build-zynq: (build-dir "firmware")
   cd "zynq7000" && cargo build --all-features
   cd "zedboard-fsbl" && cargo build --release
+  # Excluded from the firmware workspace: needs aarch32-cpu's `critical-section-multi-core`
+  # feature, which conflicts with every other example's `critical-section-single-core` under
+  # workspace feature unification.
+  cd "examples/zedboard-smp" && cargo build
   cd "zynq7000-hal" && cargo build --features "time-driver-gtc"
 
 clean-dir target:
