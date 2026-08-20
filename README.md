@@ -21,8 +21,8 @@ This workspace contains libraries and application which can only be run on the t
   Zynq7000.
 - The [`zynq7000`](./firmware/zynq7000) PAC crate containing basic low-level register access API.
 - The [`zynq7000-hal`](./firmware/zynq7000-hal) HAL crate containing higher-level abstractions on
-  top of the PAC register crate, including the MMU abstractions, and also contains embassy time
-  drivers.
+  top of the PAC register crate, including the MMU abstractions, and also contains
+  [`embassy-time`](https://docs.rs/embassy-time/latest/embassy_time/) drivers.
 
 This project was developed using a Zedboard, so there are several crates available targeted towards
 this board:
@@ -60,18 +60,6 @@ It also contains the following helper crates:
   tool is a native Rust flashing/debugging tool which uses `probe-rs` to talk to a JTAG debug
   probe directly, without needing `xsct` or `hw_server`. See the
   [dedicated section below](#flashing-running-and-debugging-the-software---z7-run-app) for details.
-
-# Using the `.cargo/config.toml` file
-
-This is mostly relevant for development directly inside this repository.
-Use the following command to have a starting `config.toml` file
-
-```sh
-cp .cargo/config.toml.template .cargo/config.toml
-```
-
-You then can adapt the `config.toml` to your needs. For example, you can configure runners
-to conveniently flash with `cargo run`.
 
 # Building the blinky example
 
@@ -199,6 +187,18 @@ The `z7-run`/`probe-rs` flow above only supports a probe connected directly to t
   Vivado and generate the SDT folder yourself.
 - `gdb-multiarch` installation to debug applications.
 - `python3` installation to use the provided tooling.
+
+## Setting up the runner
+
+This is mostly relevant for development directly inside this repository.
+Use the following command to have a starting `config.toml` file
+
+```sh
+cp .cargo/config.toml.template .cargo/config.toml
+```
+
+You then can adapt the `config.toml` to your needs. For example, you can configure runners
+to conveniently flash with `cargo run`.
 
 ## Programming and Debug Flow
 
