@@ -101,7 +101,7 @@ cd firmware
 cargo build --bin blinky
 ```
 
-# Flashing, running and debugging the software - z7-run app
+# Flashing, running and debugging the software using the `z7-run` app
 
 The [`z7-run`](./host/z7-run) tool is a native Rust runner taking care of all steps to run a
 software on the Z7 in either OCM or in DDR memory. It has a higher level of
@@ -167,7 +167,7 @@ the example apps provided in this repo and also installs the [`z7-run`](./host/z
    `--config`, `--probe` and `--check-ddr` (a DDR read/write sanity check performed right after PS7
    init).
 
-# Flashing, running and debugging the software - TCL script and runner
+# Flashing, running and debugging the software using a TCL script and runner
 
 This repository was only tested with the [Zedboard](https://digilent.com/reference/programmable-logic/zedboard/start)
 but should be easily adaptable to other Zynq7000 based platforms and boards.
