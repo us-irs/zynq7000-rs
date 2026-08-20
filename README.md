@@ -61,6 +61,12 @@ It also contains the following helper crates:
   probe directly, without needing `xsct` or `hw_server`. See the
   [dedicated section below](#flashing-running-and-debugging-the-software---z7-run-app) for details.
 
+# Dual-core (SMP) support
+
+The Zynq7000's two Cortex-A9 cores are both supported. See the
+[`zynq7000-rt` documentation](https://docs.rs/zynq7000-rt) for details, and the
+[`zedboard-smp`](./firmware/examples/zedboard-smp) example for a complete two-core setup.
+
 # Using the `.cargo/config.toml` file
 
 This is mostly relevant for development directly inside this repository.
