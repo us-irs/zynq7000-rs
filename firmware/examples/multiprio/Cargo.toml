@@ -1,5 +1,5 @@
 [package]
-name = "embassy-examples"
+name = "embassy-multiprio"
 version = "0.1.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
@@ -23,14 +23,16 @@ critical-section = "1"
 heapless = "0.9"
 embedded-io = "0.7"
 embedded-hal = "1"
-fugit = "0.4"
+arbitrary-int = "2"
 log = "0.4"
-
-embassy-executor = { version = "0.10", features = [
-  "platform-cortex-ar",
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
+embassy-executor = { version = "0.10", git = "https://github.com/embassy-rs/embassy.git", rev = "4723de827af8e3a05a4e9fa4c822adc18c66fcc4", features = [
+  "platform-z7",
   "executor-thread",
+  "executor-interrupt",
 ]}
 
-# embassy-executor = { git = "https://github.com/robamu/embassy.git", branch = "add-z7-arch-support", features = ["platform-z7", "executor-thread"] }
-# embassy-executor = { git = "https://github.com/robamu/embassy.git", features = ["platform-cortex-ar", "executor-thread"] }
-embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
+[patch.crates-io]
+# Specific patch needed to avoid having two versions of this in the dependency tree.
+embassy-time-queue-utils = { git = "https://github.com/embassy-rs/embassy.git", rev = "4723de827af8e3a05a4e9fa4c822adc18c66fcc4" }
+
