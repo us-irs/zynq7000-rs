@@ -1,7 +1,6 @@
 [package]
 name = "zedboard"
 version = "0.1.0"
-authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Embassy examples for the Zynq7000 SoC"
 homepage = "https://github.com/us-irs/zynq7000-rs"

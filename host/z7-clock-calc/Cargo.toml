@@ -3,7 +3,11 @@ name = "z7-clock-calc"
 version = "0.1.0"
 edition = "2024"
 description = "Pure clock/divisor search calculators used by zynq7000-hal, split into their own crate so they can be unit-tested on the host (zynq7000-hal cannot build for the host target)"
+homepage = "https://github.com/us-irs/zynq7000-rs"
+repository = "https://github.com/us-irs/zynq7000-rs"
 license = "MIT OR Apache-2.0"
+keywords = ["no-std", "zynq7000", "clock", "embedded"]
+categories = ["algorithms", "no-std", "embedded"]
 
 [dependencies]
 fugit = "0.5"
