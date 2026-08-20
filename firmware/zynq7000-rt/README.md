@@ -17,9 +17,12 @@ these in detail.
 
 Some major differences to the startup code provided by AMD:
 
-- No L2 cache initialization is performed.
-- MMU table is specified as Rust code.
+- L2 cache initialization is **not** performed.
+- MMU table is **not** configured and enabled.
 - Modification to the stack setup code, because a different linker script is used.
+
+The [zynq7000-hal](../zynq7000-hal/README.md) provides components for L2 cache and MMU
+configuration and initialization.
 
 ## Features
 
