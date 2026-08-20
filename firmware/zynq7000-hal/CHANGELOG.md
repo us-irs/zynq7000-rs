@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- The async UART TX driver now tracks its transfer state with plain atomics
+  (`AtomicPtr`/`AtomicUsize`) instead of a `critical_section::Mutex<RefCell<_>>`, matching the
+  design used by the `axi-uart16550` crate. On cancellation, `Drop` now also nulls the shared
+  buffer pointer, closing a gap where a spurious interrupt between a cancelled future and the
+  next transfer could otherwise read from a dangling pointer.
 - `Interrupt::Sgi` now wraps the new `SgiInterrupt` type instead of a raw `usize`.
 - Merged the `zynq7000-mmu` crate into `mmu`. The `L1Table`, `L1TableRaw` and `L1TableWrapper`
   types now live here directly, since this HAL was their only remaining consumer.

@@ -11,7 +11,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 zynq7000 = { path = "../zynq7000", version = "0.4" }
-zynq7000-hal = { path = "../zynq7000-hal", version = "0.1" }
+zynq7000-hal = { path = "../zynq7000-hal", version = "0.2" }
 bitbybit = "2"
 log = "0.4"
 arbitrary-int = "2"

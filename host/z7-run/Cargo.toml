@@ -18,3 +18,4 @@ serde = { version = "1", features = ["derive"] }
 z7-run-data = { path = "../z7-run-data" }
 serialport = { version = "4" }
 indicatif = { version = "0.18" }
+ctrlc = { version = "3" }

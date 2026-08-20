@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
+    sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
 };
 
@@ -306,34 +307,107 @@ fn flash_bitstream(bitstream: &str, board: &str, extra_args: &[String]) -> anyho
     Ok(())
 }
 
-/// Opens the configured serial port and prints anything received to stdout, forever. Meant to be
-/// the last thing `main` does: once the target is up and running, this is how you watch its UART
-/// output without needing a separate terminal/tool.
-fn attach_serial_console(serial: &SerialConfig) -> anyhow::Result<()> {
-    use std::io::{Read, Write};
+/// Set by the `Ctrl+C` handler. The background reader thread spawned by [`open_serial_console`]
+/// polls this and exits cleanly instead of running forever, which lets the serial port close
+/// normally (via `Drop`) instead of the whole process just being killed mid-read. Everything
+/// before that phase (probe selection, flashing, register ops) doesn't watch this flag, since
+/// nothing there holds a resource that benefits from orderly teardown; a second `Ctrl+C` forces
+/// an immediate exit regardless, in case the first one arrived too early to matter.
+static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 
+/// Opens the configured serial port and immediately starts reading from it on a background
+/// thread, forwarding every chunk received to the returned channel. Must be called before either
+/// core is released: the target can start UARTing out its own boot log the instant
+/// `core.run()`/`core1.run()` return, and those probe-rs calls are themselves slow JTAG
+/// round-trips, so opening (and reading) the port only afterward reliably loses the target's
+/// first output.
+///
+/// Nothing is printed here. Capturing into a channel instead of straight to stdout means the
+/// bytes that arrive during that gap get printed in order, before anything live, once
+/// [`run_serial_console`] starts draining it - not interleaved with the flashing progress bars
+/// or tracing output still on screen at that point, so the overall sequence stays clean.
+fn open_serial_console(
+    serial: &SerialConfig,
+) -> anyhow::Result<(
+    std::sync::mpsc::Receiver<Vec<u8>>,
+    std::thread::JoinHandle<()>,
+)> {
     tracing::info!(
         "attaching to serial console: {} @ {} baud",
         serial.port,
         serial.baud_rate
     );
-    let mut port = serialport::new(&serial.port, serial.baud_rate)
+    let port = serialport::new(&serial.port, serial.baud_rate)
         .timeout(Duration::from_millis(100))
         .open()
         .with_context(|| format!("failed to open serial port {}", serial.port))?;
 
+    let (tx, rx) = std::sync::mpsc::channel();
+    let handle = std::thread::spawn(move || serial_reader_loop(port, tx));
+    Ok((rx, handle))
+}
+
+/// Reads from `port` and forwards every chunk received to `tx`, until either `tx`'s receiver is
+/// gone, a real read error occurs, or [`SHUTDOWN_REQUESTED`] is set. This is the body of the
+/// background thread [`open_serial_console`] spawns; `port` and `tx` are passed in explicitly
+/// (rather than captured by the spawned closure) so it's clear at the call site exactly what
+/// data crosses into the thread.
+fn serial_reader_loop(
+    mut port: Box<dyn serialport::SerialPort>,
+    tx: std::sync::mpsc::Sender<Vec<u8>>,
+) {
+    use std::io::Read;
+
     let mut buf = [0u8; 1024];
-    let mut stdout = std::io::stdout();
     loop {
+        if SHUTDOWN_REQUESTED.load(Ordering::Relaxed) {
+            return;
+        }
         match port.read(&mut buf) {
+            Ok(0) => {}
             Ok(n) => {
-                stdout.write_all(&buf[..n])?;
-                stdout.flush()?;
+                if tx.send(buf[..n].to_vec()).is_err() {
+                    // Receiver gone, i.e. the main thread exited; nothing left to do.
+                    return;
+                }
             }
-            Err(e) if e.kind() == std::io::ErrorKind::TimedOut => {}
-            Err(e) => return Err(e).with_context(|| "failed to read from serial console"),
+            Err(e)
+                if e.kind() == std::io::ErrorKind::TimedOut
+                    || e.kind() == std::io::ErrorKind::WouldBlock => {}
+            // Can't propagate this to `main`'s `Result` from a background thread; log it and
+            // stop, which closes the channel and ends `run_serial_console`'s read loop.
+            Err(e) => {
+                tracing::error!("serial console read error: {e}");
+                return;
+            }
         }
     }
+}
+
+/// Prints everything received on `rx` to stdout, forever, in the order it arrived (including
+/// whatever was already buffered before this was called). Meant to be the last thing `main` does:
+/// once the target is up and running, this is how you watch its UART output without needing a
+/// separate terminal/tool.
+///
+/// `rx` only closes once the reader thread's closure returns and drops its `Sender`, so by the
+/// time this loop ends the thread is already finished or about to be; `handle.join()` below just
+/// confirms that and surfaces a panic there instead of silently treating it as a clean
+/// disconnect.
+fn run_serial_console(
+    rx: std::sync::mpsc::Receiver<Vec<u8>>,
+    handle: std::thread::JoinHandle<()>,
+) -> anyhow::Result<()> {
+    use std::io::Write;
+
+    let mut stdout = std::io::stdout();
+    for chunk in rx {
+        stdout.write_all(&chunk)?;
+        stdout.flush()?;
+    }
+    if handle.join().is_err() {
+        anyhow::bail!("serial console reader thread panicked");
+    }
+    Ok(())
 }
 
 /// Writes a few distinct bit patterns to DDR and reads them back, to give an unambiguous
@@ -405,6 +479,18 @@ fn main() -> anyhow::Result<()> {
                 .unwrap_or_else(|_| EnvFilter::new("info,probe_rs=warn")),
         )
         .init();
+
+    // First `Ctrl+C` asks the serial console's background reader thread to shut down cleanly
+    // (see `SHUTDOWN_REQUESTED`/`open_serial_console`). Nothing outside that phase watches the
+    // flag, so if it arrives earlier (still flashing, prompting for a probe, ...) it does
+    // nothing by itself; a second `Ctrl+C` always exits immediately, so that case still
+    // terminates the process instead of becoming uninterruptible.
+    ctrlc::set_handler(|| {
+        if SHUTDOWN_REQUESTED.swap(true, Ordering::SeqCst) {
+            std::process::exit(130);
+        }
+    })
+    .context("failed to install Ctrl+C handler")?;
 
     let cli = Cli::parse();
 
@@ -576,6 +662,15 @@ fn main() -> anyhow::Result<()> {
     session.prepare_running_on_ram(vector_table_addr, 0)?;
     let mut core = session.core(0)?;
 
+    // Open the serial console and start capturing from it now, before releasing either core:
+    // the target can start UARTing out its boot log the instant `core.run()` returns, and both
+    // that and `core1.run()` below are themselves slow JTAG round-trips, so opening the port
+    // only after them would reliably lose the target's first output.
+    let opt_serial_rx_and_join_handle = match &config.serial {
+        Some(serial) => Some(open_serial_console(serial)?),
+        None => None,
+    };
+
     tracing::info!("running core");
     core.run()?;
     drop(core);
@@ -587,8 +682,8 @@ fn main() -> anyhow::Result<()> {
     let mut core1 = session.core(1)?;
     core1.run()?;
 
-    if let Some(serial) = &config.serial {
-        attach_serial_console(serial)?;
+    if let Some((rx, join_handle)) = opt_serial_rx_and_join_handle {
+        run_serial_console(rx, join_handle)?;
     }
 
     Ok(())
