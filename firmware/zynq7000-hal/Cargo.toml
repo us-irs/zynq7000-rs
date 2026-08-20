@@ -1,7 +1,6 @@
 [package]
 name = "zynq7000-hal"
-version = "0.1.1"
-authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
+version = "0.2.0"
 edition = "2024"
 description = "Hardware Abstraction Layer (HAL) for the Zynq7000 family of SoCs"
 homepage = "https://github.com/us-irs/zynq7000-rs"
