@@ -1,8 +1,8 @@
 //! Shared data model for the PS7 PLL/clock/DDR/DDRIOB register init sequences.
 //!
-//! [`z7-ps7init-extract`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/host/z7-ps7init-extract)
+//! [`z7-ps7init-extract`](https://github.com/us-irs/zynq7000-rs/tree/main/host/z7-ps7init-extract)
 //! produces a [`PsInitOps`] value (serialized as RON, optionally JSON) from an AMD `ps7_init.tcl`
-//! script. [`z7-run`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/host/z7-run)
+//! script. [`z7-run`](https://github.com/us-irs/zynq7000-rs/tree/main/host/z7-run)
 //! deserializes it back and executes the op sequences over JTAG via probe-rs. Sharing this crate
 //! between both keeps the two in sync instead of maintaining parallel type definitions.
 

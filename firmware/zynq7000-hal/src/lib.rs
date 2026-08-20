@@ -1,7 +1,7 @@
 //! # HAL for the AMD Zynq 7000 SoC family
 //!
 //! This repository contains the **H**ardware **A**bstraction **L**ayer (HAL), which is an additional
-//! hardware abstraction on top of the [peripheral access API](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq7000).
+//! hardware abstraction on top of the [peripheral access API](https://github.com/us-irs/zynq7000-rs/tree/main/zynq7000).
 //!
 //! It is the result of reading the datasheet for the device and encoding a type-safe layer over the
 //! raw PAC. This crate also implements traits specified by the
@@ -21,8 +21,8 @@
 //!
 //! ## Examples
 //!
-//! All examples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/examples)
-//! and [firmware folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware) of the project
+//! All examples can be found inside the [examples folder](https://github.com/us-irs/zynq7000-rs/tree/main/firmware/examples)
+//! and [firmware folder](https://github.com/us-irs/zynq7000-rs/tree/main/firmware) of the project
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 

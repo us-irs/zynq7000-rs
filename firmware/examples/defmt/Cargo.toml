@@ -4,8 +4,8 @@ version = "0.1.0"
 authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "DEFMT test app"
-homepage = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
-repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
+homepage = "https://github.com/us-irs/zynq7000-rs"
+repository = "https://github.com/us-irs/zynq7000-rs"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
