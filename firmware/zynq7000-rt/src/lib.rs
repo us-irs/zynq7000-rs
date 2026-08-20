@@ -1,20 +1,27 @@
-//! # Rust bare metal run-time support for the AMD Zynq 7000 SoCs
+//! # Startup code and minimal run-time support for the AMD Zynq 7000 SoCs
 //!
-//! Startup code and minimal runtime for the AMD Zynq7000 SoC to write bare metal Rust code.
-//! This run-time crate is strongly based on the
-//! [startup code provided by AMD](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S).
+//! This run-time crate is based on both the
+//! [startup code provided by AMD](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S)
+//! and the [aarch32-rt](https://github.com/rust-embedded/aarch32/tree/main/aarch32-rt) generic
+//! run-time library.
 //!
-//! It mostly builds on [aarch32-rt](https://github.com/rust-embedded/aarch32/tree/main/aarch32-rt).
-//! It activates the `fpu-d32` feature on that crate and overrides the `_default_start` method
-//! to add necessary setup code for the Zynq7000. It re-exports the `aarch32-rt` crate, including
-//! the attributes macros. The [documentation](https://docs.rs/aarch32-rt/latest/aarch32_rt/) specifies
-//! these in detail.
+//! It activates the `fpu-d32` feature of the [`aarch32_rt`] library and overrides the
+//! `_default_start` method to add necessary setup code for the Zynq7000. It re-exports the
+//! [`aarch32_rt`] crate, including the attributes macros. The
+//! [documentation](https://docs.rs/aarch32-rt/latest/aarch32_rt/) specifies these in detail.
 //!
 //! Some major differences to the startup code provided by AMD:
 //!
-//! - No L2 cache initialization is performed.
-//! - MMU table is NOT part of the run-time and must be done in Rust code.
+//! - L2 cache initialization is **not** performed.
+//! - MMU table is **not** configured and enabled.
 //! - Modification to the stack setup code, because a different linker script is used.
+//!
+//! The [zynq7000-hal](https://docs.rs/zynq7000-hal) provides components for L2 cache and MMU
+//! configuration and initialization.
+//!
+//! ## Features
+//!
+//! * `rt` - Default feature which activates the run-time.
 //!
 //! ## Linker script
 //!
@@ -118,12 +125,10 @@
 //!
 //! See any of the `firmware/examples/*/build.rs` files in this repository for a real copy.
 //!
-//! ## Features
+//! ## Dual-core (SMP)
 //!
-//! * `first-segment-ddr-attr` - This feature can be enabled if the DDR is accessed through memory
-//!   addresses 0x8000 to 0x0010_0000. In this case, the MMU attribute for the first segment is
-//!   the DDR memory attribute (inner and outer cache maintenance). Otherwise, the OCM attribute
-//!   will be used (only inner cache maintenance).
+//! This library has support for dual-core (SMP) setups where two cores are executing the
+//! same software. The [`smp`] module documentation provides more detailed information.
 //!
 //! ## Placing statics in OCM
 //!

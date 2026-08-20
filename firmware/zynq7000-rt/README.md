@@ -5,15 +5,17 @@
 Zynq7000 Rust Run-Time Support
 ========
 
-Startup code and minimal runtime for the AMD Zynq7000 SoC to write bare metal Rust code.
-This run-time crate is strongly based on the
-[startup code provided by AMD](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S).
+Startup code and minimal run-time support for the AMD Zynq 7000 SoCs.
 
-It mostly builds on [aarch32-rt](https://github.com/rust-embedded/aarch32/tree/main/aarch32-rt).
-It activates the `fpu-d32` feature on that crate and overrides the `_default_start` method
-to add necessary setup code for the Zynq7000. It re-exports the `aarch32-rt` crate, including
-the attributes macros. The [documentation](https://docs.rs/aarch32-rt/latest/aarch32_rt/) specifies
-these in detail.
+This run-time crate is based on both the
+[startup code provided by AMD](https://github.com/Xilinx/embeddedsw/blob/master/lib/bsp/standalone/src/arm/cortexa9/gcc/boot.S)
+and the [aarch32-rt](https://github.com/rust-embedded/aarch32/tree/main/aarch32-rt) generic
+run-time library.
+
+It activates the `fpu-d32` feature of the `aarch32_rt` library and overrides the
+`_default_start` method to add necessary setup code for the Zynq7000. It re-exports the
+`aarch32_rt` crate, including the attributes macros. The
+[documentation](https://docs.rs/aarch32-rt/latest/aarch32_rt/) specifies these in detail.
 
 Some major differences to the startup code provided by AMD:
 
@@ -28,8 +30,8 @@ configuration and initialization.
 
 - `rt` is a default feature which activates the run-time.
 
-## Re-Generating the MMU table
+## Dual-core (SMP)
 
-The MMU table is a static flat map of 4096 entries for each 1 MB in the memory map.
-It was generated using the [`mmu-table-gen`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/tools/mmu-table-gen)
-tool.
+Dual-core (SMP) boot support is provided by the `smp` module. See the
+[documentation](https://docs.rs/zynq7000-rt) for details, and the
+[`zedboard-smp`](../examples/zedboard-smp) example for a complete two-core setup.

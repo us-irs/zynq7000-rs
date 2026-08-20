@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.4.0] 2026-08-20
+
 ## Added
 
 - Added an `smp` module: `smp::start_core1` releases CPU1 from the boot ROM's park loop via the
@@ -15,16 +17,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   now SMP-aware: only the primary core zeroes `.bss`/`.data`, and every core computes its stack
   pointer from its real MPIDR index instead of assuming core 0. `z7link.x` provides a default
   weak `kmain_secondary`, so existing single-core binaries still link without defining one.
-
-## Removed
-
-- Removed MMU table setup. The `mmu`/`mmu_table` modules, `mmu_l1_table_mut()` and the assembly
-  that enabled the MMU in `rt.rs` are gone, along with the now-unused `zynq7000-mmu` dependency.
-  This now lives in `zynq7000-hal` and must be called explicitly from Rust instead of running
-  unconditionally during startup.
-
-## Added
-
 - Added `z7link.x`, a complete linker script shipped by this crate which supersedes
   `aarch32-rt`'s `link.x` (projects now pass `-Clink-arg=-Tz7link.x` instead of `-Tlink.x`). It
   is a copy of `aarch32-rt/link.x` with two new output sections, `.ocm.data` and `.ocm.bss`,
@@ -37,6 +29,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   Projects that don't use OCM placement just need `OCM` aliased to any existing region in their
   `memory.x` (e.g. `REGION_ALIAS("OCM", DATA);`); nothing gets placed there so the sections are
   zero-sized.
+
+## Removed
+
+- Removed MMU table setup. The `mmu`/`mmu_table` modules, `mmu_l1_table_mut()` and the assembly
+  that enabled the MMU in `rt.rs` are gone, along with the now-unused `zynq7000-mmu` dependency.
+  This now lives in `zynq7000-hal` and must be called explicitly from Rust instead of running
+  unconditionally during startup.
 
 ## Fixed
 
@@ -80,7 +79,8 @@ Documentation fixes.
 
 Initial release
 
-[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.3.0...HEAD
+[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-rt-v0.4.0...HEAD
+[v0.4.0]: https://github.com/us-irs/zynq7000-rs/tags/zynq7000-rt-v0.4.0
 [v0.3.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.2.0...zynq7000-rt-v0.3.0
 [v0.2.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.1.1...zynq7000-rt-v0.2.0
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-rt-v0.1.0...zynq7000-rt-v0.1.1
