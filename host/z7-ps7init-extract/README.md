@@ -11,7 +11,8 @@ scripts with a C compiler, this tool extracts all required configuration paramet
 DDRIOB initialization and configuration and exports them as native Rust constants.
 
 The generates files can be placed in individual projects or board support packages to initialize
-the DDR in conjunction with the [Zynq7000 HAL library](https://github.com/us-irs/zynq7000-rs/tree/fsbl-rs/zynq/zynq7000-hal).
+the DDR in conjunction with the [Zynq7000 HAL library](https://github.com/us-irs/zynq7000-rs/tree/main/firmware/zynq7000-hal),
+e.g. as done by [`zedboard-fsbl`](https://github.com/us-irs/zynq7000-rs/tree/main/firmware/zedboard-fsbl).
 
 Right now, the script expects the `ps7init.tcl` file to be passed as a command line argument
 for `-p` or `--path`. It then generates the configuration as a `ddrc_config_autogen.rs` and

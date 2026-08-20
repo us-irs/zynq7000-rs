@@ -8,21 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
-## Changed
-
-- The async UART TX driver now tracks its transfer state with plain atomics
-  (`AtomicPtr`/`AtomicUsize`) instead of a `critical_section::Mutex<RefCell<_>>`, matching the
-  design used by the `axi-uart16550` crate. On cancellation, `Drop` now also nulls the shared
-  buffer pointer, closing a gap where a spurious interrupt between a cancelled future and the
-  next transfer could otherwise read from a dangling pointer.
-- `Interrupt::Sgi` now wraps the new `SgiInterrupt` type instead of a raw `usize`.
-- Merged the `zynq7000-mmu` crate into `mmu`. The `L1Table`, `L1TableRaw` and `L1TableWrapper`
-  types now live here directly, since this HAL was their only remaining consumer.
-- Moved MMU table setup here from `zynq7000-rt`. The `mmu` and `mmu_table` modules and the
-  `first-segment-ddr-attr` feature now live in this crate. Enabling the MMU used to happen
-  unconditionally in the run-time startup assembly, it is now an explicit Rust call gated by
-  the new `Config::mmu_init` flag, which `init()` runs by default. The first 1 MB segment now
-  defaults to the OCM attribute rather than DDR, matching that move.
+# [v0.2.0] 2026-08-20
 
 ## Added
 
@@ -45,6 +31,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Fixed
 
+- `GlobalTimerCounter::read_timer` looped re-reading the lower 32 bits until the upper 32 bits
+  matched the *original* upper value it read first. On a genuine counter rollover (upper actually
+  incrementing), that value would never be seen again, so the loop never terminated. It now just
+  re-reads the upper half once and, if it changed, re-reads the lower half too, instead of looping.
 - `DDR` MMU sections used domain 15, but `enable_mmu_and_cache()` only grants Manager access to
   domain 0. All sections now use domain 0, matching what's actually enabled and avoiding a domain
   fault on DDR access.
@@ -58,6 +48,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Several bugfixes and improvements for GIC module. Some of the registers previously were
   completely overwritten instead of only modifying their own bit portions. Also allow targeting
   interrupts without clearing other CPU target.
+- The `smoltcp`/`embassy-net` Ethernet driver capabilities had the hardware checksum offload
+  flags backwards: IPv4/UDP/TCP were marked `Checksum::Both` (hardware verifies and generates)
+  and ICMPv4/ICMPv6 were marked `Checksum::None`, the opposite of what the GEM hardware actually
+  offloads. Swapped to the correct assignment.
+- `configure_bitstream_non_secure` (PL bitstream programming) had two DMA setup bugs:
+  `write_dma_source_len`/`write_dma_dest_len` were given the bitstream length in bytes, but the
+  DevC DMA length registers count 32-bit words, so the DMA request was 4x too large. The source
+  address's two LSBs also need to be set to `0b01` to mark it as the last DMA command of the
+  transfer, per the TRM, which wasn't being done.
 - Do not reset the UART on TX future creation anymore, which lead to glitches and invalid data.
 - Robustness improvements for the asynchronous UART TX module.
 - SPI1 AMBA clock control bits are now enabled and disabled properly
@@ -67,6 +66,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Changed
 
+- `Interrupt::Sgi` now wraps the new `SgiInterrupt` type instead of a raw `usize`.
+- Merged the `zynq7000-mmu` crate into `mmu`. The `L1Table`, `L1TableRaw` and `L1TableWrapper`
+  types now live here directly, since this HAL was their only remaining consumer.
+- Moved MMU table setup here from `zynq7000-rt`. The `mmu` and `mmu_table` modules and the
+  `first-segment-ddr-attr` feature now live in this crate. Enabling the MMU used to happen
+  unconditionally in the run-time startup assembly, it is now an explicit Rust call gated by
+  the new `Config::mmu_init` flag, which `init()` runs by default. The first 1 MB segment now
+  defaults to the OCM attribute rather than DDR, matching that move.
 - HAL init now brings out the PL out of reset by default.
 - HAL init configuration is now a non-exhaustive configuration structure with a `Default` impl.
 - Inside the `smoltcp` ethernet TX driver, only clean the cache.
@@ -83,6 +90,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   for logging.
 - GIC data structures: Removed the `Gic` prefix which already is part of the module name.
 - Renamed `GicInterruptHelper` to `InterruptGuard`. It acknowledges the end of interrupts on drop.
+- The async UART TX driver now tracks its transfer state with plain atomics
+  (`AtomicPtr`/`AtomicUsize`) instead of a `critical_section::Mutex<RefCell<_>>`, matching the
+  design used by the `axi-uart16550` crate. On cancellation, `Drop` now also nulls the shared
+  buffer pointer, closing a gap where a spurious interrupt between a cancelled future and the
+  next transfer could otherwise read from a dangling pointer.
 
 ## Added
 
@@ -101,6 +113,7 @@ Documentation fixes.
 
 Initial release
 
-[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-hal-v0.1.0...HEAD
+[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-hal-v0.2.0...HEAD
+[v0.2.0]: https://github.com/us-irs/zynq7000-rs/tags/zynq7000-hal-v0.2.0
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-hal-v0.1.0...zynq7000-hal-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zynq7000-hal-v0.1.0
