@@ -1,6 +1,7 @@
 //! # Simple logging providers
 
 use core::sync::atomic::{AtomicBool, AtomicU8};
+pub use log::LevelFilter;
 
 static LOGGER_INIT_DONE: AtomicBool = AtomicBool::new(false);
 
@@ -267,12 +268,32 @@ macro_rules! uprintln {
 /// Logger module which logs into a pipe to allow asynchronous logging handling.
 pub mod asynch {
     use core::fmt::Write as _;
+    use core::sync::atomic::{AtomicU32, Ordering};
 
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
     use embedded_io_async::Write as _;
     use log::{LevelFilter, set_logger, set_max_level};
 
     use crate::uart::TxAsync;
+
+    /// Counts bytes that could not be written to the log pipe because it was full, i.e. logging
+    /// (or [`print`]) outpaced [`UartLoggerRunner`] draining it over the UART. Incremented instead
+    /// of logging the failure, since logging from inside the logger would only make the overflow
+    /// worse.
+    static DROPPED_BYTES: AtomicU32 = AtomicU32::new(0);
+
+    /// Number of bytes dropped so far because the log pipe was full. Wraps on overflow.
+    pub fn dropped_bytes() -> u32 {
+        DROPPED_BYTES.load(Ordering::Relaxed)
+    }
+
+    /// Adds `remaining` unwritten bytes to [`DROPPED_BYTES`]. `remaining` is 0 when a line was
+    /// written in full.
+    fn note_dropped(remaining: usize) {
+        if remaining > 0 {
+            DROPPED_BYTES.fetch_add(remaining as u32, Ordering::Relaxed);
+        }
+    }
 
     /// Logger implementation which logs frames via a ring buffer and sends the frame sizes
     /// as messages.
@@ -304,10 +325,10 @@ pub mod asynch {
         }
 
         fn log(&self, record: &log::Record) {
-            if self.pipe.borrow().is_none() {
-                return;
-            }
             critical_section::with(|cs| {
+                if self.pipe.borrow().is_none() {
+                    return;
+                }
                 let mut buf = self.buf.borrow(cs).borrow_mut();
                 buf.clear();
                 let _ = writeln!(buf, "{} - {}\r", record.level(), record.args());
@@ -324,6 +345,7 @@ pub mod asynch {
                         break;
                     }
                 }
+                note_dropped(buf.len() - written);
             });
         }
 
@@ -333,10 +355,10 @@ pub mod asynch {
     /// Writes formatted arguments into the logger pipe, bypassing the `log` crate: no level
     /// prefix and no level filtering. Used by the [`crate::uprint`]/[`crate::uprintln`] macros.
     pub fn print(args: core::fmt::Arguments) {
-        if LOGGER.pipe.borrow().is_none() {
-            return;
-        }
         critical_section::with(|cs| {
+            if LOGGER.pipe.borrow().is_none() {
+                return;
+            }
             let mut buf = LOGGER.buf.borrow(cs).borrow_mut();
             buf.clear();
             let _ = buf.write_fmt(args);
@@ -351,6 +373,7 @@ pub mod asynch {
                     break;
                 }
             }
+            note_dropped(buf.len() - written);
         });
     }
 

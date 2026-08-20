@@ -15,9 +15,18 @@ categories = ["embedded", "no-std", "hardware-support"]
 # not just IRQ-disable.
 aarch32-cpu = { version = "0.4", features = ["critical-section-multi-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
-zynq7000-hal = { path = "../../zynq7000-hal" }
+zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
 critical-section = "1"
 log = "0.4"
+static_cell = "2"
+embassy-sync = "0.8"
+embedded-io = "0.7"
+
+embassy-executor = { version = "0.10", features = [
+  "platform-cortex-ar",
+  "executor-thread",
+]}
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
 
 # cargo build/run
 [profile.dev]

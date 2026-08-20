@@ -66,10 +66,35 @@ pub use interrupt::{generic_interrupt_handler, register_interrupt};
 pub use zynq7000 as pac;
 pub use zynq7000::slcr::LevelShifterConfig;
 
+/// Identifies one of the two physical Cortex-A9 cores.
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum CoreId {
+    Cpu0 = 0,
+    Cpu1 = 1,
+}
+
+/// Reads the ID of the core this is called on, from MPIDR's affinity level 0 field.
+#[inline]
+pub fn core_id() -> CoreId {
+    if aarch32_cpu::register::mpidr::Mpidr::read().0 & 0x3 == 0 {
+        CoreId::Cpu0
+    } else {
+        CoreId::Cpu1
+    }
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum InitError {
     #[error("peripheral singleton was already taken")]
     PeripheralsAlreadyTaken,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum SecondaryCoreInitError {
+    #[error("secondary core init was already performed")]
+    AlreadyInitialized,
+    #[error("secondary core init must not be called from the primary core")]
+    CalledFromPrimaryCore,
 }
 
 #[derive(Debug)]
@@ -77,11 +102,14 @@ pub enum InteruptConfig {
     /// GIC is configured to route all interrupts to CPU0. Suitable if the software handles all
     /// the interrupts and only runs on CPU0.
     AllInterruptsToCpu0,
+    /// Minimal configuration which does not route any interrupts but still enables them.
+    Minimal,
 }
 
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Config {
+    /// Basic initialization of the L2 cache.
     pub init_l2_cache: bool,
     /// If this has some value, it will configure the level shifter between PS and PL.
     pub level_shifter_config: Option<LevelShifterConfig>,
@@ -95,7 +123,7 @@ pub struct Config {
     /// If true, calls [`mmu::init`] to set up and enable the MMU and cache. The run-time
     /// startup code no longer does this itself, so this must be enabled (or `mmu::init` called
     /// manually) for the MMU to be active at all.
-    pub mmu_init: bool,
+    pub init_mmu: bool,
 }
 
 impl Default for Config {
@@ -105,14 +133,14 @@ impl Default for Config {
             level_shifter_config: Some(LevelShifterConfig::EnableAll),
             interrupt_config: Some(InteruptConfig::AllInterruptsToCpu0),
             deassert_pl_reset: true,
-            mmu_init: true,
+            init_mmu: true,
         }
     }
 }
 
 /// Utility function to perform common initialization steps.
 pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
-    if config.mmu_init {
+    if config.init_mmu {
         // Safety: Initialization function is only called once.
         unsafe {
             crate::mmu::init();
@@ -139,6 +167,7 @@ pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
                 gic.enable_all_interrupts();
                 gic.set_all_spi_interrupt_targets_cpu0();
             }
+            InteruptConfig::Minimal => (),
         }
         gic.enable();
         unsafe {
@@ -147,6 +176,72 @@ pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
     }
 
     Ok(unsafe { zynq7000::Peripherals::steal() })
+}
+
+/// Configuration for [`init_secondary_core`].
+#[derive(Debug, Clone, Copy)]
+pub struct SecondaryCoreConfig {
+    /// Initializes and enables the MMU and cache for this core. This state is genuinely
+    /// per-core, so every core needs to do this itself, even though [`init`] already did it for
+    /// the primary core.
+    pub init_mmu: bool,
+    /// Configures this core's own banked GIC CPU interface state (PPI enable bits, priority
+    /// mask, CPU interface enable) and unmasks IRQs on this core. Requires the primary core to
+    /// have already configured the GIC's shared distributor state via [`init`].
+    pub init_gic: bool,
+}
+
+impl Default for SecondaryCoreConfig {
+    fn default() -> Self {
+        Self {
+            init_mmu: true,
+            init_gic: true,
+        }
+    }
+}
+
+static SECONDARY_CORE_INIT_DONE: core::sync::atomic::AtomicBool =
+    core::sync::atomic::AtomicBool::new(false);
+
+/// Utility function to perform common initialization steps on a secondary core.
+///
+/// This is [`init`]'s counterpart for any core other than the primary one. It only touches
+/// core specific state: the MMU/cache and the GIC's banked CPU interface state
+/// (PPI enable bits, priority mask, CPU interface enable).
+///
+/// Like [`init`] with the peripheral singleton, this can only succeed once: a second call from
+/// any core returns [`SecondaryCoreInitError::AlreadyInitialized`]. It also checks that it is
+/// not called from the primary core, returning
+/// [`SecondaryCoreInitError::CalledFromPrimaryCore`] otherwise. The primary core must already
+/// have called [`init`] and released this core, e.g. via `zynq7000_rt::smp::start_core1`,
+/// before this is called.
+pub fn init_secondary_core(config: SecondaryCoreConfig) -> Result<(), SecondaryCoreInitError> {
+    if core_id() == CoreId::Cpu0 {
+        return Err(SecondaryCoreInitError::CalledFromPrimaryCore);
+    }
+    if SECONDARY_CORE_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
+        return Err(SecondaryCoreInitError::AlreadyInitialized);
+    }
+
+    if config.init_mmu {
+        // Safety: Guarded above to run at most once, only from a secondary core.
+        unsafe {
+            crate::mmu::init();
+        }
+    }
+    if config.init_gic {
+        // Safety: We only touch our own banked GIC state here. The primary core already
+        // configured the shared distributor state before releasing this core.
+        let mut gic = unsafe { gic::Configurator::steal() };
+        gic.enable_all_ppi_interrupts();
+        // This must be done per core.
+        gic.set_priority_mask(0xff);
+        gic.enable();
+        unsafe {
+            gic.enable_interrupts();
+        }
+    }
+    Ok(())
 }
 
 /// This enumeration encodes the various boot sources.
