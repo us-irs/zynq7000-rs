@@ -17,7 +17,7 @@ z7-boot-image = { path = "../../host/z7-boot-image" }
 zedboard-bsp = { path = "../zedboard-bsp" }
 embedded-io = "0.7"
 embedded-hal = "1"
-fugit = "0.4"
+fugit = "0.5"
 log = "0.4"
 arbitrary-int = "2"
 

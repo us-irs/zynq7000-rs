@@ -1,5 +1,5 @@
 use arbitrary_int::{traits::Integer as _, u3, u4, u6, u12};
-use embedded_sdmmc::sdcard::{
+use embedded_sdmmc_types::sdcard::{
     CardType,
     argument::{self, OcrLower},
     csd::{Csd, InvalidCsdStructureFieldError},
@@ -51,8 +51,8 @@ pub const VOLTAGE_LEVEL_CAPABILITIES: OcrLower = OcrLower::builder()
 pub struct SdCardInfo {
     card_type: CardType,
     rca: u16,
-    cid: embedded_sdmmc::sdcard::cid::Cid,
-    csd: embedded_sdmmc::sdcard::csd::Csd,
+    cid: embedded_sdmmc_types::sdcard::cid::Cid,
+    csd: embedded_sdmmc_types::sdcard::csd::Csd,
 }
 
 impl SdCardInfo {
@@ -68,12 +68,12 @@ impl SdCardInfo {
     }
 
     #[inline]
-    pub fn csd(&self) -> &embedded_sdmmc::sdcard::csd::Csd {
+    pub fn csd(&self) -> &embedded_sdmmc_types::sdcard::csd::Csd {
         &self.csd
     }
 
     #[inline]
-    pub fn cid(&self) -> &embedded_sdmmc::sdcard::cid::Cid {
+    pub fn cid(&self) -> &embedded_sdmmc_types::sdcard::cid::Cid {
         &self.cid
     }
 }
@@ -200,7 +200,7 @@ pub enum InitializationError {
     #[error("invalid CSD: {0}")]
     Csd(#[from] InvalidCsdStructureFieldError),
     #[error("invalid CID")]
-    Cid(#[from] embedded_sdmmc::sdcard::cid::ChecksumInvalidError),
+    Cid(#[from] embedded_sdmmc_types::sdcard::cid::ChecksumInvalidError),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -944,13 +944,13 @@ impl SdCard {
 
     /// Card IDentification (CID).
     #[inline]
-    pub fn cid(&self) -> &embedded_sdmmc::sdcard::cid::Cid {
+    pub fn cid(&self) -> &embedded_sdmmc_types::sdcard::cid::Cid {
         &self.sd_info.cid
     }
 
     /// Card specific data (CSD).
     #[inline]
-    pub fn csd(&self) -> &embedded_sdmmc::sdcard::csd::Csd {
+    pub fn csd(&self) -> &embedded_sdmmc_types::sdcard::csd::Csd {
         &self.sd_info.csd
     }
 
@@ -1126,13 +1126,13 @@ impl SdCard {
     }
 }
 
-impl embedded_sdmmc::BlockDevice for SdCard {
+impl embedded_sdmmc_types::BlockDevice for SdCard {
     type Error = DeviceError;
 
     fn read(
         &self,
-        blocks: &mut [embedded_sdmmc::Block],
-        start_block_idx: embedded_sdmmc::BlockIdx,
+        blocks: &mut [embedded_sdmmc_types::Block],
+        start_block_idx: embedded_sdmmc_types::BlockIdx,
     ) -> Result<(), Self::Error> {
         let addr = match self.sd_info.card_type {
             CardType::SD1 | CardType::SD2 => start_block_idx.0 * BLOCK_LEN as u32,
@@ -1146,8 +1146,8 @@ impl embedded_sdmmc::BlockDevice for SdCard {
 
     fn write(
         &self,
-        blocks: &[embedded_sdmmc::Block],
-        start_block_idx: embedded_sdmmc::BlockIdx,
+        blocks: &[embedded_sdmmc_types::Block],
+        start_block_idx: embedded_sdmmc_types::BlockIdx,
     ) -> Result<(), Self::Error> {
         let (mut addr, increment) = match self.sd_info.card_type {
             CardType::SD1 | CardType::SD2 => (start_block_idx.0 * BLOCK_LEN as u32, BLOCK_LEN),
@@ -1160,8 +1160,8 @@ impl embedded_sdmmc::BlockDevice for SdCard {
         Ok(())
     }
 
-    fn num_blocks(&self) -> Result<embedded_sdmmc::BlockCount, Self::Error> {
-        Ok(embedded_sdmmc::BlockCount(
+    fn num_blocks(&self) -> Result<embedded_sdmmc_types::BlockCount, Self::Error> {
+        Ok(embedded_sdmmc_types::BlockCount(
             self.csd().card_capacity_blocks(),
         ))
     }
@@ -1193,7 +1193,7 @@ pub fn initialize_card(
         commands::CMD8_SEND_IF_COND,
         argument::Cmd8::ZERO
             .with_voltage_supplied(
-                embedded_sdmmc::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V,
+                embedded_sdmmc_types::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V,
             )
             .with_check_pattern(0xAA)
             .raw_value(),
@@ -1203,7 +1203,7 @@ pub fn initialize_card(
             commands::CMD8_SEND_IF_COND,
             argument::Cmd8::ZERO
                 .with_voltage_supplied(
-                    embedded_sdmmc::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V,
+                    embedded_sdmmc_types::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V,
                 )
                 .with_check_pattern(0xAA)
                 .raw_value(),
@@ -1215,7 +1215,7 @@ pub fn initialize_card(
     let hsc = if responded_to_cmd8 {
         let r7 = response::R7::new_with_raw_value(ll.read_u32_response());
         if !r7.voltage_accepted().is_ok_and(|val| {
-            val == embedded_sdmmc::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V
+            val == embedded_sdmmc_types::sdcard::argument::VoltageSuppliedSelect::_2_7To3_6V
         }) || r7.echo_check_pattern() != 0xAA
         {
             return Err(InitializationErrorWithStep {
@@ -1223,9 +1223,9 @@ pub fn initialize_card(
                 error: InitializationError::ResponseError(status.response_errors()),
             });
         }
-        embedded_sdmmc::sdcard::argument::HostCapacitySupport::SdhcOrSdxc
+        embedded_sdmmc_types::sdcard::argument::HostCapacitySupport::SdhcOrSdxc
     } else {
-        embedded_sdmmc::sdcard::argument::HostCapacitySupport::SdscOnly
+        embedded_sdmmc_types::sdcard::argument::HostCapacitySupport::SdscOnly
     };
     send_acmd(
         ll,
@@ -1233,7 +1233,7 @@ pub fn initialize_card(
         argument::Acmd41::builder()
             .with_host_capacity_support(hsc)
             .with_fast_boot(false)
-            .with_xpc(embedded_sdmmc::sdcard::argument::PowerControl::MaximumPerformance)
+            .with_xpc(embedded_sdmmc_types::sdcard::argument::PowerControl::MaximumPerformance)
             .with_s18r(false)
             .with_ocr(VOLTAGE_LEVEL_CAPABILITIES)
             .build()
@@ -1245,7 +1245,8 @@ pub fn initialize_card(
         error: e,
     })?;
 
-    let mut r3 = embedded_sdmmc::sdcard::response::R3::new_with_raw_value(ll.read_u32_response());
+    let mut r3 =
+        embedded_sdmmc_types::sdcard::response::R3::new_with_raw_value(ll.read_u32_response());
     if !r3.initialization_complete() {
         r3 = wait_for_amd41_card_ready(ll, 0).map_err(|e| InitializationErrorWithStep {
             step: InitStep::SendingIfCondAcmd41,
@@ -1272,7 +1273,8 @@ pub fn initialize_card(
     }
     let mut cid_buf: [u32; 4] = [0; 4];
     let cid_raw = ll.read_u128_response(&mut cid_buf);
-    let cid = embedded_sdmmc::sdcard::cid::Cid::new_with_raw_value(u128::from_be_bytes(cid_raw));
+    let cid =
+        embedded_sdmmc_types::sdcard::cid::Cid::new_with_raw_value(u128::from_be_bytes(cid_raw));
 
     // Send CMD3 to retrieve RCA required for card addressing, as well as put the card
     // into standby mode.
@@ -1385,7 +1387,7 @@ pub fn send_acmd(
     if status.has_response_errors() {
         return Err(InitializationError::ResponseError(status.response_errors()));
     }
-    let r1 = embedded_sdmmc::sdcard::response::R1::new_with_raw_value(ll.read_u32_response());
+    let r1 = embedded_sdmmc_types::sdcard::response::R1::new_with_raw_value(ll.read_u32_response());
     if !r1.app_cmd() {
         return Err(InitializationError::UnexpectedResponse);
     }
@@ -1395,14 +1397,15 @@ pub fn send_acmd(
 pub fn wait_for_amd41_card_ready(
     ll: &mut SdLowLevel,
     rca: u16,
-) -> Result<embedded_sdmmc::sdcard::response::R3, InitializationError> {
+) -> Result<embedded_sdmmc_types::sdcard::response::R3, InitializationError> {
     loop {
         let status = send_acmd(ll, commands::ACMD41_SEND_IF_COND, 0, rca)?;
         // Explicitely check only for timeouts here. CRC errors have occured here..
         if status.0.command_timeout_error() {
             return Err(InitializationError::ResponseError(status.response_errors()));
         }
-        let r3 = embedded_sdmmc::sdcard::response::R3::new_with_raw_value(ll.read_u32_response());
+        let r3 =
+            embedded_sdmmc_types::sdcard::response::R3::new_with_raw_value(ll.read_u32_response());
         if r3.initialization_complete() {
             return Ok(r3);
         }

@@ -6,7 +6,7 @@ description = "Pure clock/divisor search calculators used by zynq7000-hal, split
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-fugit = "0.4"
+fugit = "0.5"
 libm = "0.2"
 
 [features]
