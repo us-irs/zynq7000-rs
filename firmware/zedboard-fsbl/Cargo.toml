@@ -1,7 +1,6 @@
 [package]
 name = "zedboard-fsbl"
 version = "0.1.0"
-authors = ["Robin Mueller <muellerr@irs.uni-stuttgart.de>"]
 edition = "2024"
 description = "Rust First Stage Bootloader for the Zedboard"
 homepage = "https://github.com/us-irs/zynq7000-rs"
