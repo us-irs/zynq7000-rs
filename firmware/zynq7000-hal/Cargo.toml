@@ -77,6 +77,6 @@ eth-packet-trace = []
 approx = "0.5"
 
 [package.metadata.docs.rs]
-features = ["alloc"]
+features = ["alloc", "time-driver-gtc", "defmt"]
 targets = ["armv7a-none-eabihf"]
 rustdoc-args = ["--generate-link-to-definition"]
