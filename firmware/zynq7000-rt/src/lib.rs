@@ -12,9 +12,16 @@
 //!
 //! Some major differences to the startup code provided by AMD:
 //!
-//! - No L2 cache initialization is performed.
-//! - MMU table is NOT part of the run-time and must be done in Rust code.
+//! - L2 cache initialization is **not** performed.
+//! - MMU table is **not** configured and enabled.
 //! - Modification to the stack setup code, because a different linker script is used.
+//!
+//! The [zynq7000-hal](https://docs.rs/zynq7000-hal) provides components for L2 cache and MMU
+//! configuration and initialization.
+//!
+//! ## Features
+//!
+//! * `rt` - Default feature which activates the run-time.
 //!
 //! ## Linker script
 //!
@@ -118,12 +125,27 @@
 //!
 //! See any of the `firmware/examples/*/build.rs` files in this repository for a real copy.
 //!
-//! ## Features
+//! ## Dual-core (SMP)
 //!
-//! * `first-segment-ddr-attr` - This feature can be enabled if the DDR is accessed through memory
-//!   addresses 0x8000 to 0x0010_0000. In this case, the MMU attribute for the first segment is
-//!   the DDR memory attribute (inner and outer cache maintenance). Otherwise, the OCM attribute
-//!   will be used (only inner cache maintenance).
+//! The Zynq7000 has two Cortex-A9 cores. The AMD BootROM code parks CPU1 inside an [`aarch32_cpu::asm::wfe`]
+//! loop until user software writes a start address at the [`smp::CPU1_ENTRY_MAILBOX_ADDR`]
+//! address and then issues an [`aarch32_cpu::asm::sev`] instruction. Depending on how you boot
+//! your system, you might also have to explicitly start CPU1 with your debugger.
+//!
+//! The run-time library provides [`smp::start_core1`] to release CPU1 from regular Rust code
+//! running on CPU0. When CPU1 is released, it runs a reduced version of the regular run-time
+//! code. It sets up all the core-specific steps like the stack, but skips steps that only have
+//! to be performed once, like `.bss` and `.data` segment initialization. After that, it jumps to
+//! a user-defined `kmain_secondary` function instead of the regular `kmain`.
+//!
+//! Everything past that point, such as MMU/cache enable and GIC setup for the new core, is left
+//! to the application. The `zynq7000_hal` library provides components to do this
+//! and the `zedboard-smp` example shows a complete two-core setup.
+//!
+//! Using `critical_section` across both cores requires the [`aarch32_cpu`]
+//! `critical-section-multi-core` feature. The default `critical-section-single-core`
+//! implementation only disables IRQs on the current core, which does not provide real mutual
+//! exclusion once a second core is running.
 //!
 //! ## Placing statics in OCM
 //!

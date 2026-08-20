@@ -28,8 +28,8 @@ configuration and initialization.
 
 - `rt` is a default feature which activates the run-time.
 
-## Re-Generating the MMU table
+## Dual-core (SMP)
 
-The MMU table is a static flat map of 4096 entries for each 1 MB in the memory map.
-It was generated using the [`mmu-table-gen`](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/tools/mmu-table-gen)
-tool.
+Dual-core (SMP) boot support is provided by the `smp` module. See the
+[documentation](https://docs.rs/zynq7000-rt) for details, and the
+[`zedboard-smp`](../examples/zedboard-smp) example for a complete two-core setup.

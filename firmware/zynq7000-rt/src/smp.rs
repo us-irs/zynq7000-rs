@@ -1,6 +1,6 @@
 //! # Symmetric multi-processing (SMP) support.
 //!
-//! CPU1 is parked by the Zynq-7000 boot ROM in a `WFE` loop, polling a fixed physical
+//! CPU1 is parked by the Zynq-7000 BootROM in a `WFE` loop, polling a fixed physical
 //! address (`0xFFFFFFF0`) for its entry point. Per the TRM: "When CPU 1 receives a system
 //! event, it immediately reads the contents of address 0xFFFFFFF0 and jumps to that address."
 use aarch32_cpu::{
@@ -9,8 +9,11 @@ use aarch32_cpu::{
 };
 use zynq7000::slcr::reset::CpuResetControl;
 
-/// Fixed physical address the boot ROM polls for CPU1's entry point.
-const CPU1_ENTRY_MAILBOX: *mut u32 = 0xFFFF_FFF0 as *mut u32;
+/// Fixed physical address the boot ROM polls.
+pub const CPU1_ENTRY_MAILBOX_ADDR: u32 = 0xFFFF_FFF0;
+
+/// Fixed physical address pointer the boot ROM polls for CPU1's entry point.
+pub const CPU1_ENTRY_MAILBOX: *mut u32 = CPU1_ENTRY_MAILBOX_ADDR as *mut u32;
 
 // Same unlock/lock keys `rt.rs`'s `check_efuse` path already uses (in raw assembly, since it
 // runs before Rust/stacks are set up) to *assert* CPU1's reset on single-core-efuse silicon;
@@ -30,11 +33,9 @@ unsafe extern "C" {
 /// access, L2 cache init, etc.) that CPU1 must not race, since CPU1 begins executing
 /// immediately once released.
 ///
-/// Returns the `A9_CPU_RST_CTRL` value from before it was touched, so callers can log it: on a
-/// real boot CPU1 is normally already out of reset (the boot ROM parks it in a `WFE` loop from
-/// power-on), but JTAG/debug boot flows commonly leave it explicitly held in SLCR reset
-/// instead, in which case it isn't even clocked and the mailbox protocol below has no effect
-/// until the reset is cleared.
+/// Returns the [`CpuResetControl`] value from before it was touched. This function clears
+/// the reset bits of the CPU reset control. If the second core does not start properly,
+/// you might need to explicitely run/release the core using your debugger.
 pub fn start_core1() -> CpuResetControl {
     let prev_reset_control = unsafe {
         let mut slcr = zynq7000::slcr::Registers::new_mmio_fixed();

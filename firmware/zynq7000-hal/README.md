@@ -14,3 +14,8 @@ various drivers in the embedded rust ecosystem.
 
 The [top-level README](../../README.md) and the documentation
 contain more information on how to use this crate.
+
+## Re-Generating the MMU table
+
+`src/mmu_table.rs` is a static flat map of 4096 entries for each 1 MB in the memory map. It was
+generated using the [`mmu-table-gen`](../../host/mmu-table-gen) tool.
