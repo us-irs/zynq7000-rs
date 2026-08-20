@@ -96,6 +96,6 @@ Documentation fixes.
 
 Initial release
 
-[unreleased]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-hal-v0.1.0...HEAD
+[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-hal-v0.1.0...HEAD
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-hal-v0.1.0...zynq7000-hal-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zynq7000-hal-v0.1.0

@@ -4,9 +4,9 @@
 //!
 //! ## Examples
 //!
-//! - [Logger through UART](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/simple/src/bin/logger.rs)
-//! - [Zedboard Blocking UART](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/uart-blocking.rs)
-//! - [Zedboard Non-Blocking UART](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/examples/zedboard/src/bin/uart-non-blocking.rs)
+//! - [Logger through UART](https://github.com/us-irs/zynq7000-rs/blob/main/zynq/examples/simple/src/bin/logger.rs)
+//! - [Zedboard Blocking UART](https://github.com/us-irs/zynq7000-rs/blob/main/zynq/examples/zedboard/src/bin/uart-blocking.rs)
+//! - [Zedboard Non-Blocking UART](https://github.com/us-irs/zynq7000-rs/blob/main/zynq/examples/zedboard/src/bin/uart-non-blocking.rs)
 #![deny(missing_docs)]
 use core::convert::Infallible;
 
