@@ -1,7 +1,7 @@
 use arbitrary_int::u6;
 use zynq7000::sdio::{BlockSelect, CommandRegister, ResponseType};
 
-use embedded_sdmmc::sdcard::{AcmdId, CmdId};
+use embedded_sdmmc_types::sdcard::{AcmdId, CmdId};
 
 pub struct CommandConfig {
     pub id: u6,

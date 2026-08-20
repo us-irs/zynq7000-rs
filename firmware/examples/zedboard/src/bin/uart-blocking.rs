@@ -125,7 +125,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // TODO: Can we determine/read the clock frequency to the FPGAs as well?
     let (clk_config, error) =
-        axi_uart16550::ClockConfig::new_autocalc_with_error(fugit::HertzU32::MHz(100), 115200)
+        axi_uart16550::ClockConfig::new_autocalc_with_error(fugit_04::HertzU32::MHz(100), 115200)
             .unwrap();
     assert!(error < 0.02);
     let mut uart_16550 = unsafe {

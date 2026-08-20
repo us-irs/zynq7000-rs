@@ -29,7 +29,10 @@ embedded-hal = "1"
 embedded-hal-bus = { version = "0.3", features = ["async"] }
 embedded-hal-async = "1"
 dummy-pin = "1"
-fugit = "0.4"
+fugit = "0.5"
+# axi-uart16550 still expects fugit 0.4's Rate types, so keep it around under a different name
+# just for that conversion, until axi-uart16550 itself moves to fugit 0.5.
+fugit-04 = { package = "fugit", version = "0.4" }
 once_cell = { version = "1.21", default-features = false }
 embedded-graphics = "0.8"
 log = "0.4"
@@ -40,7 +43,7 @@ rand = { version = "0.10", default-features = false }
 embassy-executor = { version = "0.10", features = ["platform-cortex-ar", "executor-thread"] }
 embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
 embassy-net = { version = "0.9", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp", "auto-icmp-echo-reply"] }
-embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
+embedded-sdmmc = "0.10"
 embassy-sync = { version = "0.8" }
 heapless = "0.9"
 axi-uartlite = { version = "0.3" }

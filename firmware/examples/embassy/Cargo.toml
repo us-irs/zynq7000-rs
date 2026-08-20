@@ -23,7 +23,7 @@ critical-section = "1"
 heapless = "0.9"
 embedded-io = "0.7"
 embedded-hal = "1"
-fugit = "0.4"
+fugit = "0.5"
 log = "0.4"
 
 embassy-executor = { version = "0.10", features = [

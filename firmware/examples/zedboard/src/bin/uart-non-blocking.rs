@@ -262,7 +262,7 @@ async fn main(spawner: Spawner) -> ! {
     uartlite.enable_interrupt();
 
     let (clk_config, error) = axi_uart16550::ClockConfig::new_autocalc_with_error(
-        fugit::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
+        fugit_04::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
         uart_speed,
     )
     .unwrap();

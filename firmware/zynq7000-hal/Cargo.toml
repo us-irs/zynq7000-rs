@@ -29,17 +29,17 @@ static_cell = "2"
 delegate = "0.13"
 pastey = "0.2.1"
 nb = "1"
-fugit = "0.4"
+fugit = "0.5"
 critical-section = "1"
 libm = "0.2"
 log = "0.4"
 embassy-sync = "0.8"
 embassy-net-driver = "0.2"
-smoltcp = { version = "0.13", default-features = false, features = ["proto-ipv4", "medium-ethernet", "socket-raw"] }
+smoltcp = { version = "0.14", default-features = false, features = ["proto-ipv4", "medium-ethernet", "socket-raw"] }
 vcell = "0.1"
 raw-buffer = "0.1"
 embedded-io-async = "0.7"
-embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
+embedded-sdmmc-types = "0.1"
 bytemuck = "1.25"
 
 once_cell = { version = "1", default-features = false, features = ["critical-section"], optional = true }
