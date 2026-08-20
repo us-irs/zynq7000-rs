@@ -1,7 +1,7 @@
-Zynq 7000 Bare-Metal Rust Support
+Zynq 7000 Embedded Rust Support
 =========
 
-This crate collection provides support to write bare-metal Rust applications for the AMD Zynq 7000
+This crate collection provides support to write Embedded Rust applications for the AMD Zynq 7000
 family of SoCs.
 
 <p align="center">
