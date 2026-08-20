@@ -1,6 +1,6 @@
 [package]
 name = "zynq7000"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 description = "Peripheral Access Crate (PAC) for the Zynq7000 family of SoCs"
 homepage = "https://github.com/us-irs/zynq7000-rs"
