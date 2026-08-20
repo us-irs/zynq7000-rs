@@ -1,7 +1,7 @@
-Zynq 7000 Bare-Metal Rust Support
+Zynq 7000 Embedded Rust Support
 =========
 
-This crate collection provides support to write bare-metal Rust applications for the AMD Zynq 7000
+This crate collection provides support to write Embedded Rust applications for the AMD Zynq 7000
 family of SoCs.
 
 <p align="center">
@@ -21,8 +21,8 @@ This workspace contains libraries and application which can only be run on the t
   Zynq7000.
 - The [`zynq7000`](./firmware/zynq7000) PAC crate containing basic low-level register access API.
 - The [`zynq7000-hal`](./firmware/zynq7000-hal) HAL crate containing higher-level abstractions on
-  top of the PAC register crate, including the MMU abstractions, and also contains embassy time
-  drivers.
+  top of the PAC register crate, including the MMU abstractions, and also contains
+  [`embassy-time`](https://docs.rs/embassy-time/latest/embassy_time/) drivers.
 
 This project was developed using a Zedboard, so there are several crates available targeted towards
 this board:
@@ -67,18 +67,6 @@ The Zynq7000's two Cortex-A9 cores are both supported. See the
 [`zynq7000-rt` documentation](https://docs.rs/zynq7000-rt) for details, and the
 [`zedboard-smp`](./firmware/examples/zedboard-smp) example for a complete two-core setup.
 
-# Using the `.cargo/config.toml` file
-
-This is mostly relevant for development directly inside this repository.
-Use the following command to have a starting `config.toml` file
-
-```sh
-cp .cargo/config.toml.template .cargo/config.toml
-```
-
-You then can adapt the `config.toml` to your needs. For example, you can configure runners
-to conveniently flash with `cargo run`.
-
 # Building the blinky example
 
 Assuming you have the following segments inside your `.cargo/config.toml`
@@ -107,7 +95,7 @@ cd firmware
 cargo build --bin blinky
 ```
 
-# Flashing, running and debugging the software - z7-run app
+# Flashing, running and debugging the software using the `z7-run` app
 
 The [`z7-run`](./host/z7-run) tool is a native Rust runner taking care of all steps to run a
 software on the Z7 in either OCM or in DDR memory. It has a higher level of
@@ -173,7 +161,7 @@ the example apps provided in this repo and also installs the [`z7-run`](./host/z
    `--config`, `--probe` and `--check-ddr` (a DDR read/write sanity check performed right after PS7
    init).
 
-# Flashing, running and debugging the software - TCL script and runner
+# Flashing, running and debugging the software using a TCL script and runner
 
 This repository was only tested with the [Zedboard](https://digilent.com/reference/programmable-logic/zedboard/start)
 but should be easily adaptable to other Zynq7000 based platforms and boards.
@@ -205,6 +193,18 @@ The `z7-run`/`probe-rs` flow above only supports a probe connected directly to t
   Vivado and generate the SDT folder yourself.
 - `gdb-multiarch` installation to debug applications.
 - `python3` installation to use the provided tooling.
+
+## Setting up the runner
+
+This is mostly relevant for development directly inside this repository.
+Use the following command to have a starting `config.toml` file
+
+```sh
+cp .cargo/config.toml.template .cargo/config.toml
+```
+
+You then can adapt the `config.toml` to your needs. For example, you can configure runners
+to conveniently flash with `cargo run`.
 
 ## Programming and Debug Flow
 
