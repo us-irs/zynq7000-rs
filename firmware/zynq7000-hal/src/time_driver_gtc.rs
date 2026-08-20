@@ -81,12 +81,12 @@ impl TimeDriverGtc {
     }
 
     /// Should be called inside the IRQ handler if the IRQ ID is equal to
-    /// [crate::hal::gic::PpiInterrupt::GlobalTimer].
+    /// [crate::gic::PpiInterrupt::GlobalTimer].
     ///
     /// # Safety
     ///
     /// This function has to be called once for interrupt ID
-    /// [crate::hal::gic::PpiInterrupt::GlobalTimer].
+    /// [crate::gic::PpiInterrupt::GlobalTimer].
     pub unsafe fn on_interrupt(&self, core_id: CoreId) {
         critical_section::with(|cs| {
             self.trigger_alarm(core_id, cs);

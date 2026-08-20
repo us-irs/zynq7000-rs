@@ -107,7 +107,7 @@ docs-pac-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 --open
 [working-directory: 'firmware']
 docs-hal:
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --no-deps
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features "alloc,time-driver-gtc,defmt" --no-deps
 [working-directory: 'firmware']
 docs-hal-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --open
