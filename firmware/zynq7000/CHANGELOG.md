@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.5.0] 2026-08-20
+
 - `InterruptProcessorTargetRegister` now has a `default = 0x0` value and uses `bitbybit`'s
   `defmt_bitfields` attribute instead of a manual `defmt::Format` derive.
 
@@ -38,7 +40,8 @@ Documentation fix
 
 Initial release
 
-[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-v0.4.0...HEAD
+[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-v0.5.0...HEAD
+[v0.5.0]: https://github.com/us-irs/zynq7000-rs/tags/zynq7000-v0.5.0
 [v0.4.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.3.0...zynq7000-v0.4.0
 [v0.3.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.2.0...zynq7000-v0.3.0
 [v0.2.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.1.0...zynq7000-v0.2.0

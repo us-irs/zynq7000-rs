@@ -26,5 +26,6 @@ defmt = ["dep:defmt", "arbitrary-int/defmt"]
 approx = "0.5"
 
 [package.metadata.docs.rs]
+features = ["defmt"]
 targets = ["armv7a-none-eabihf"]
 rustdoc-args = ["--generate-link-to-definition"]
