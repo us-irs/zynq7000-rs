@@ -55,6 +55,7 @@ pub mod qspi;
 pub mod sd;
 pub mod slcr;
 pub mod spi;
+pub mod swdt;
 pub mod time;
 #[cfg(feature = "time-driver-gtc")]
 pub mod time_driver_gtc;
