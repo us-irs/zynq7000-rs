@@ -1,3 +1,8 @@
+//! AXI GPIO example.
+//!
+//! Exercises the `axi-gpio` crate directly, independent of the MIO/EMIO GPIO controller: channel
+//! 1 drives LD6/LD7 (output), channel 2 reads SW7 (input). See
+//! `zedboard-gateware/README.md`'s board resource table for the pin assignment.
 #![no_std]
 #![no_main]
 
@@ -11,7 +16,7 @@ use zynq7000_hal::{BootMode, clocks, generic_interrupt_handler, gpio, gtc, uart}
 
 use zynq7000_rt as _;
 
-const INIT_STRING: &str = "-- Zynq 7000 Zedboard GPIO blinky example --\n\r";
+const INIT_STRING: &str = "-- Zynq 7000 Zedboard AXI GPIO example --\n\r";
 
 const AXI_GPIO_BASE_ADDR: u32 = 0x4120_0000;
 
@@ -27,7 +32,7 @@ async fn main(_spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let mut gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::GpioPins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -50,39 +55,31 @@ async fn main(_spawner: Spawner) -> ! {
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
+    // Channel 1 drives LD6/LD7, channel 2 reads SW7, see zedboard-gateware/README.md's board
+    // resource table.
+    let (axi_gpio, axi_gpio_ch1_pins, axi_gpio_ch2_pins) =
+        unsafe { axi_gpio::AxiGpio::new_dual_channel(AXI_GPIO_BASE_ADDR) };
+    let mut led6 = axi_gpio.output_pin(axi_gpio_ch1_pins.p0, gpio::PinState::Low);
+    let mut led7 = axi_gpio.output_pin(axi_gpio_ch1_pins.p1, gpio::PinState::High);
+    let switch_7 = axi_gpio.input_pin(axi_gpio_ch2_pins.p0);
+
+    let mut last_switch_state = switch_7.is_high();
+    info!("SW7 initial state: {}", last_switch_state);
+
     let mut ticker = Ticker::every(Duration::from_millis(200));
-
-    let mut mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
-    // LD0-LD5 are driven by EMIO, LD6/LD7 by AXI GPIO channel 1, see
-    // zedboard-gateware/README.md's board resource table.
-    let mut emio_leds: [gpio::Output; 6] = [
-        gpio::Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(3).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(4).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(5).unwrap(), gpio::PinState::Low),
-    ];
-    let (axi_gpio, axi_gpio_pins) =
-        unsafe { axi_gpio::AxiGpio::new_single_channel(AXI_GPIO_BASE_ADDR) };
-    let mut axi_gpio_leds: [axi_gpio::Output; 2] = [
-        axi_gpio.output_pin(axi_gpio_pins.p0, gpio::PinState::Low),
-        axi_gpio.output_pin(axi_gpio_pins.p1, gpio::PinState::Low),
-    ];
     loop {
-        mio_led.toggle();
+        // Alternate LD6/LD7 to show AXI GPIO channel 1 output is working.
+        led6.toggle();
+        led7.toggle();
 
-        // Create a wave pattern across LD0-LD5 (EMIO), continuing into LD6/LD7 (AXI GPIO).
-        for led in emio_leds.iter_mut() {
-            led.toggle();
-            ticker.next().await; // Wait for the next ticker for each toggle
-        }
-        for led in axi_gpio_leds.iter_mut() {
-            led.toggle();
-            ticker.next().await;
+        // Poll SW7 (AXI GPIO channel 2 input) and log on change.
+        let switch_state = switch_7.is_high();
+        if switch_state != last_switch_state {
+            info!("SW7 changed: {}", switch_state);
+            last_switch_state = switch_state;
         }
 
-        ticker.next().await; // Wait for the next cycle of the ticker
+        ticker.next().await;
     }
 }
 

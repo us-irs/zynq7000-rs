@@ -145,6 +145,7 @@ xilinx.com:inline_hdl:ilconcat:1.0\
 xilinx.com:inline_hdl:ilconstant:1.0\
 xilinx.com:ip:smartconnect:1.0\
 xilinx.com:ip:axi_dma:7.1\
+xilinx.com:ip:axi_gpio:2.0\
 "
 
    set list_ips_missing ""
@@ -623,21 +624,22 @@ proc create_root_design { parentCell } {
   ] $UART_MUX
 
 
-  # Create instance: LEDS, and set properties
-  set LEDS [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 LEDS ]
+  # Create instance: emio_leds, and set properties
+  set emio_leds [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 emio_leds ]
   set_property -dict [list \
-    CONFIG.DIN_FROM {7} \
+    CONFIG.DIN_FROM {5} \
     CONFIG.DIN_WIDTH {16} \
-  ] $LEDS
+  ] $emio_leds
 
 
   # Create instance: EMIO_I_0, and set properties
   set EMIO_I_0 [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconcat:1.0 EMIO_I_0 ]
   set_property -dict [list \
-    CONFIG.IN0_WIDTH {8} \
-    CONFIG.IN1_WIDTH {5} \
-    CONFIG.IN2_WIDTH {3} \
-    CONFIG.NUM_PORTS {3} \
+    CONFIG.IN0_WIDTH {7} \
+    CONFIG.IN1_WIDTH {1} \
+    CONFIG.IN2_WIDTH {5} \
+    CONFIG.IN3_WIDTH {3} \
+    CONFIG.NUM_PORTS {4} \
   ] $EMIO_I_0
 
 
@@ -656,14 +658,14 @@ proc create_root_design { parentCell } {
   set smartconnect_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:smartconnect:1.0 smartconnect_0 ]
   set_property -dict [list \
     CONFIG.ADVANCED_PROPERTIES {__experimental_features__ {legacy_low_area_mode 1}} \
-    CONFIG.NUM_MI {3} \
+    CONFIG.NUM_MI {4} \
     CONFIG.NUM_SI {1} \
   ] $smartconnect_0
 
 
   # Create instance: IRQ_F2P, and set properties
   set IRQ_F2P [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconcat:1.0 IRQ_F2P ]
-  set_property CONFIG.NUM_PORTS {4} $IRQ_F2P
+  set_property CONFIG.NUM_PORTS {5} $IRQ_F2P
 
 
   # Create instance: OLED_DC, and set properties
@@ -720,6 +722,52 @@ proc create_root_design { parentCell } {
   set_property CONFIG.ADVANCED_PROPERTIES {__experimental_features__ {legacy_low_area_mode 1}} $smartconnect_1
 
 
+  # Create instance: axi_gpio_0, and set properties
+  set axi_gpio_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_gpio:2.0 axi_gpio_0 ]
+  set_property -dict [list \
+    CONFIG.C_ALL_INPUTS_2 {1} \
+    CONFIG.C_ALL_OUTPUTS {1} \
+    CONFIG.C_INTERRUPT_PRESENT {1} \
+    CONFIG.C_IS_DUAL {1} \
+  ] $axi_gpio_0
+
+
+  # Create instance: leds_concat, and set properties
+  set leds_concat [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconcat:1.0 leds_concat ]
+  set_property -dict [list \
+    CONFIG.IN0_WIDTH {6} \
+    CONFIG.IN1_WIDTH {2} \
+    CONFIG.NUM_PORTS {2} \
+  ] $leds_concat
+
+
+  # Create instance: axi_gpio_led, and set properties
+  set axi_gpio_led [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 axi_gpio_led ]
+  set_property CONFIG.DIN_FROM {1} $axi_gpio_led
+
+
+  # Create instance: emio_switches, and set properties
+  set emio_switches [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 emio_switches ]
+  set_property -dict [list \
+    CONFIG.DIN_FROM {6} \
+    CONFIG.DIN_WIDTH {8} \
+  ] $emio_switches
+
+
+  # Create instance: axi_gpio_switch, and set properties
+  set axi_gpio_switch [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilslice:1.0 axi_gpio_switch ]
+  set_property -dict [list \
+    CONFIG.DIN_FROM {7} \
+    CONFIG.DIN_TO {7} \
+    CONFIG.DIN_WIDTH {8} \
+  ] $axi_gpio_switch
+
+
+  # Create instance: ilconstant_4, and set properties
+  set ilconstant_4 [ create_bd_cell -type inline_hdl -vlnv xilinx.com:inline_hdl:ilconstant:1.0 ilconstant_4 ]
+  set_property CONFIG.CONST_VAL {0} $ilconstant_4
+
+
   # Create interface connections
   connect_bd_intf_net -intf_net axi_dma_0_M_AXIS_MM2S [get_bd_intf_pins axi_dma_0/M_AXIS_MM2S] [get_bd_intf_pins axi_dma_0/S_AXIS_S2MM]
   connect_bd_intf_net -intf_net axi_dma_0_M_AXI_MM2S [get_bd_intf_pins axi_dma_0/M_AXI_MM2S] [get_bd_intf_pins smartconnect_1/S00_AXI]
@@ -730,15 +778,18 @@ proc create_root_design { parentCell } {
   connect_bd_intf_net -intf_net smartconnect_0_M00_AXI [get_bd_intf_pins smartconnect_0/M00_AXI] [get_bd_intf_pins axi_uartlite_0/S_AXI]
   connect_bd_intf_net -intf_net smartconnect_0_M01_AXI [get_bd_intf_pins smartconnect_0/M01_AXI] [get_bd_intf_pins axi_uart16550_0/S_AXI]
   connect_bd_intf_net -intf_net smartconnect_0_M02_AXI [get_bd_intf_pins smartconnect_0/M02_AXI] [get_bd_intf_pins axi_dma_0/S_AXI_LITE]
+  connect_bd_intf_net -intf_net smartconnect_0_M03_AXI [get_bd_intf_pins smartconnect_0/M03_AXI] [get_bd_intf_pins axi_gpio_0/S_AXI]
   connect_bd_intf_net -intf_net smartconnect_1_M00_AXI [get_bd_intf_pins smartconnect_1/M00_AXI] [get_bd_intf_pins processing_system7_0/S_AXI_GP0]
 
   # Create port connections
   connect_bd_net -net BTTNS_1  [get_bd_ports BTTNS] \
-  [get_bd_pins EMIO_I_0/In1]
+  [get_bd_pins EMIO_I_0/In2]
   connect_bd_net -net EMIO_I_1_dout  [get_bd_pins EMIO_I_1/dout] \
   [get_bd_pins EMIO_I/In3]
   connect_bd_net -net EMIO_O_1_Dout  [get_bd_pins EMIO_O_1/Dout] \
   [get_bd_pins EMIO_I/In2]
+  connect_bd_net -net LEDS_Dout  [get_bd_pins emio_leds/Dout] \
+  [get_bd_pins leds_concat/In0]
   connect_bd_net -net OLED_RESET_Dout  [get_bd_pins OLED_RESET/Dout] \
   [get_bd_ports OLED_RESET]
   connect_bd_net -net OLED_VBAT_Dout  [get_bd_pins OLED_VBAT/Dout] \
@@ -746,11 +797,16 @@ proc create_root_design { parentCell } {
   connect_bd_net -net OLED_VDD_Dout  [get_bd_pins OLED_VDD/Dout] \
   [get_bd_ports OLED_VDD]
   connect_bd_net -net SWITCHES_1  [get_bd_ports SWITCHES] \
-  [get_bd_pins EMIO_I_0/In0]
+  [get_bd_pins emio_switches/Din] \
+  [get_bd_pins axi_gpio_switch/Din]
   connect_bd_net -net axi_dma_0_mm2s_introut  [get_bd_pins axi_dma_0/mm2s_introut] \
   [get_bd_pins IRQ_F2P/In2]
   connect_bd_net -net axi_dma_0_s2mm_introut  [get_bd_pins axi_dma_0/s2mm_introut] \
   [get_bd_pins IRQ_F2P/In3]
+  connect_bd_net -net axi_gpio_0_gpio_io_o  [get_bd_pins axi_gpio_0/gpio_io_o] \
+  [get_bd_pins axi_gpio_led/Din]
+  connect_bd_net -net axi_gpio_0_ip2intc_irpt  [get_bd_pins axi_gpio_0/ip2intc_irpt] \
+  [get_bd_pins IRQ_F2P/In4]
   connect_bd_net -net axi_uart16550_0_ip2intc_irpt  [get_bd_pins axi_uart16550_0/ip2intc_irpt] \
   [get_bd_pins IRQ_F2P/In1]
   connect_bd_net -net axi_uart16550_0_sout  [get_bd_pins axi_uart16550_0/sout] \
@@ -765,19 +821,27 @@ proc create_root_design { parentCell } {
   [get_bd_pins EMIO_I/In1]
   connect_bd_net -net ilconcat_0_dout2  [get_bd_pins IRQ_F2P/dout] \
   [get_bd_pins processing_system7_0/IRQ_F2P]
+  connect_bd_net -net ilconcat_0_dout3  [get_bd_pins leds_concat/dout] \
+  [get_bd_ports LEDS]
   connect_bd_net -net ilconstant_0_dout  [get_bd_pins ilconstant_0/dout] \
-  [get_bd_pins EMIO_I_0/In2]
+  [get_bd_pins EMIO_I_0/In3]
   connect_bd_net -net ilconstant_2_dout  [get_bd_pins ilconstant_2/dout] \
   [get_bd_pins processing_system7_0/SPI0_SS_I]
   connect_bd_net -net ilconstant_3_dout  [get_bd_pins ilconstant_3/dout] \
   [get_bd_pins processing_system7_0/SPI0_SCLK_I] \
   [get_bd_pins processing_system7_0/SPI0_MOSI_I]
+  connect_bd_net -net ilconstant_4_dout  [get_bd_pins ilconstant_4/dout] \
+  [get_bd_pins EMIO_I_0/In1]
   connect_bd_net -net ilslice_0_Dout  [get_bd_pins UART_MUX/Dout] \
   [get_bd_pins uart_mux_0/sel]
-  connect_bd_net -net ilslice_0_Dout1  [get_bd_pins LEDS/Dout] \
-  [get_bd_ports LEDS]
+  connect_bd_net -net ilslice_0_Dout1  [get_bd_pins axi_gpio_led/Dout] \
+  [get_bd_pins leds_concat/In1]
   connect_bd_net -net ilslice_0_Dout2  [get_bd_pins OLED_DC/Dout] \
   [get_bd_ports OLED_DC]
+  connect_bd_net -net ilslice_1_Dout  [get_bd_pins emio_switches/Dout] \
+  [get_bd_pins EMIO_I_0/In0]
+  connect_bd_net -net ilslice_2_Dout  [get_bd_pins axi_gpio_switch/Dout] \
+  [get_bd_pins axi_gpio_0/gpio2_io_i]
   connect_bd_net -net processing_system7_0_FCLK_CLK0  [get_bd_pins processing_system7_0/FCLK_CLK0] \
   [get_bd_pins rst_ps7_0_100M/slowest_sync_clk] \
   [get_bd_pins uart_mux_0/sys_clk] \
@@ -789,7 +853,8 @@ proc create_root_design { parentCell } {
   [get_bd_pins processing_system7_0/M_AXI_GP0_ACLK] \
   [get_bd_pins processing_system7_0/S_AXI_GP0_ACLK] \
   [get_bd_pins smartconnect_0/aclk] \
-  [get_bd_pins smartconnect_1/aclk]
+  [get_bd_pins smartconnect_1/aclk] \
+  [get_bd_pins axi_gpio_0/s_axi_aclk]
   connect_bd_net -net processing_system7_0_FCLK_RESET0_N  [get_bd_pins processing_system7_0/FCLK_RESET0_N] \
   [get_bd_pins rst_ps7_0_100M/ext_reset_in]
   connect_bd_net -net processing_system7_0_GPIO_O  [get_bd_pins processing_system7_0/GPIO_O] \
@@ -807,7 +872,8 @@ proc create_root_design { parentCell } {
   [get_bd_pins axi_dma_0/axi_resetn] \
   [get_bd_pins axi_uart16550_0/s_axi_aresetn] \
   [get_bd_pins axi_uartlite_0/s_axi_aresetn] \
-  [get_bd_pins smartconnect_0/aresetn]
+  [get_bd_pins smartconnect_0/aresetn] \
+  [get_bd_pins axi_gpio_0/s_axi_aresetn]
   connect_bd_net -net rx_in_0_1  [get_bd_ports UART_rxd] \
   [get_bd_pins uart_mux_0/rx_in]
   connect_bd_net -net uart_mux_0_tx_out  [get_bd_pins uart_mux_0/tx_out] \
@@ -826,7 +892,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net xlslice_1_Dout  [get_bd_pins EMIO_O_0/Dout] \
   [get_bd_pins EMIO_I/In0] \
   [get_bd_pins UART_MUX/Din] \
-  [get_bd_pins LEDS/Din] \
+  [get_bd_pins emio_leds/Din] \
   [get_bd_pins OLED_DC/Din] \
   [get_bd_pins OLED_RESET/Din] \
   [get_bd_pins OLED_VDD/Din] \

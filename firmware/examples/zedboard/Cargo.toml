@@ -48,3 +48,4 @@ heapless = "0.9"
 axi-uartlite = { version = "0.3" }
 axi-uart16550 = { version = "0.3" }
 axi-dma = { version = "0.1" }
+axi-gpio = { git = "https://github.com/us-irs/axi-hdl-rs.git", rev = "bce2698dfa2d03d6c4614f244f25440c9c536758" }
