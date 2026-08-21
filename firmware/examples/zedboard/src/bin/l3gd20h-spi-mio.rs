@@ -130,15 +130,12 @@ async fn main(spawner: Spawner) -> ! {
     );
 
     let mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
-    let mut emio_leds: [Output; 8] = [
+    // Just LD0-LD2 here as a simple "this example is running" indicator. See main.rs for an
+    // example that exercises all 8 LEDs, including LD6/LD7 which are AXI GPIO, not EMIO driven.
+    let mut emio_leds: [Output; 3] = [
         Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(3).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(4).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(5).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(6).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(7).unwrap(), PinState::Low),
     ];
     for (idx, led) in emio_leds.iter_mut().enumerate() {
         if idx.is_multiple_of(2) {
@@ -163,7 +160,7 @@ pub async fn logger_task(mut log_runner: UartLoggerRunner) -> ! {
 
 pub async fn blocking_application(
     mut mio_led: Output,
-    mut emio_leds: [Output; 8],
+    mut emio_leds: [Output; 3],
     spi: spi::Spi,
 ) -> ! {
     let mut delay = Delay;
@@ -192,7 +189,7 @@ pub async fn blocking_application(
 
 pub async fn non_blocking_application(
     mut mio_led: Output,
-    mut emio_leds: [Output; 8],
+    mut emio_leds: [Output; 3],
     spi: spi::Spi,
 ) -> ! {
     let mut delay = Delay;

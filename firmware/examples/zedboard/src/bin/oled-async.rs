@@ -87,15 +87,12 @@ async fn main(spawner: Spawner) -> ! {
     spawner.spawn(logger_task(log_runner).unwrap());
 
     let mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
-    let emio_leds: [gpio::Output; 8] = [
+    // Just LD0-LD2 here as a simple "this example is running" indicator. See main.rs for an
+    // example that exercises all 8 LEDs, including LD6/LD7 which are AXI GPIO, not EMIO driven.
+    let emio_leds: [gpio::Output; 3] = [
         gpio::Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), gpio::PinState::Low),
         gpio::Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), gpio::PinState::Low),
         gpio::Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(3).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(4).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(5).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(6).unwrap(), gpio::PinState::Low),
-        gpio::Output::new_for_emio(gpio_pins.emio.take(7).unwrap(), gpio::PinState::Low),
     ];
     spawner.spawn(blinky_task(mio_led, emio_leds).unwrap());
 
@@ -217,7 +214,7 @@ pub async fn logger_task(mut log_runner: UartLoggerRunner) -> ! {
 }
 
 #[embassy_executor::task]
-pub async fn blinky_task(mut mio_led: gpio::Output, mut emio_leds: [gpio::Output; 8]) {
+pub async fn blinky_task(mut mio_led: gpio::Output, mut emio_leds: [gpio::Output; 3]) {
     let mut ticker = Ticker::every(Duration::from_millis(200));
     loop {
         mio_led.toggle();

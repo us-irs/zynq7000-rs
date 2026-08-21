@@ -283,15 +283,12 @@ async fn main(spawner: Spawner) -> ! {
     info!("Boot mode: {:?}", boot_mode);
 
     let mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
-    let emio_leds: [Output; 8] = [
+    // Just LD0-LD2 here as a simple "this example is running" indicator. See main.rs for an
+    // example that exercises all 8 LEDs, including LD6/LD7 which are AXI GPIO, not EMIO driven.
+    let emio_leds: [Output; 3] = [
         Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(3).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(4).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(5).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(6).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(7).unwrap(), PinState::Low),
     ];
 
     let (uart_0_tx, mut uart_0_rx) = uart_0.split();
@@ -356,7 +353,7 @@ fn build_print_string(prefix: &str, base_str: &str) -> alloc::string::String {
 }
 
 #[embassy_executor::task]
-async fn led_task(mut mio_led: Output, mut emio_leds: [Output; 8]) {
+async fn led_task(mut mio_led: Output, mut emio_leds: [Output; 3]) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     let mut led_idx = 0;
     loop {

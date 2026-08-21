@@ -8,10 +8,10 @@
 # are always resolved relative to the current directory, unlike paths inside this file.
 
 [fpga]
-# Path to the bitstream to load via openFPGALoader before the ELF is flashed.
-# Relative paths are resolved relative to this file's own directory, not the current directory.
-# Overridden by the ZYNQ_BITSTREAM env var when set.
-# bitstream = "zedboard-gateware/sdt_out/zedboard-rust.bit"
+# Path to the bitstream to load via openFPGALoader before the ELF is flashed. Absolute paths are
+# used as-is; relative paths are resolved relative to this file's own directory, not the current
+# directory. Overridden by the ZYNQ_BITSTREAM env var when set.
+# bitstream = "../zedboard-gateware/zedboard-rust.bit"
 
 # Board name passed to openFPGALoader via `-b`. Overridden by OPENFPGALOADER_BOARD when set.
 board = "zedboard"

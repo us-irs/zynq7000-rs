@@ -141,15 +141,12 @@ async fn main(_spawner: Spawner) -> ! {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
 
     let mut mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
-    let mut emio_leds: [Output; 8] = [
+    // Just LD0-LD2 here as a simple "this example is running" indicator. See main.rs for an
+    // example that exercises all 8 LEDs, including LD6/LD7 which are AXI GPIO, not EMIO driven.
+    let mut emio_leds: [Output; 3] = [
         Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(3).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(4).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(5).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(6).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(7).unwrap(), PinState::Low),
     ];
 
     let mut uart_mux = UartMultiplexer::new([

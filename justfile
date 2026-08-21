@@ -44,7 +44,8 @@ export-bd: && clean-bd
 clean-bd:
   sed -i '/CONFIG.Coe_File/d; s/CONFIG.Load_Init_File {true}/CONFIG.Load_Init_File {false}/' zedboard-gateware/src/zedboard-bd.tcl
 
-# Copy the impl_1 bitstream out to zedboard-rust.bit, next to the xsa/project.
+# Copy the impl_1 bitstream out to zedboard-rust.bit, both next to the xsa/project and at
+# zedboard-gateware/zedboard-rust.bit (the same path `download-zed-gateware` uses).
 [working-directory: 'zedboard-gateware']
 export-bit:
   vivado -mode batch -source export-bit.tcl
