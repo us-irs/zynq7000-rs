@@ -144,6 +144,11 @@ impl LowLevelGpio {
     }
 
     /// Convert the pin into an IO peripheral pin.
+    ///
+    /// `pullup` is `Some(true)` to enable the pin's internal pull-up, `Some(false)` to disable
+    /// it, or `None` to leave the current pull-up configuration untouched. MIO pins only support
+    /// a pull-up, there is no pull-down option, so `Some(false)` leaves the pin floating rather
+    /// than pulling it low.
     pub fn configure_as_io_periph_pin(&mut self, mux_conf: MuxConfig, pullup: Option<bool>) {
         self.reconfigure_slcr_mio_cfg(false, pullup, Some(mux_conf));
     }

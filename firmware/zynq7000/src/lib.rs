@@ -36,6 +36,7 @@ pub mod qspi;
 pub mod sdio;
 pub mod slcr;
 pub mod spi;
+pub mod swdt;
 pub mod ttc;
 pub mod uart;
 pub mod xadc;
@@ -70,6 +71,7 @@ pub struct Peripherals {
     pub xadc: xadc::MmioRegisters<'static>,
     pub sdio_0: sdio::MmioRegisters<'static>,
     pub sdio_1: sdio::MmioRegisters<'static>,
+    pub swdt: swdt::MmioRegisters<'static>,
 }
 
 impl Peripherals {
@@ -112,6 +114,7 @@ impl Peripherals {
                 xadc: xadc::Registers::new_mmio_fixed(),
                 sdio_0: sdio::Registers::new_mmio_fixed_0(),
                 sdio_1: sdio::Registers::new_mmio_fixed_1(),
+                swdt: swdt::Registers::new_mmio_fixed(),
             }
         }
     }

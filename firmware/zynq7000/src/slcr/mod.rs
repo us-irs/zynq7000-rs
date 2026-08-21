@@ -116,6 +116,26 @@ pub struct MioLoopback {
     spi0_loop_spi1: bool,
 }
 
+#[bitbybit::bitenum(u1, exhaustive = true)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum WdtClockSelect {
+    InternalCpu1x = 0b0,
+    ExternalEmioOrMio = 0b1,
+}
+
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
+pub struct WdtClockSelectRegister {
+    #[bit(0, rw)]
+    sel: WdtClockSelect,
+}
+
 /// System Level Control Registers access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
@@ -147,7 +167,7 @@ pub struct Registers {
     _gap3: [u32; 0x28],
 
     apu_ctrl: u32,
-    wdt_clk_set: u32,
+    wdt_clk_set: WdtClockSelectRegister,
 
     _gap4: [u32; 0x4E],
 
