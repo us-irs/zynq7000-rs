@@ -67,7 +67,7 @@ pub fn configure_ddr_for_ddr3(
     let dci_clk_cfg = ll::calculate_dci_divisors(&ddr_clks);
 
     ddrc_regs.modify_ddrc_ctrl(|mut val| {
-        val.set_soft_reset(zynq7000::ddrc::regs::SoftReset::Reset);
+        val.set_soft_reset(zynq7000::ddrc::types::SoftReset::Reset);
         val
     });
 
@@ -91,12 +91,12 @@ pub fn configure_ddr_for_ddr3(
 
     // Now take the DDR out of reset.
     ddrc_regs.modify_ddrc_ctrl(|mut val| {
-        val.set_soft_reset(zynq7000::ddrc::regs::SoftReset::Active);
+        val.set_soft_reset(zynq7000::ddrc::types::SoftReset::Active);
         val
     });
     // Wait until the DDR setup has completed.
     while ddrc_regs.read_mode_status().operating_mode()
-        != zynq7000::ddrc::regs::OperatingMode::NormalOperation
+        != zynq7000::ddrc::types::OperatingMode::NormalOperation
     {
         // Wait for the soft reset to complete.
         aarch32_cpu::asm::nop();

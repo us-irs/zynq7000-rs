@@ -1,7 +1,6 @@
 //! System Level Control Registers (slcr)
 //!
 //! Writing any of these registers required unlocking the SLCR first.
-use arbitrary_int::u4;
 pub use clocks::{ClockControlRegisters, MmioClockControlRegisters};
 pub use reset::{MmioResetControl, ResetControl};
 
@@ -20,35 +19,145 @@ pub mod mio;
 /// Peripheral reset control registers.
 pub mod reset;
 
-/// Reference voltage selection for GPIOB.
-#[bitbybit::bitenum(u3, exhaustive = false)]
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum VrefSel {
-    /// Reference voltage disabled.
-    Disabled = 0b000,
-    /// 0.9V reference voltage.
-    Vref0_9V = 0b001,
-}
+pub use types::*;
 
-/// GPIOB bank reference voltage control.
-#[bitbybit::bitfield(
-    u32,
-    default = 0,
-    debug,
-    defmt_fields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct GpiobControl {
-    /// Enables the reference voltage switch.
-    #[bit(11, rw)]
-    vref_sw_en: bool,
-    /// Reference voltage selection.
-    #[bits(4..=6, rw)]
-    vref_sel: Option<VrefSel>,
-    /// Enables the reference voltage.
-    #[bit(0, rw)]
-    vref_en: bool,
+/// Register helper types.
+pub mod types {
+    use arbitrary_int::u4;
+
+    /// Reference voltage selection for GPIOB.
+    #[bitbybit::bitenum(u3, exhaustive = false)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum VrefSel {
+        /// Reference voltage disabled.
+        Disabled = 0b000,
+        /// 0.9V reference voltage.
+        Vref0_9V = 0b001,
+    }
+
+    /// GPIOB bank reference voltage control.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct GpiobControl {
+        /// Enables the reference voltage switch.
+        #[bit(11, rw)]
+        vref_sw_en: bool,
+        /// Reference voltage selection.
+        #[bits(4..=6, rw)]
+        vref_sel: Option<VrefSel>,
+        /// Enables the reference voltage.
+        #[bit(0, rw)]
+        vref_en: bool,
+    }
+
+    /// Boot PLL bypass configuration, sampled from the boot mode pins.
+    #[bitbybit::bitenum(u1, exhaustive = true)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum BootPllConfig {
+        /// PLL enabled.
+        Enabled = 0,
+        /// Disabled and bypassed.
+        Bypassed = 1,
+    }
+
+    /// Boot mode strapping pin status, read-only.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct BootModeRegister {
+        /// Boot PLL bypass configuration.
+        #[bit(4, r)]
+        pll_config: BootPllConfig,
+        /// Boot device selection.
+        #[bits(0..=3, r)]
+        boot_mode: u4,
+    }
+
+    /// PS-to-PL and PL-to-PS level shifter enable configuration.
+    #[bitbybit::bitenum(u4)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum LevelShifterConfig {
+        /// Disable all level shifters.
+        DisableAll = 0x00,
+        /// Enable only the PS-to-PL level shifters.
+        EnablePsToPl = 0xA,
+        /// Enable all level shifters.
+        EnableAll = 0xF,
+    }
+
+    /// PS-PL level shifter enable control.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct LevelShifterRegister {
+        /// Level shifter enable configuration.
+        #[bits(0..=3, rw)]
+        user_lvl_shftr_en: Option<LevelShifterConfig>,
+    }
+
+    /// MIO peripheral loopback configuration.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct MioLoopback {
+        /// Loop I2C0 to I2C1.
+        #[bit(3, rw)]
+        i2c0_loop_i2c1: bool,
+        /// Loop CAN0 to CAN1.
+        #[bit(2, rw)]
+        can0_loop_can1: bool,
+        /// Loop UART0 to UART1.
+        #[bit(1, rw)]
+        ua0_loop_ua1: bool,
+        /// Loop SPI0 to SPI1.
+        #[bit(0, rw)]
+        spi0_loop_spi1: bool,
+    }
+
+    /// WDT input clock select.
+    #[bitbybit::bitenum(u1, exhaustive = true)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum WdtClockSelect {
+        /// Internal clock: CPU1x.
+        InternalCpu1x = 0b0,
+        /// External clock, either through EMIO or through MIO.
+        ExternalEmioOrMio = 0b1,
+    }
+
+    /// WDT input clock select register.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct WdtClockSelectRegister {
+        /// Select bit.
+        #[bit(0, rw)]
+        sel: WdtClockSelect,
+    }
 }
 
 /// GPIOB bank I/O buffer configuration registers.
@@ -82,109 +191,6 @@ impl GpiobRegisters {
     pub unsafe fn new_mmio_fixed() -> MmioGpiobRegisters<'static> {
         unsafe { Self::new_mmio_at(SLCR_BASE_ADDR + GPIOB_OFFSET) }
     }
-}
-
-/// Boot PLL bypass configuration, sampled from the boot mode pins.
-#[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum BootPllConfig {
-    /// PLL enabled.
-    Enabled = 0,
-    /// Disabled and bypassed.
-    Bypassed = 1,
-}
-
-/// Boot mode strapping pin status, read-only.
-#[bitbybit::bitfield(
-    u32,
-    default = 0,
-    debug,
-    defmt_fields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct BootModeRegister {
-    /// Boot PLL bypass configuration.
-    #[bit(4, r)]
-    pll_config: BootPllConfig,
-    /// Boot device selection.
-    #[bits(0..=3, r)]
-    boot_mode: u4,
-}
-
-/// PS-to-PL and PL-to-PS level shifter enable configuration.
-#[bitbybit::bitenum(u4)]
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum LevelShifterConfig {
-    /// Disable all level shifters.
-    DisableAll = 0x00,
-    /// Enable only the PS-to-PL level shifters.
-    EnablePsToPl = 0xA,
-    /// Enable all level shifters.
-    EnableAll = 0xF,
-}
-
-/// PS-PL level shifter enable control.
-#[bitbybit::bitfield(
-    u32,
-    default = 0,
-    debug,
-    defmt_fields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct LevelShifterRegister {
-    /// Level shifter enable configuration.
-    #[bits(0..=3, rw)]
-    user_lvl_shftr_en: Option<LevelShifterConfig>,
-}
-
-/// MIO peripheral loopback configuration.
-#[bitbybit::bitfield(
-    u32,
-    default = 0,
-    debug,
-    defmt_fields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct MioLoopback {
-    /// Loop I2C0 to I2C1.
-    #[bit(3, rw)]
-    i2c0_loop_i2c1: bool,
-    /// Loop CAN0 to CAN1.
-    #[bit(2, rw)]
-    can0_loop_can1: bool,
-    /// Loop UART0 to UART1.
-    #[bit(1, rw)]
-    ua0_loop_ua1: bool,
-    /// Loop SPI0 to SPI1.
-    #[bit(0, rw)]
-    spi0_loop_spi1: bool,
-}
-
-/// WDT input clock select.
-#[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-pub enum WdtClockSelect {
-    /// Internal clock: CPU1x.
-    InternalCpu1x = 0b0,
-    /// External clock, either through EMIO or through MIO.
-    ExternalEmioOrMio = 0b1,
-}
-
-/// WDT input clock select register.
-#[bitbybit::bitfield(
-    u32,
-    default = 0,
-    debug,
-    defmt_fields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct WdtClockSelectRegister {
-    /// Select bit.
-    #[bit(0, rw)]
-    sel: WdtClockSelect,
 }
 
 /// System Level Control Registers access.

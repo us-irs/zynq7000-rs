@@ -6,19 +6,19 @@ use arbitrary_int::u12;
 /// Base address of the system watchdog timer register block.
 pub const SWDT_BASE_ADDR: usize = 0xF800_5000;
 
-/// Key which must be written to [fields::Control]'s key field for any other field write in that
+/// Key which must be written to [Control]'s key field for any other field write in that
 /// register to take effect.
 pub const CONTROL_KEY: u12 = u12::new(0xABC);
-/// Key which must be written to [fields::CounterConfig]'s key field for any other field write in
+/// Key which must be written to [CounterConfig]'s key field for any other field write in
 /// that register to take effect.
 pub const COUNTER_CONFIG_KEY: u12 = u12::new(0x248);
-/// Key which must be written to [fields::Restart] to restart the watchdog.
+/// Key which must be written to [Restart] to restart the watchdog.
 pub const RESTART_KEY: u16 = 0x1999;
 
-pub use fields::*;
+pub use types::*;
 
-/// SWDT register field definitions.
-pub mod fields {
+/// Register helper types.
+pub mod types {
     use arbitrary_int::{u3, u12};
 
     /// Length of the pulse generated on the IRQ output, in PCLK cycles.
@@ -149,15 +149,15 @@ pub mod fields {
 #[repr(C)]
 pub struct Registers {
     /// Control register.
-    control: fields::Control,
+    control: Control,
     /// Counter config register.
-    counter_config: fields::CounterConfig,
+    counter_config: CounterConfig,
     /// Restart register.
     #[mmio(Write)]
-    restart: fields::Restart,
+    restart: Restart,
     /// Status register.
     #[mmio(PureRead)]
-    status: fields::Status,
+    status: Status,
 }
 
 static_assertions::const_assert_eq!(core::mem::size_of::<Registers>(), 0x10);

@@ -2,15 +2,15 @@
 #![doc = r""]
 #![doc = r"This configuration file contains static DDRIOB configuration parameters extracted from the"]
 #![doc = r"AMD ps7init.tcl file. It was generated for the MT41K128M16JT-125 DDR chip."]
-use zynq7000::ddrc::regs;
+use zynq7000::ddrc::types;
 use zynq7000_hal::ddr::DdriobConfigSet;
 pub const DDRIOB_CONFIG_SET_ZEDBOARD: DdriobConfigSet = DdriobConfigSet {
     ddr_control: zynq7000::slcr::ddriob::DdrControl::new_with_raw_value(0x00000260),
-    addr0: regs::DdriobConfig::new_with_raw_value(0x00000600),
-    addr1: regs::DdriobConfig::new_with_raw_value(0x00000600),
-    data0: regs::DdriobConfig::new_with_raw_value(0x00000672),
-    data1: regs::DdriobConfig::new_with_raw_value(0x00000672),
-    diff0: regs::DdriobConfig::new_with_raw_value(0x00000674),
-    diff1: regs::DdriobConfig::new_with_raw_value(0x00000674),
-    clock: regs::DdriobConfig::new_with_raw_value(0x00000600),
+    addr0: types::DdriobConfig::new_with_raw_value(0x00000600),
+    addr1: types::DdriobConfig::new_with_raw_value(0x00000600),
+    data0: types::DdriobConfig::new_with_raw_value(0x00000672),
+    data1: types::DdriobConfig::new_with_raw_value(0x00000672),
+    diff0: types::DdriobConfig::new_with_raw_value(0x00000674),
+    diff1: types::DdriobConfig::new_with_raw_value(0x00000674),
+    clock: types::DdriobConfig::new_with_raw_value(0x00000600),
 };
