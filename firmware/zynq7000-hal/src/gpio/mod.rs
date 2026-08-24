@@ -395,6 +395,11 @@ pub struct IoPeriphPin {
 impl IoPeriphPin {
     /// Constructor for IO peripheral pins where only the multiplexer and pullup configuration
     /// need to be changed.
+    ///
+    /// `pullup` is `Some(true)` to enable the pin's internal pull-up, `Some(false)` to disable
+    /// it, or `None` to leave the current pull-up configuration untouched. MIO pins only support
+    /// a pull-up, there is no pull-down option, so `Some(false)` leaves the pin floating rather
+    /// than pulling it low.
     pub fn new(pin: impl MioPin, mux_conf: MuxConfig, pullup: Option<bool>) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(pin.offset()));
         low_level.configure_as_io_periph_pin(mux_conf, pullup);
