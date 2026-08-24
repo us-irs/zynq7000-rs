@@ -1,74 +1,178 @@
 //! # GIC (Generic Interrupt Controller) register module.
 pub use crate::mpcore::{GICC_BASE_ADDR, GICD_BASE_ADDR};
-use arbitrary_int::{u2, u3, u4, u5, u10, u11};
 use static_assertions::const_assert_eq;
 
-/// Distributor Control Register
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    debug,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct DistributorControlRegister {
-    /// Enables forwarding of Non-secure interrupts from the distributor to the CPU interfaces.
-    #[bit(1, rw)]
-    enable_non_secure: bool,
-    /// Enables forwarding of Secure interrupts from the distributor to the CPU interfaces.
-    #[bit(0, rw)]
-    enable_secure: bool,
-}
+pub use types::*;
 
-/// Read only bit. This register only returns fixed constants.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct TypeRegister {
-    /// Number of lockable shared peripheral interrupts.
-    #[bits(11..=15, r)]
-    lspi: u5,
-    /// The GIC implements the security extension.
-    #[bit(10, r)]
-    security_extension: bool,
-    /// Number of implemented CPU interfaces, encoded.
-    #[bits(5..=7, r)]
-    cpu_number: u3,
-    /// Number of implemented interrupt lines, encoded in blocks of 32.
-    #[bits(0..=4, r)]
-    it_lines_number: u5,
-}
+/// Register helper types.
+pub mod types {
+    use arbitrary_int::{u2, u3, u4, u5, u10, u11};
 
-impl TypeRegister {
-    /// Fixed value of the security extension bit.
-    pub const SECURITY_EXTNS_BIT: bool = true;
-    /// 31 LSPIs.
-    pub const NUM_LSPI: usize = 0x1f;
-    /// Encoding: 0b001 means that the Cortex-A9 MPCore has 2 processors.
-    pub const CPU_NUMBER_BITS: u8 = 0b001;
-    /// The distributor provides 96 interrupts.
-    pub const IT_LINES_NUMBER: u8 = 0x2;
+    /// Distributor Control Register
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct DistributorControlRegister {
+        /// Enables forwarding of Non-secure interrupts from the distributor to the CPU interfaces.
+        #[bit(1, rw)]
+        enable_non_secure: bool,
+        /// Enables forwarding of Secure interrupts from the distributor to the CPU interfaces.
+        #[bit(0, rw)]
+        enable_secure: bool,
+    }
 
-    /// Number of CPUs implemented in the Cortex-A9 MPCore.
-    pub const NUM_OF_CPUS: usize = 2;
-    /// Number of interrupts implemented by the distributor.
-    pub const NUM_OF_INTERRUPTS: usize = 96;
-}
+    /// Read only bit. This register only returns fixed constants.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct TypeRegister {
+        /// Number of lockable shared peripheral interrupts.
+        #[bits(11..=15, r)]
+        lspi: u5,
+        /// The GIC implements the security extension.
+        #[bit(10, r)]
+        security_extension: bool,
+        /// Number of implemented CPU interfaces, encoded.
+        #[bits(5..=7, r)]
+        cpu_number: u3,
+        /// Number of implemented interrupt lines, encoded in blocks of 32.
+        #[bits(0..=4, r)]
+        it_lines_number: u5,
+    }
 
-/// Interrupt Controller Type Register.
-pub type Typer = TypeRegister;
+    impl TypeRegister {
+        /// Fixed value of the security extension bit.
+        pub const SECURITY_EXTNS_BIT: bool = true;
+        /// 31 LSPIs.
+        pub const NUM_LSPI: usize = 0x1f;
+        /// Encoding: 0b001 means that the Cortex-A9 MPCore has 2 processors.
+        pub const CPU_NUMBER_BITS: u8 = 0b001;
+        /// The distributor provides 96 interrupts.
+        pub const IT_LINES_NUMBER: u8 = 0x2;
 
-/// Interrupt Processor Targets Register, selecting which CPUs an interrupt is forwarded to.
-#[bitbybit::bitfield(
-    u32,
-    debug,
-    default = 0x0,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-#[derive(PartialEq, Eq)]
-pub struct InterruptProcessorTargetRegister {
-    /// Target array. Every register holds the information for 4 interrupts.
-    #[bits(0..=1, rw, stride = 8)]
-    targets: [u2; 4],
+        /// Number of CPUs implemented in the Cortex-A9 MPCore.
+        pub const NUM_OF_CPUS: usize = 2;
+        /// Number of interrupts implemented by the distributor.
+        pub const NUM_OF_INTERRUPTS: usize = 96;
+    }
+
+    /// Interrupt Controller Type Register.
+    pub type Typer = TypeRegister;
+
+    /// Interrupt Processor Targets Register, selecting which CPUs an interrupt is forwarded to.
+    #[bitbybit::bitfield(
+        u32,
+        debug,
+        default = 0x0,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    #[derive(PartialEq, Eq)]
+    pub struct InterruptProcessorTargetRegister {
+        /// Target array. Every register holds the information for 4 interrupts.
+        #[bits(0..=1, rw, stride = 8)]
+        targets: [u2; 4],
+    }
+
+    /// CPU interface control register.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct InterfaceControl {
+        /// Controls whether the CPU interface uses the secure or non-secure binary point register.
+        #[bit(4, rw)]
+        sbpr: bool,
+        /// Signal Secure interrupts as FIQ instead of IRQ.
+        #[bit(3, rw)]
+        fiq_en: bool,
+        /// Controls whether a Non-secure read of the Interrupt Acknowledge Register can acknowledge
+        /// a Secure interrupt.
+        #[bit(2, rw)]
+        ack_ctrl: bool,
+        /// Enables signaling of Non-secure interrupts by the CPU interface.
+        #[bit(1, rw)]
+        enable_non_secure: bool,
+        /// Enables signaling of Secure interrupts by the CPU interface.
+        #[bit(0, rw)]
+        enable_secure: bool,
+    }
+
+    /// Priority Mask Register
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct PriorityRegister {
+        /// Interrupt priority value, smaller values indicate higher priority.
+        #[bits(0..=7, rw)]
+        priority: u8,
+    }
+
+    /// Interrupt acknowledge register.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct InterruptSignalRegister {
+        /// ID of the CPU that requested the interrupt, valid for software generated interrupts.
+        #[bits(10..=12, rw)]
+        cpu_id: u3,
+        /// Interrupt ID of the acknowledged or completed interrupt.
+        #[bits(0..=9, rw)]
+        ack_int_id: u10,
+    }
+
+    /// Determines when a software generated interrupt is treated as a Group 1 interrupt.
+    #[bitbybit::bitenum(u1, exhaustive = true)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    #[derive(Debug, PartialEq, Eq)]
+    pub enum SecurityCondition {
+        /// Treated as Group 1 only if the distributor is configured as Secure.
+        IfConfiguredAsSecure = 0,
+        /// Treated as Group 1 only if the distributor is configured as Non-secure.
+        IfConfiguredAsNonSecure = 1,
+    }
+
+    /// Selects the target CPUs of a software generated interrupt.
+    #[bitbybit::bitenum(u2, exhaustive = true)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    #[derive(Debug, PartialEq, Eq)]
+    pub enum TargetListFilter {
+        /// Forward the interrupt to the CPUs in the target list.
+        SendToCpusInTargetList = 0b00,
+        /// Forward the interrupt to all CPUs except the requesting one.
+        SendToAllOtherCpus = 0b01,
+        /// Forward the interrupt to the requesting CPU only.
+        SendToSelf = 0b10,
+        /// Reserved value.
+        Reserved = 0b11,
+    }
+
+    /// Software Generated Interrupt Register, used to request an interrupt on other CPUs.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct SoftwareGeneratedInterruptRegister {
+        /// Selects which CPUs the interrupt is forwarded to.
+        #[bits(24..=25, rw)]
+        target_list_filter: TargetListFilter,
+        /// Bitmask of target CPUs, used when the target list filter selects the target list.
+        #[bits(16..=23, rw)]
+        cpu_target_list: u8,
+        /// SATT field.
+        #[bit(15, rw)]
+        security_condition: SecurityCondition,
+        /// Should be zero.
+        #[bits(4..=14, rw)]
+        sbz: u11,
+        /// Interrupt ID of the software generated interrupt, in the range 0 to 15.
+        #[bits(0..=3, rw)]
+        interrupt_id: u4,
+    }
 }
 
 /// GIC Distributor registers.
@@ -174,104 +278,6 @@ impl DistributorRegisters {
     pub const unsafe fn new_mmio_fixed() -> MmioDistributorRegisters<'static> {
         unsafe { Self::new_mmio_at(GICD_BASE_ADDR) }
     }
-}
-
-/// CPU interface control register.
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    debug,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct InterfaceControl {
-    /// Controls whether the CPU interface uses the secure or non-secure binary point register.
-    #[bit(4, rw)]
-    sbpr: bool,
-    /// Signal Secure interrupts as FIQ instead of IRQ.
-    #[bit(3, rw)]
-    fiq_en: bool,
-    /// Controls whether a Non-secure read of the Interrupt Acknowledge Register can acknowledge
-    /// a Secure interrupt.
-    #[bit(2, rw)]
-    ack_ctrl: bool,
-    /// Enables signaling of Non-secure interrupts by the CPU interface.
-    #[bit(1, rw)]
-    enable_non_secure: bool,
-    /// Enables signaling of Secure interrupts by the CPU interface.
-    #[bit(0, rw)]
-    enable_secure: bool,
-}
-
-/// Priority Mask Register
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct PriorityRegister {
-    /// Interrupt priority value, smaller values indicate higher priority.
-    #[bits(0..=7, rw)]
-    priority: u8,
-}
-
-/// Interrupt acknowledge register.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct InterruptSignalRegister {
-    /// ID of the CPU that requested the interrupt, valid for software generated interrupts.
-    #[bits(10..=12, rw)]
-    cpu_id: u3,
-    /// Interrupt ID of the acknowledged or completed interrupt.
-    #[bits(0..=9, rw)]
-    ack_int_id: u10,
-}
-
-/// Determines when a software generated interrupt is treated as a Group 1 interrupt.
-#[bitbybit::bitenum(u1, exhaustive = true)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[derive(Debug, PartialEq, Eq)]
-pub enum SecurityCondition {
-    /// Treated as Group 1 only if the distributor is configured as Secure.
-    IfConfiguredAsSecure = 0,
-    /// Treated as Group 1 only if the distributor is configured as Non-secure.
-    IfConfiguredAsNonSecure = 1,
-}
-
-/// Selects the target CPUs of a software generated interrupt.
-#[bitbybit::bitenum(u2, exhaustive = true)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[derive(Debug, PartialEq, Eq)]
-pub enum TargetListFilter {
-    /// Forward the interrupt to the CPUs in the target list.
-    SendToCpusInTargetList = 0b00,
-    /// Forward the interrupt to all CPUs except the requesting one.
-    SendToAllOtherCpus = 0b01,
-    /// Forward the interrupt to the requesting CPU only.
-    SendToSelf = 0b10,
-    /// Reserved value.
-    Reserved = 0b11,
-}
-
-/// Software Generated Interrupt Register, used to request an interrupt on other CPUs.
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    debug,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct SoftwareGeneratedInterruptRegister {
-    /// Selects which CPUs the interrupt is forwarded to.
-    #[bits(24..=25, rw)]
-    target_list_filter: TargetListFilter,
-    /// Bitmask of target CPUs, used when the target list filter selects the target list.
-    #[bits(16..=23, rw)]
-    cpu_target_list: u8,
-    /// SATT field.
-    #[bit(15, rw)]
-    security_condition: SecurityCondition,
-    /// Should be zero.
-    #[bits(4..=14, rw)]
-    sbz: u11,
-    /// Interrupt ID of the software generated interrupt, in the range 0 to 15.
-    #[bits(0..=3, rw)]
-    interrupt_id: u4,
 }
 
 /// GIC CPU interface registers.

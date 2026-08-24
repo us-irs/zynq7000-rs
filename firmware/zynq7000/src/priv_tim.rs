@@ -3,41 +3,46 @@
 /// Base address of the CPU private timer register block.
 pub const CPU_PRIV_TIM_BASE_ADDR: usize = super::mpcore::MPCORE_BASE_ADDR + 0x0000_0600;
 
-/// CPU private timer control.
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    debug,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct Control {
-    /// Clock prescaler applied to the counter.
-    #[bits(8..=15, rw)]
-    prescaler: u8,
-    /// Enables the timer interrupt.
-    #[bit(2, rw)]
-    interrupt_enable: bool,
-    /// Reloads the counter from the load register on underflow instead of stopping.
-    #[bit(1, rw)]
-    auto_reload: bool,
-    /// Enables the timer.
-    #[bit(0, rw)]
-    enable: bool,
-}
+pub use types::*;
 
-/// CPU private timer interrupt status.
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    debug,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-pub struct InterruptStatus {
-    /// Cleared by writing a one.
-    #[bit(0, rw)]
-    event_flag: bool,
+/// Register helper types.
+pub mod types {
+    /// CPU private timer control.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct Control {
+        /// Clock prescaler applied to the counter.
+        #[bits(8..=15, rw)]
+        prescaler: u8,
+        /// Enables the timer interrupt.
+        #[bit(2, rw)]
+        interrupt_enable: bool,
+        /// Reloads the counter from the load register on underflow instead of stopping.
+        #[bit(1, rw)]
+        auto_reload: bool,
+        /// Enables the timer.
+        #[bit(0, rw)]
+        enable: bool,
+    }
+
+    /// CPU private timer interrupt status.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct InterruptStatus {
+        /// Cleared by writing a one.
+        #[bit(0, rw)]
+        event_flag: bool,
+    }
 }
 
 /// CPU private timer register access.

@@ -1,5 +1,4 @@
 //! # AXI high-performance port control registers.
-pub use arbitrary_int::{u3, u4};
 
 /// Port 0 base address.
 pub const AXI_HP_0_BASE_ADDR: usize = 0xF800_8000;
@@ -10,93 +9,100 @@ pub const AXI_HP_2_BASE_ADDR: usize = 0xF800_A000;
 /// Port 3 base address.
 pub const AXI_HP_3_BASE_ADDR: usize = 0xF800_B000;
 
-/// Read channel control.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct ReadChannelControl {
-    /// Enables QoS for the command at the head of the command queue.
-    #[bit(3, rw)]
-    qos_head_of_cmdq_enable: bool,
-    /// Enables output of commands to the fabric.
-    #[bit(2, rw)]
-    fabric_out_cmd_enable: bool,
-    /// Enables QoS signalling on the fabric interface.
-    #[bit(1, rw)]
-    fabric_qos_enable: bool,
-    /// Enables 32-bit (instead of 64-bit) read data width.
-    #[bit(0, rw)]
-    enable_32bit: bool,
-}
+pub use fields::*;
 
-/// Channel issuing capability.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct ChannelIssuingCapability {
-    /// Maximum number of outstanding issuing commands, capability set 1.
-    #[bits(4..=6, rw)]
-    read_issue_cap_1: u3,
-    /// Maximum number of outstanding issuing commands, capability set 0.
-    #[bits(0..=2, rw)]
-    read_issue_cap_0: u3,
-}
+/// Register definitions.
+pub mod fields {
+    pub use arbitrary_int::{u3, u4};
 
-/// Channel QoS configuration.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct ChannelQos {
-    /// Static QoS value applied to commands on this channel.
-    #[bits(0..=3, rw)]
-    static_qos: u4,
-}
+    /// Read channel control.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct ReadChannelControl {
+        /// Enables QoS for the command at the head of the command queue.
+        #[bit(3, rw)]
+        qos_head_of_cmdq_enable: bool,
+        /// Enables output of commands to the fabric.
+        #[bit(2, rw)]
+        fabric_out_cmd_enable: bool,
+        /// Enables QoS signalling on the fabric interface.
+        #[bit(1, rw)]
+        fabric_qos_enable: bool,
+        /// Enables 32-bit (instead of 64-bit) read data width.
+        #[bit(0, rw)]
+        enable_32bit: bool,
+    }
 
-/// Channel FIFO fill level.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct ChannelFifoLevel {
-    /// Current fill level of the channel FIFO.
-    #[bits(0..=7, r)]
-    level: u8,
-}
+    /// Channel issuing capability.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct ChannelIssuingCapability {
+        /// Maximum number of outstanding issuing commands, capability set 1.
+        #[bits(4..=6, rw)]
+        read_issue_cap_1: u3,
+        /// Maximum number of outstanding issuing commands, capability set 0.
+        #[bits(0..=2, rw)]
+        read_issue_cap_0: u3,
+    }
 
-/// Channel debug status.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct ChannelDebug {
-    /// Number of outstanding commands currently in the channel.
-    #[bits(1..=4, r)]
-    n_commands: u4,
-    /// Set when the channel FIFO has overflowed.
-    #[bit(0, r)]
-    fifo_overflow: bool,
-}
+    /// Channel QoS configuration.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct ChannelQos {
+        /// Static QoS value applied to commands on this channel.
+        #[bits(0..=3, rw)]
+        static_qos: u4,
+    }
 
-/// Selects when write data is released back to the fabric.
-#[bitbybit::bitenum(u2, exhaustive = false)]
-#[cfg_attr(feature = "defmt", derive(defmt::Format))]
-#[derive(Debug, PartialEq, Eq)]
-pub enum WriteReleaseMode {
-    /// Release write data on the last beat of the burst.
-    Last = 0,
-    /// Release write data once the configured threshold is reached.
-    Threshold = 1,
-}
+    /// Channel FIFO fill level.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct ChannelFifoLevel {
+        /// Current fill level of the channel FIFO.
+        #[bits(0..=7, r)]
+        level: u8,
+    }
 
-/// Write channel control.
-#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
-pub struct WriteChannelControl {
-    /// Data threshold (in words) used when the release mode is `Threshold`.
-    #[bits(8..=11, rw)]
-    write_data_threshold: u4,
-    /// Selects the write command release mode (see [`WriteReleaseMode`]).
-    #[bits(4..=5, rw)]
-    write_command_release_mode: Option<WriteReleaseMode>,
-    /// Enables QoS for the command at the head of the command queue.
-    #[bit(3, rw)]
-    qos_head_of_cmdq_enable: bool,
-    /// Enables output of commands to the fabric.
-    #[bit(2, rw)]
-    fabric_out_cmd_enable: bool,
-    /// Enables QoS signalling on the fabric interface.
-    #[bit(1, rw)]
-    fabric_qos_enable: bool,
-    /// Enables 32-bit (instead of 64-bit) write data width.
-    #[bit(0, rw)]
-    enable_32bit: bool,
+    /// Channel debug status.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct ChannelDebug {
+        /// Number of outstanding commands currently in the channel.
+        #[bits(1..=4, r)]
+        n_commands: u4,
+        /// Set when the channel FIFO has overflowed.
+        #[bit(0, r)]
+        fifo_overflow: bool,
+    }
+
+    /// Selects when write data is released back to the fabric.
+    #[bitbybit::bitenum(u2, exhaustive = false)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    #[derive(Debug, PartialEq, Eq)]
+    pub enum WriteReleaseMode {
+        /// Release write data on the last beat of the burst.
+        Last = 0,
+        /// Release write data once the configured threshold is reached.
+        Threshold = 1,
+    }
+
+    /// Write channel control.
+    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    pub struct WriteChannelControl {
+        /// Data threshold (in words) used when the release mode is `Threshold`.
+        #[bits(8..=11, rw)]
+        write_data_threshold: u4,
+        /// Selects the write command release mode (see [`WriteReleaseMode`]).
+        #[bits(4..=5, rw)]
+        write_command_release_mode: Option<WriteReleaseMode>,
+        /// Enables QoS for the command at the head of the command queue.
+        #[bit(3, rw)]
+        qos_head_of_cmdq_enable: bool,
+        /// Enables output of commands to the fabric.
+        #[bit(2, rw)]
+        fabric_out_cmd_enable: bool,
+        /// Enables QoS signalling on the fabric interface.
+        #[bit(1, rw)]
+        fabric_qos_enable: bool,
+        /// Enables 32-bit (instead of 64-bit) write data width.
+        #[bit(0, rw)]
+        enable_32bit: bool,
+    }
 }
 
 /// AXI-HP register access.

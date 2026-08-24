@@ -1,8 +1,10 @@
 /// Base address of the DDR memory controller register block.
 pub const DDRC_BASE_ADDR: usize = 0xF800_6000;
 
-/// Bitfield and enum types for the DDR controller registers.
-pub mod regs {
+pub use types::*;
+
+/// Register helper types.
+pub mod types {
     pub use crate::slcr::ddriob::DdriobConfig;
     use arbitrary_int::{u2, u3, u4, u5, u6, u7, u9, u10, u11, u12, u20};
 
@@ -1328,8 +1330,6 @@ pub mod regs {
         operating_mode: OperatingMode,
     }
 }
-
-use regs::*;
 
 /// DDR controller register access.
 #[derive(derive_mmio::Mmio)]

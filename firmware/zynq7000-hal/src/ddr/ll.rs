@@ -1,6 +1,6 @@
 //! Low-level DDR configuration module.
 use arbitrary_int::{prelude::*, u2, u3, u6};
-use zynq7000::ddrc::{MmioRegisters, regs::*};
+use zynq7000::ddrc::{MmioRegisters, types::*};
 use zynq7000::slcr::{clocks::DciClockControl, ddriob::DdriobConfig};
 
 use crate::{clocks::DdrClocks, time::Hertz};

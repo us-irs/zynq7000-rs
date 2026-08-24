@@ -1,47 +1,53 @@
 //! # GPIO register module.
-/// Maskable output data, only bits with the corresponding mask bit cleared are updated.
-#[bitbybit::bitfield(
-    u32,
-    default = 0x0,
-    defmt_bitfields(feature = "defmt"),
-    forbid_overlaps
-)]
-#[derive(Debug)]
-pub struct MaskedOutput {
-    /// Write mask, a set bit prevents the corresponding output bit from being updated.
-    #[bits(16..=31, w)]
-    mask: u16,
-    /// Output data.
-    #[bits(0..=15, rw)]
-    output: u16,
-}
 
-/// Per-bank GPIO direction and interrupt control registers.
-#[derive(derive_mmio::Mmio)]
-#[repr(C)]
-pub struct BankControlRegisters {
-    /// Direction mode
-    dirm: u32,
-    /// Output enable
-    out_en: u32,
-    /// Interrupt mask status
-    #[mmio(PureRead)]
-    int_mask: u32,
-    /// Interrupt enable/unmask
-    #[mmio(Write)]
-    int_en: u32,
-    /// Interrupt disable/mask
-    #[mmio(Write)]
-    int_dis: u32,
-    /// Interrupt status
-    #[mmio(PureRead, Write)]
-    int_sts: u32,
-    /// Interrupt type
-    int_type: u32,
-    /// Interrupt polarity
-    int_pol: u32,
-    /// Interrupt any edge sensitivity
-    int_any: u32,
+pub use types::*;
+
+/// Register helper types.
+pub mod types {
+    /// Maskable output data, only bits with the corresponding mask bit cleared are updated.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    #[derive(Debug)]
+    pub struct MaskedOutput {
+        /// Write mask, a set bit prevents the corresponding output bit from being updated.
+        #[bits(16..=31, w)]
+        mask: u16,
+        /// Output data.
+        #[bits(0..=15, rw)]
+        output: u16,
+    }
+
+    /// Per-bank GPIO direction and interrupt control registers.
+    #[derive(derive_mmio::Mmio)]
+    #[repr(C)]
+    pub struct BankControlRegisters {
+        /// Direction mode
+        dirm: u32,
+        /// Output enable
+        out_en: u32,
+        /// Interrupt mask status
+        #[mmio(PureRead)]
+        int_mask: u32,
+        /// Interrupt enable/unmask
+        #[mmio(Write)]
+        int_en: u32,
+        /// Interrupt disable/mask
+        #[mmio(Write)]
+        int_dis: u32,
+        /// Interrupt status
+        #[mmio(PureRead, Write)]
+        int_sts: u32,
+        /// Interrupt type
+        int_type: u32,
+        /// Interrupt polarity
+        int_pol: u32,
+        /// Interrupt any edge sensitivity
+        int_any: u32,
+    }
 }
 
 /// GPIO register access.
