@@ -1,15 +1,23 @@
+/// Base address of the XADC register block.
 pub const XADC_BASE_ADDR: usize = 0xF8007100;
 
 /// XADC register access.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Registers {
+    /// XADC configuration
     config: u32,
+    /// Interrupt status
     interrupt_status: u32,
+    /// Interrupt mask
     interrupt_mask: u32,
+    /// Miscellaneous status
     misc_status: u32,
+    /// Command FIFO
     command_fifo: u32,
+    /// Data FIFO
     data_fifo: u32,
+    /// Miscellaneous control
     misc_control: u32,
 }
 

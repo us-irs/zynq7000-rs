@@ -1,23 +1,32 @@
 //! # Global timer counter module.
 
+/// Base address of the global timer counter register block.
 pub const GTC_BASE_ADDR: usize = super::mpcore::MPCORE_BASE_ADDR + 0x0000_0200;
 
+/// Global timer counter control.
 #[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct Control {
+    /// Clock prescaler applied to the counter.
     #[bits(8..=15, rw)]
     prescaler: u8,
+    /// Auto-increment the comparator by the auto-increment register value on each match.
     #[bit(3, rw)]
     auto_increment: bool,
+    /// Enables the comparator interrupt.
     #[bit(2, rw)]
     irq_enable: bool,
+    /// Enables the comparator.
     #[bit(1, rw)]
     comparator_enable: bool,
+    /// Enables the counter.
     #[bit(0, rw)]
     enable: bool,
 }
 
+/// Global timer counter interrupt status.
 #[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct InterruptStatus {
+    /// Comparator match event flag, cleared by writing a one.
     #[bit(0, rw)]
     event_flag: bool,
 }

@@ -13,6 +13,7 @@
 //!
 //! * `defmt` - Add support for the [`defmt`](https://github.com/knurling-rs/defmt) logging library.
 #![no_std]
+#![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 use core::sync::atomic::{AtomicBool, Ordering};
@@ -20,24 +21,31 @@ use core::sync::atomic::{AtomicBool, Ordering};
 #[cfg(test)]
 extern crate std;
 
+/// Base address of the MPCore private memory region.
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
+/// DDR memory controller.
 pub mod ddrc;
+/// Device configuration interface.
 pub mod devcfg;
 pub mod eth;
 pub mod gic;
 pub mod gpio;
 pub mod gtc;
 pub mod i2c;
+/// PL310 L2 cache controller.
 pub mod l2_cache;
 pub mod mpcore;
 pub mod priv_tim;
+/// Quad-SPI controller.
 pub mod qspi;
+/// SD/SDIO controller.
 pub mod sdio;
 pub mod slcr;
 pub mod spi;
 pub mod ttc;
 pub mod uart;
+/// XADC analog-to-digital converter.
 pub mod xadc;
 
 static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
@@ -48,27 +56,49 @@ static PERIPHERALS_TAKEN: AtomicBool = AtomicBool::new(false);
 /// The [`svd2rust` documentation](https://docs.rs/svd2rust/latest/svd2rust/#peripheral-api)
 /// provides some more information about this.
 pub struct Peripherals {
+    /// GIC CPU interface.
     pub gicc: gic::MmioCpuInterfaceRegisters<'static>,
+    /// GIC distributor.
     pub gicd: gic::MmioDistributorRegisters<'static>,
+    /// L2 cache controller.
     pub l2c: l2_cache::MmioRegisters<'static>,
+    /// DDR memory controller.
     pub ddrc: ddrc::MmioRegisters<'static>,
+    /// UART controller 0.
     pub uart_0: uart::MmioRegisters<'static>,
+    /// UART controller 1.
     pub uart_1: uart::MmioRegisters<'static>,
+    /// SPI controller 0.
     pub spi_0: spi::MmioRegisters<'static>,
+    /// SPI controller 1.
     pub spi_1: spi::MmioRegisters<'static>,
+    /// I2C controller 0.
     pub i2c_0: i2c::MmioRegisters<'static>,
+    /// I2C controller 1.
     pub i2c_1: i2c::MmioRegisters<'static>,
+    /// Global timer counter.
     pub gtc: gtc::MmioRegisters<'static>,
+    /// GPIO controller.
     pub gpio: gpio::MmioRegisters<'static>,
+    /// System level control registers.
     pub slcr: slcr::MmioRegisters<'static>,
+    /// Triple timer counter 0.
     pub ttc_0: ttc::MmioRegisters<'static>,
+    /// Triple timer counter 1.
     pub ttc_1: ttc::MmioRegisters<'static>,
+    /// Gigabit Ethernet controller 0.
     pub eth_0: eth::MmioRegisters<'static>,
+    /// Gigabit Ethernet controller 1.
     pub eth_1: eth::MmioRegisters<'static>,
+    /// Quad-SPI controller.
     pub qspi: qspi::MmioRegisters<'static>,
+    /// Device configuration interface.
     pub devcfg: devcfg::MmioRegisters<'static>,
+    /// XADC analog-to-digital converter.
     pub xadc: xadc::MmioRegisters<'static>,
+    /// SD/SDIO controller 0.
     pub sdio_0: sdio::MmioRegisters<'static>,
+    /// SD/SDIO controller 1.
     pub sdio_1: sdio::MmioRegisters<'static>,
 }
 
@@ -117,18 +147,24 @@ impl Peripherals {
     }
 }
 
+/// SPI clock phase, controlling when data is driven relative to the SPI clock edges.
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiClockPhase {
+    /// Clock is active outside the word.
     ActiveOutsideOfWord = 0,
+    /// Clock is inactive outside the word.
     InactiveOutsideOfWord = 1,
 }
 
+/// SPI clock polarity, the quiescent state of the SPI clock line.
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiClockPolarity {
+    /// Clock is low when quiescent.
     QuiescentLow = 0,
+    /// Clock is high when quiescent.
     QuiescentHigh = 1,
 }

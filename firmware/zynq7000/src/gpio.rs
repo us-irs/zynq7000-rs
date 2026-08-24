@@ -1,4 +1,5 @@
 //! # GPIO register module.
+/// Maskable output data, only bits with the corresponding mask bit cleared are updated.
 #[bitbybit::bitfield(
     u32,
     default = 0x0,
@@ -7,12 +8,15 @@
 )]
 #[derive(Debug)]
 pub struct MaskedOutput {
+    /// Write mask, a set bit prevents the corresponding output bit from being updated.
     #[bits(16..=31, w)]
     mask: u16,
+    /// Output data.
     #[bits(0..=15, rw)]
     output: u16,
 }
 
+/// Per-bank GPIO direction and interrupt control registers.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct BankControlRegisters {
@@ -89,21 +93,25 @@ pub struct Registers {
 
     _reserved_2: [u32; 101],
 
+    /// Bank 0 (MIO) direction and interrupt control
     #[mmio(Inner)]
     bank_0: BankControlRegisters,
 
     _reserved_3: [u32; 7],
 
+    /// Bank 1 (MIO) direction and interrupt control
     #[mmio(Inner)]
     bank_1: BankControlRegisters,
 
     _reserved_4: [u32; 7],
 
+    /// Bank 2 (EMIO) direction and interrupt control
     #[mmio(Inner)]
     bank_2: BankControlRegisters,
 
     _reserved_5: [u32; 7],
 
+    /// Bank 3 (EMIO) direction and interrupt control
     #[mmio(Inner)]
     bank_3: BankControlRegisters,
 }
