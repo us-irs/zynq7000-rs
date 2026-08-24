@@ -55,7 +55,7 @@ pub struct Status {
     bus_active: bool,
     /// FIFO is full and new byte was received. The new byte is not acknowledged and the contents
     /// of the FIFO remain unchanged.
-    #[bit(6, r)]
+    #[bit(7, r)]
     rx_overflow: bool,
     /// 1: There is still a byte of data to be transmitted by the interface.
     #[bit(6, r)]
