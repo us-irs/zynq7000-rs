@@ -47,6 +47,7 @@ pub mod spi;
 pub mod swdt;
 pub mod ttc;
 pub mod uart;
+pub mod usb;
 /// XADC analog-to-digital converter.
 pub mod xadc;
 
