@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+- Fixed overlapping bit positions for `rx_overflow` and `tx_busy` in the I2C `Status` register.
+  `rx_overflow` now correctly uses bit 7 instead of bit 6.
+
 # [v0.5.0] 2026-08-20
 
 - `InterruptProcessorTargetRegister` now has a `default = 0x0` value and uses `bitbybit`'s
