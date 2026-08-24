@@ -24,6 +24,7 @@ extern crate std;
 /// Base address of the MPCore private memory region.
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
+pub mod axi;
 /// DDR memory controller.
 pub mod ddrc;
 /// Device configuration interface.
