@@ -16,7 +16,6 @@ zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
 zedboard-bsp = { path = "../../zedboard-bsp" }
 num_enum = { version = "0.7", default-features = false }
-l3gd20 = { git = "https://github.com/us-irs/l3gd20.git", branch = "add-async-if" }
 embedded-io = "0.7"
 bitbybit = "2"
 arbitrary-int = "2"
