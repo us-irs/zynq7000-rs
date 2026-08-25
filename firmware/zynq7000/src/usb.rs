@@ -159,7 +159,13 @@ pub mod types {
     }
 
     /// DMA master AHB burst mode configuration.
-    #[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x3,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct SbusConfig {
         /// AHB burst size, using the standard AHB burst type encoding. The reset value
         /// 0x3 selects INCR16, with non-multiple transfers of INCR16 decomposed into
@@ -279,12 +285,18 @@ pub mod types {
     }
 
     /// USB commands executed by the host/device controller.
-    #[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0008_0000,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct UsbCommand {
         /// Maximum interrupt rate, see [InterruptThreshold].
         #[bits(16..=23, rw)]
         itc: Option<InterruptThreshold>,
-        /// MSB of the frame list size, refer to [Self::fs01].
+        /// MSB of the frame list size, refer to [UsbCommand::fs01].
         #[bit(15, rw)]
         fs2: bool,
         /// Add dTD tripwire, used as a semaphore to ensure the proper addition of a new
@@ -316,7 +328,7 @@ pub mod types {
         /// Periodic schedule enable. Host mode.
         #[bit(4, rw)]
         pse: bool,
-        /// LSBs of the frame list size, refer to [Self::fs2]. 0b00 selects 1024 elements,
+        /// LSBs of the frame list size, refer to [UsbCommand::fs2]. 0b00 selects 1024 elements,
         /// 0b111 selects 8 elements.
         #[bits(2..=3, rw)]
         fs01: u2,
@@ -331,7 +343,13 @@ pub mod types {
 
     /// USB bus and port interrupt status, controller state, and general purpose timer
     /// status. Applies to both host and device mode unless noted otherwise.
-    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct UsbStatus {
         /// GP timer 1 raw interrupt. Write 1 to clear.
         #[bit(25, rw)]
@@ -553,7 +571,13 @@ pub mod types {
     }
 
     /// Burst size used during data movement on the initiator/master interface.
-    #[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0000_1010,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct BurstSize {
         /// Maximum TX burst length in 32-bit words, moving data from system memory to
         /// the USB bus. Supported values are 4 to 128. If [SbusConfig::ahbbrst] is
@@ -661,7 +685,13 @@ pub mod types {
     /// Indirect access to the ULPI PHY register set. The core normally accesses the ULPI
     /// PHY registers on its own, this port exists for cases where software needs direct
     /// access.
-    #[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0800_0000,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct UlpiViewport {
         /// ULPI wake up operation. Write 1 to execute (not undoable), reads 1 while the
         /// operation is in progress. Do not issue a wake up and a viewport transaction in
@@ -697,7 +727,13 @@ pub mod types {
     /// Generic per-endpoint bitmask, shared by the endpoint NAK, prime, flush, ready and
     /// complete registers. Bit N of each half corresponds to endpoint N. This
     /// implementation supports 12 endpoints (0 to 11), higher bits are reserved.
-    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct EndpointMask {
         /// TX (IN) endpoint bits.
         #[bits(16..=31, rw)]
@@ -774,9 +810,15 @@ pub mod types {
     }
 
     /// Port status and control. This implementation contains only 1 host port.
-    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x8C00_0004,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PortStatusControl {
-        /// PHY type status constant, together with [Self::pts2] as the MSB. 0b010
+        /// PHY type status constant, together with [PortStatusControl::pts2] as the MSB. 0b010
         /// selects a ULPI interface.
         #[bits(30..=31, rw)]
         pts: u2,
@@ -791,7 +833,7 @@ pub mod types {
         /// Port speed, see [PortSpeed].
         #[bits(26..=27, rw)]
         pspd: PortSpeed,
-        /// MSB of [Self::pts].
+        /// MSB of [PortStatusControl::pts].
         #[bit(25, rw)]
         pts2: bool,
         /// Forces the port to only connect at full speed by disabling the chirp sequence
@@ -801,14 +843,15 @@ pub mod types {
         pfsc: bool,
         /// Disables the PHY clock. Cannot be disabled if it is being used as the system
         /// clock. Device mode: can be set when the device is not running
-        /// ([UsbCommand::rs] is 0) or the host has signaled suspend ([Self::susp] is 1),
+        /// ([UsbCommand::rs] is 0) or the host has signaled suspend ([PortStatusControl::susp]
+        /// is 1),
         /// and is cleared automatically once the host signals resume. Host mode: can be
         /// set when the downstream device is suspended or no downstream device is
         /// connected, entirely under software control.
         #[bit(23, rw)]
         phcd: bool,
         /// Enables the port to be sensitive to over-current conditions as a wakeup
-        /// event. Zero if [Self::pp] is 0 or in device mode. Output on the
+        /// event. Zero if [PortStatusControl::pp] is 0 or in device mode. Output on the
         /// pwrctl_wake_ovrcurr_en signal for an external power control circuit. Host
         /// mode only.
         #[bit(22, rw)]
@@ -841,7 +884,8 @@ pub mod types {
         /// High speed port status, redundant with [Self::pspd]. Read-only.
         #[bit(9, r)]
         hsp: bool,
-        /// Port reset. Zero if [Self::pp] is 0. Host mode: 1 means the port is in reset.
+        /// Port reset. Zero if [PortStatusControl::pp] is 0. Host mode: 1 means the port is in
+        /// reset.
         /// Device mode: read-only status bit, a device reset from the USB bus is also
         /// indicated in [UsbStatus::ur].
         #[bit(8, rw)]
@@ -853,7 +897,7 @@ pub mod types {
         /// Force port resume. Write 1 to drive resume signaling (K-state) on the port.
         #[bit(6, rw)]
         fpr: bool,
-        /// Set to 1 on a change to [Self::oca]. Write 1 to clear.
+        /// Set to 1 on a change to [PortStatusControl::oca]. Write 1 to clear.
         #[bit(5, rw)]
         occ: bool,
         /// The port currently has an over-current condition. Automatically transitions
@@ -870,7 +914,7 @@ pub mod types {
         /// 1.
         #[bit(2, rw)]
         pe: bool,
-        /// Set to 1 on a change to [Self::ccs]. Write 1 to clear. Host mode only,
+        /// Set to 1 on a change to [PortStatusControl::ccs]. Write 1 to clear. Host mode only,
         /// undefined in device mode.
         #[bit(1, rw)]
         csc: bool,
@@ -883,32 +927,38 @@ pub mod types {
     /// On-The-Go (OTG) status and control. This implementation provides one OTG status
     /// and control register, grouped into interrupt enables, interrupt status (write 1
     /// to clear), status inputs (read-only) and controls.
-    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0000_1020,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct OtgStatusControl {
-        /// Enables [Self::dpis].
+        /// Enables [OtgStatusControl::dpis].
         #[bit(30, rw)]
         dpie: bool,
-        /// Enables [Self::ms_timer_status].
+        /// Enables [OtgStatusControl::ms_timer_status].
         #[bit(29, rw)]
         ms_timer_ie: bool,
-        /// Enables [Self::bseis].
+        /// Enables [OtgStatusControl::bseis].
         #[bit(28, rw)]
         bsee: bool,
-        /// Enables [Self::bsvis].
+        /// Enables [OtgStatusControl::bsvis].
         #[bit(27, rw)]
         bsvie: bool,
-        /// Enables [Self::asvis].
+        /// Enables [OtgStatusControl::asvis].
         #[bit(26, rw)]
         asvie: bool,
-        /// Enables [Self::avvis].
+        /// Enables [OtgStatusControl::avvis].
         #[bit(25, rw)]
         avvie: bool,
-        /// Enables [Self::idis].
+        /// Enables [OtgStatusControl::idis].
         #[bit(24, rw)]
         idie: bool,
         /// Data pulses were detected on DP or DM. Only detected when
         /// [super::UsbMode::cm] selects host mode and [PortStatusControl::pp] is 0.
-        /// Non-latched status can be read using [Self::dps]. Write 1 to clear.
+        /// Non-latched status can be read using [OtgStatusControl::dps]. Write 1 to clear.
         #[bit(22, rw)]
         dpis: bool,
         /// Set by hardware every 1 ms, based on a timer using the 60 MHz ULPI clock.
@@ -1040,7 +1090,13 @@ pub mod types {
     /// corresponding endpoint. Software reads the setup data from the queue head and
     /// then writes 1 to clear the status bit. Device mode. This implementation supports
     /// 12 endpoints (0 to 11), higher bits are reserved.
-    #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct SetupStatus {
         /// Per-endpoint setup status bits.
         #[bits(0..=15, rw)]
@@ -1066,8 +1122,15 @@ pub mod types {
     /// ENDPTCTRL1 to ENDPTCTRL11 array for endpoints 1 to 11. For endpoint 0,
     /// [Self::txe] and [Self::rxe] always read 1 and [Self::txt]/[Self::rxt] are fixed
     /// to [EndpointType::Control], reflecting that endpoint 0 is a permanently enabled
-    /// control endpoint.
-    #[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
+    /// control endpoint. The default here matches the reset value of endpoints 1 to 11,
+    /// endpoint 0 instead resets with [Self::txe] and [Self::rxe] set.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct EndpointControl {
         /// TX endpoint enable. Enable the endpoint only after it has been configured.
         #[bit(23, rw)]
