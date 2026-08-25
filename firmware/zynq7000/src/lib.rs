@@ -25,6 +25,7 @@ extern crate std;
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
 pub mod axi;
+pub mod can;
 /// DDR memory controller.
 pub mod ddrc;
 /// Device configuration interface.
