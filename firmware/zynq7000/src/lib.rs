@@ -30,6 +30,8 @@ pub mod can;
 pub mod ddrc;
 /// Device configuration interface.
 pub mod devcfg;
+/// DMA controller.
+pub mod dmac;
 pub mod eth;
 pub mod gic;
 pub mod gpio;
