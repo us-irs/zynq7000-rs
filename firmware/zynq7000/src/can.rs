@@ -140,7 +140,8 @@ pub mod types {
         #[bit(2, rw)]
         stuff_error: bool,
         /// Form error, a fixed form field of the message frame is invalid. Write 1 to clear.
-        /// Also set, instead of [Self::crc_error], on a CRC error with CRC delimiter corruption.
+        /// Also set, instead of [ErrorStatus::crc_error], on a CRC error with CRC delimiter
+        /// corruption.
         #[bit(1, rw)]
         form_error: bool,
         /// CRC error. Write 1 to clear.
@@ -428,19 +429,20 @@ pub mod types {
     /// Message identifier of a received message. Read-only counterpart of [TxIdentifier].
     #[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
     pub struct RxIdentifier {
-        /// Refer to [TxIdentifier::standard_id].
+        /// Refer to [TxIdentifier::with_standard_id].
         #[bits(21..=31, r)]
         standard_id: u11,
-        /// Refer to [TxIdentifier::substitute_remote_request]. Always 1 for Extended frames.
+        /// Refer to [TxIdentifier::with_substitute_remote_request]. Always 1 for Extended
+        /// frames.
         #[bit(20, r)]
         substitute_remote_request: bool,
-        /// Refer to [TxIdentifier::extended_frame].
+        /// Refer to [TxIdentifier::with_extended_frame].
         #[bit(19, r)]
         extended_frame: bool,
-        /// Refer to [TxIdentifier::extended_id].
+        /// Refer to [TxIdentifier::with_extended_id].
         #[bits(1..=18, r)]
         extended_id: u18,
-        /// Refer to [TxIdentifier::remote_transmission_request].
+        /// Refer to [TxIdentifier::with_remote_transmission_request].
         #[bit(0, r)]
         remote_transmission_request: bool,
     }
@@ -466,7 +468,7 @@ pub mod types {
         #[bits(28..=31, rw)]
         data_length_code: u4,
         /// Timestamp of the received message, based on the free running counter cleared
-        /// through [TimestampControl::clear].
+        /// through [TimestampControl::with_clear].
         #[bits(0..=15, rw)]
         rx_timestamp: u16,
     }
