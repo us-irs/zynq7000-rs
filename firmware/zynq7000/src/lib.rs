@@ -24,6 +24,8 @@ extern crate std;
 /// Base address of the MPCore private memory region.
 pub const MPCORE_BASE_ADDR: usize = 0xF8F0_0000;
 
+/// CPU private watchdog timer.
+pub mod awdt;
 pub mod axi;
 pub mod can;
 /// DDR memory controller.

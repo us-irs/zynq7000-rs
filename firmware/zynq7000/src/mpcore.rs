@@ -4,11 +4,13 @@
 use static_assertions::const_assert_eq;
 
 use crate::{
+    awdt,
     gic::{
         CpuInterfaceRegisters, DistributorRegisters, MmioCpuInterfaceRegisters,
         MmioDistributorRegisters,
     },
     gtc::{MmioRegisters, Registers},
+    priv_tim,
 };
 
 /// Base address of the MPCore private memory region.
@@ -72,29 +74,15 @@ pub struct MpCoreRegisters {
 
     _reserved_1: [u32; 0xF9],
 
-    /// Private timer load
-    private_timer_load: u32,
-    /// Private timer counter
-    private_timer_counter: u32,
-    /// Private timer control
-    private_timer_ctrl: u32,
-    /// Private timer interrupt status
-    private_interrupt_status: u32,
+    /// Private timer
+    #[mmio(Inner)]
+    private_timer: priv_tim::Registers,
 
     _reserved_2: [u32; 0x4],
 
-    /// Watchdog load
-    watchdog_load: u32,
-    /// Watchdog counter
-    watchdog_counter: u32,
-    /// Watchdog control
-    watchdog_ctrl: u32,
-    /// Watchdog interrupt status
-    watchdog_interrupt_status: u32,
-    /// Watchdog reset status
-    watchdog_reset_status: u32,
-    /// Watchdog disable
-    watchdog_disable: u32,
+    /// Private watchdog
+    #[mmio(Inner)]
+    watchdog: awdt::Registers,
 
     _reserved_3: [u32; 0x272],
 
@@ -119,6 +107,9 @@ impl ScuRegisters {
     }
 }
 
+const_assert_eq!(core::mem::offset_of!(MpCoreRegisters, private_timer), 0x600);
+const_assert_eq!(core::mem::offset_of!(MpCoreRegisters, watchdog), 0x620);
+const_assert_eq!(core::mem::offset_of!(MpCoreRegisters, gicd), 0x1000);
 const_assert_eq!(core::mem::size_of::<MpCoreRegisters>(), 0x2000);
 
 impl MpCoreRegisters {

@@ -158,6 +158,29 @@ pub mod types {
         #[bit(0, rw)]
         sel: WdtClockSelect,
     }
+
+    /// Application Processing Unit Control Register
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct ApuControl {
+        ///Disable write access to some system control processor registers, and some GIC registers.
+        ///
+        /// Set only. Once set, individual core reset cannot reset this value. Is reset by POR
+        /// only.
+        #[bit(1, rw)]
+        configs_disable: bool,
+        /// Disable write access to some system control processor (CP15) registers, in each processor.
+        ///
+        /// Set only. Once set, individual core reset cannot reset this value. Is reset by POR
+        /// only.
+        #[bit(0, rw)]
+        cp15_disable: bool,
+    }
 }
 
 /// GPIOB bank I/O buffer configuration registers.
@@ -226,7 +249,7 @@ pub struct Registers {
     _gap3: [u32; 0x28],
 
     /// APU control
-    apu_ctrl: u32,
+    apu_ctrl: ApuControl,
     /// SWDT clock select
     wdt_clk_set: WdtClockSelectRegister,
 
