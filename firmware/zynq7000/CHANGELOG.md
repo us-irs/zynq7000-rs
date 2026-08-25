@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Added System Watchdog Timer (`swdt`) register definitions.
 - Restructured register helper types into a `pub mod types` submodule across most modules,
   re-exported at the module root so existing paths keep working.
+- Added CPU private watchdog timer (`awdt`) register definitions. `mpcore::MpCoreRegisters`
+  now nests the typed `priv_tim` and `awdt` register blocks instead of duplicating them as raw
+  `u32` fields.
 - Fixed overlapping bit positions for `rx_overflow` and `tx_busy` in the I2C `Status` register.
   `rx_overflow` now correctly uses bit 7 instead of bit 6.
 - AXI-HP registers were not included properly
