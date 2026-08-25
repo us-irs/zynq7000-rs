@@ -181,6 +181,143 @@ pub mod types {
         #[bit(0, rw)]
         cp15_disable: bool,
     }
+
+    /// Secure configuration lock.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct SecureConfigLock {
+        /// Locks the SCL, PSS_RST_CTRL, APU_CTRL and WDT_CLK_SEL registers.
+        ///
+        /// Once locked, these registers stay locked until a power-on reset.
+        #[bit(0, rw)]
+        lock: bool,
+    }
+
+    /// SLCR write protection status, read-only.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct LockStatusRegister {
+        /// Set if the SLCR registers are write protected.
+        #[bit(0, r)]
+        locked: bool,
+    }
+
+    /// Reboot status register, persists across all resets except a power-on reset.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0040_0000,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct RebootStatusRegister {
+        /// General field which persists through all resets except a power-on reset.
+        ///
+        /// The ROM writes the last known reset reason into this field.
+        #[bits(24..=31, rw)]
+        reboot_state: u8,
+        /// Last reset was a power-on reset.
+        #[bit(22, rw)]
+        por: bool,
+        /// Last reset was an SRST_B (soft) reset.
+        #[bit(21, rw)]
+        srst_b: bool,
+        /// Last reset was a debug system reset.
+        #[bit(20, rw)]
+        dbg_rst: bool,
+        /// Last reset was an SLC soft reset.
+        #[bit(19, rw)]
+        slc_rst: bool,
+        /// Last reset was caused by the APU watchdog timer 1.
+        #[bit(18, rw)]
+        awdt1_rst: bool,
+        /// Last reset was caused by the APU watchdog timer 0.
+        #[bit(17, rw)]
+        awdt0_rst: bool,
+        /// Last reset was caused by a system watchdog timeout.
+        #[bit(16, rw)]
+        swdt_rst: bool,
+        /// Written by the BootROM to describe errors which occurred during the boot process.
+        #[bits(0..=15, rw)]
+        bootrom_error_code: u16,
+    }
+
+    /// DMAC TrustZone configuration.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct TzDmaNs {
+        /// TrustZone security state of the DMAC.
+        ///
+        /// 0: secure, 1: non-secure.
+        #[bit(0, rw)]
+        non_secure: bool,
+    }
+
+    /// DMAC TrustZone configuration for interrupts.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct TzDmaIrqNs {
+        /// TrustZone security state of the DMAC interrupt/event bits, one bit per channel.
+        ///
+        /// 0: secure, 1: non-secure.
+        #[bits(0..=15, rw)]
+        non_secure: u16,
+    }
+
+    /// DMAC TrustZone configuration for peripherals.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct TzDmaPeriphNs {
+        /// TrustZone security state of the DMAC peripheral interface, one bit per interface.
+        ///
+        /// 0: secure, 1: non-secure.
+        #[bits(0..=3, rw)]
+        non_secure: u4,
+    }
+
+    /// OCM address mapping configuration.
+    #[bitbybit::bitfield(
+        u32,
+        default = 0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct OcmCfgRegister {
+        /// Always write back the value which was read.
+        #[bit(4, rw)]
+        swap: bool,
+        /// Maps each 64 KB OCM RAM section to the high or low address space.
+        ///
+        /// Bit 0 is the first 64 KB section, bit 3 the fourth. 0: low address, 1: high address.
+        #[bits(0..=3, rw)]
+        ram_hi: u4,
+    }
 }
 
 /// GPIOB bank I/O buffer configuration registers.
@@ -221,13 +358,13 @@ impl GpiobRegisters {
 #[repr(C)]
 pub struct Registers {
     /// Secure configuration lock.
-    scl: u32,
+    scl: SecureConfigLock,
     /// SLCR write protection lock
     lock: u32,
     /// SLCR write protection unlock
     unlock: u32,
     /// SLCR write protection status
-    lock_status: u32,
+    lock_status: LockStatusRegister,
 
     _gap0: [u32; 0x3C],
 
@@ -242,7 +379,7 @@ pub struct Registers {
     _gap2: [u32; 0x02],
 
     /// Reboot status, persists across a soft reset
-    reboot_status: u32,
+    reboot_status: RebootStatusRegister,
     /// Boot mode strapping pins status
     boot_mode: BootModeRegister,
 
@@ -256,11 +393,11 @@ pub struct Registers {
     _gap4: [u32; 0x4E],
 
     /// DMA non-secure access control
-    tz_dma_ns: u32,
+    tz_dma_ns: TzDmaNs,
     /// DMA IRQ non-secure access control
-    tz_dma_irq_ns: u32,
+    tz_dma_irq_ns: TzDmaIrqNs,
     /// DMA peripheral non-secure access control
-    tz_dma_periph_ns: u32,
+    tz_dma_periph_ns: TzDmaPeriphNs,
 
     _gap5: [u32; 0x39],
 
@@ -312,7 +449,7 @@ pub struct Registers {
     _gap14: [u32; 0x03],
 
     /// OCM address mapping configuration
-    ocm_cfg: u32,
+    ocm_cfg: OcmCfgRegister,
 
     _gap15: [u32; 0x42],
 
