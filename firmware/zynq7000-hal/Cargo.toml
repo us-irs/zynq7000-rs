@@ -11,7 +11,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
 aarch32-cpu = { version = "0.4" }
-zynq7000 = { path = "../zynq7000", version = "0.5" }
+zynq7000 = { path = "../zynq7000", version = "0.6" }
 z7-clock-calc = { path = "../../host/z7-clock-calc", version = "0.1" }
 static_assertions = "1.1"
 bitbybit = "2"
