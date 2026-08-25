@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+# [v0.6.0] 2026-08-25
+
+- Added CAN controller (`can`) register definitions.
+- Added DMA controller (`dmac`) register definitions.
+- Added USB controller (`usb`) register definitions.
+- Added System Watchdog Timer (`swdt`) register definitions.
+- Restructured register helper types into a `pub mod types` submodule across most modules,
+  re-exported at the module root so existing paths keep working.
 - Fixed overlapping bit positions for `rx_overflow` and `tx_busy` in the I2C `Status` register.
   `rx_overflow` now correctly uses bit 7 instead of bit 6.
 - AXI-HP registers were not included properly
@@ -44,7 +52,8 @@ Documentation fix
 
 Initial release
 
-[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-v0.5.0...HEAD
+[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-v0.6.0...HEAD
+[v0.6.0]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-v0.5.0...zynq7000-v0.6.0
 [v0.5.0]: https://github.com/us-irs/zynq7000-rs/tags/zynq7000-v0.5.0
 [v0.4.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.3.0...zynq7000-v0.4.0
 [v0.3.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-v0.2.0...zynq7000-v0.3.0

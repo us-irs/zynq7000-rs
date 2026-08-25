@@ -13,7 +13,7 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-rt = { version = "0.4", optional = true, features = ["fpu-d32"] }
 aarch32-cpu = { version = "0.4" }
 arbitrary-int = "2"
-zynq7000 = { path = "../zynq7000", version = "0.5" }
+zynq7000 = { path = "../zynq7000", version = "0.6" }
 
 [build-dependencies]
 arm-targets = { version = "0.4" }
