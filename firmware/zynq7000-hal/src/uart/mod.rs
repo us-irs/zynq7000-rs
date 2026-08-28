@@ -729,6 +729,12 @@ impl embedded_io::Read for Uart {
     }
 }
 
+impl core::fmt::Write for Uart {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        core::fmt::Write::write_str(&mut self.tx, s)
+    }
+}
+
 /// Reset the UART peripheral using the SLCR reset register for UART.
 ///
 /// Please note that this function will interfere with an already configured

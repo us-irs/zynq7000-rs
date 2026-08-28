@@ -218,3 +218,9 @@ impl embedded_io::Write for Tx {
         Ok(())
     }
 }
+
+impl core::fmt::Write for Tx {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        embedded_io::Write::write_all(self, s.as_bytes()).map_err(|_| core::fmt::Error)
+    }
+}
