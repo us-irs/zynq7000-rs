@@ -65,17 +65,25 @@ SECTIONS {
      * May include FIQ handler code at the end.
      */
     .vector_table ORIGIN(VECTORS) : {
+        __svector = .;
+
         *(.vector_table)
+
+        . = ALIGN(_region_alignment);
+
+        __evector = .;
     } > VECTORS
 
     /* # Text
      *
      * Our executable code.
      */
-    .text : {
+    .text : ALIGN(_region_alignment) {
         __stext = .;
 
         *(.text .text*)
+
+        . = ALIGN(_region_alignment);
 
         __etext = .;
     } > CODE
@@ -84,10 +92,12 @@ SECTIONS {
      *
      * Our constants.
      */
-    .rodata : {
+    .rodata : ALIGN(_region_alignment) {
         __srodata = .;
 
         *(.rodata .rodata*)
+
+        . = ALIGN(_region_alignment);
 
         __erodata = .;
     } > CODE
@@ -96,13 +106,13 @@ SECTIONS {
      *
      * Our global variables that are not initialised to zero.
      */
-    .data : ALIGN(4) {
-        . = ALIGN(4);
+    .data : ALIGN(_region_alignment) {
+        . = ALIGN(_region_alignment);
         __sdata = .;
 
         *(.data .data.*);
 
-        . = ALIGN(4);
+        . = ALIGN(_region_alignment);
         /* NB: __edata defined lower down */
     } > DATA AT>CODE
 
@@ -111,7 +121,7 @@ SECTIONS {
      * use the .data loading mechanism by pushing __edata. Note: do not change
      * output region or load region in those user sections!
      */
-    . = ALIGN(4);
+    . = ALIGN(_region_alignment);
     __edata = .;
 
     /* LMA of .data */
@@ -121,13 +131,13 @@ SECTIONS {
      *
      * Our global variables that *are* initialised to zero.
      */
-    .bss (NOLOAD) : ALIGN(4) {
-        . = ALIGN(4);
+    .bss (NOLOAD) : ALIGN(_region_alignment) {
+        . = ALIGN(_region_alignment);
         __sbss = .;
 
         *(.bss .bss* COMMON)
 
-        . = ALIGN(4);
+        . = ALIGN(_region_alignment);
         /* NB: __ebss defined lower down */
     } > DATA
 
@@ -143,17 +153,17 @@ SECTIONS {
      * Global variables placed in OCM via `#[unsafe(link_section = ".ocm.data")]` that are not
      * initialised to zero.
      */
-    .ocm.data : ALIGN(4) {
-        . = ALIGN(4);
+    .ocm.data : ALIGN(_region_alignment) {
+        . = ALIGN(_region_alignment);
         _socmdata = .;
 
         *(.ocm.data .ocm.data.*);
 
-        . = ALIGN(4);
+        . = ALIGN(_region_alignment);
         /* NB: _eocmdata defined lower down */
     } > OCM AT>CODE
 
-    . = ALIGN(4);
+    . = ALIGN(_region_alignment);
     _eocmdata = .;
 
     /* LMA of .ocm.data */
@@ -164,13 +174,13 @@ SECTIONS {
      * Global variables placed in OCM via `#[unsafe(link_section = ".ocm.bss")]` that *are*
      * initialised to zero.
      */
-    .ocm.bss (NOLOAD) : ALIGN(4) {
-        . = ALIGN(4);
+    .ocm.bss (NOLOAD) : ALIGN(_region_alignment) {
+        . = ALIGN(_region_alignment);
         _socmbss = .;
 
         *(.ocm.bss .ocm.bss.*);
 
-        . = ALIGN(4);
+        . = ALIGN(_region_alignment);
         /* NB: _eocmbss defined lower down */
     } > OCM
 
@@ -180,40 +190,33 @@ SECTIONS {
      *
      * Our global variables that have no defined initial value.
      */
-    .uninit (NOLOAD) : ALIGN(4)
+    .uninit (NOLOAD) : ALIGN(_region_alignment)
     {
-        . = ALIGN(4);
+        . = ALIGN(_region_alignment);
         __suninit = .;
 
         *(.uninit .uninit.*);
 
-        . = ALIGN(4);
+        . = ALIGN(_region_alignment);
         __euninit = .;
     } > DATA
 
-
     /* # Stack Padding
      *
-     * A padding region to push the stacks to the top of the STACKS region.
-     * If `_pack_stacks == 0`, this is forced to be zero size, putting the
-     * stacks at the bottom of the STACK region.
+     * Compute where `.stacks` should start: at the top of the STACKS region,
+     * unless `_pack_stacks == 1`, in which case right where we already are.
      */
-    .filler (NOLOAD) : {
-        /* Move the .stacks section to the end of the STACKS memory region */
-        _next_region = ORIGIN(STACKS) + LENGTH(STACKS);
-        _start_moved_stacks = _next_region - SIZEOF(.stacks);
-        _start_stacks = _pack_stacks ? . : _start_moved_stacks;
-        FILL(0x00)
-        . = _start_stacks;
-    } > STACKS
+    _next_region = ORIGIN(STACKS) + LENGTH(STACKS);
+    _start_moved_stacks = _next_region - SIZEOF(.stacks);
+    _start_stacks = _pack_stacks ? . : _start_moved_stacks;
 
     /* # Stacks
      *
      * Space for all seven stacks.
      */
-    .stacks (NOLOAD) : ALIGN(8)
+    .stacks _start_stacks (NOLOAD) : ALIGN(_stack_alignment)
     {
-        . = ALIGN(8);
+        . = ALIGN(_stack_alignment);
 
         /* Lowest address of allocated stack */
         _stacks_low_end = .;
@@ -223,30 +226,42 @@ SECTIONS {
         . += (_und_stack_size * _num_cores);
         _und_stack_high_end = .;
 
+        . += _inter_stack_padding;
+
         /* Stack for SVC mode */
         _svc_stack_low_end = .;
         . += (_svc_stack_size * _num_cores);
         _svc_stack_high_end = .;
+
+        . += _inter_stack_padding;
 
         /* Stack for ABT mode */
         _abt_stack_low_end = .;
         . += (_abt_stack_size * _num_cores);
         _abt_stack_high_end = .;
 
+        . += _inter_stack_padding;
+
         /* Stack for HYP mode */
         _hyp_stack_low_end = .;
         . += (_hyp_stack_size * _num_cores);
         _hyp_stack_high_end = .;
+
+        . += _inter_stack_padding;
 
         /* Stack for IRQ mode */
         _irq_stack_low_end = .;
         . += (_irq_stack_size * _num_cores);
         _irq_stack_high_end = .;
 
+        . += _inter_stack_padding;
+
         /* Stack for FIQ mode */
         _fiq_stack_low_end = .;
         . += (_fiq_stack_size * _num_cores);
         _fiq_stack_high_end = .;
+
+        . += _inter_stack_padding;
 
         /* Stack for SYS mode */
         _sys_stack_low_end = .;
@@ -280,6 +295,16 @@ PROVIDE(_sys_stack_size = 16K);
 /* Default to one CPU core (i.e. one copy of each stack) */
 PROVIDE(_num_cores      = 1);
 
+/* Default stack alignment. You can over-align if you want to set up MPU regions for the stacks */
+PROVIDE(_stack_alignment = 8);
+
+/* Default region alignment. You can over-align if you want to set up MPU regions */
+PROVIDE(_region_alignment = 4);
+
+/* Default to no padding between stacks. You might want padding if you want turn on the MPU and */
+/* only have a single core (so the stacks are otherwise contiguous) */
+PROVIDE(_inter_stack_padding = 0);
+
 /* Set this to 1 in memory.x to remove the filler section pushing the stacks to the end of STACKS. */
 PROVIDE(_pack_stacks = 0);
 
@@ -293,7 +318,6 @@ PROVIDE(_asm_svc_handler            = _asm_default_svc_handler);
 PROVIDE(_asm_hvc_handler            = _asm_default_hvc_handler);
 PROVIDE(_asm_prefetch_abort_handler = _asm_default_prefetch_abort_handler);
 PROVIDE(_asm_data_abort_handler     = _asm_default_data_abort_handler);
-/* TODO: Hyp handler goes here */
 PROVIDE(_asm_irq_handler            = _asm_default_irq_handler);
 PROVIDE(_asm_fiq_handler            = _asm_default_fiq_handler);
 
@@ -307,21 +331,31 @@ PROVIDE(_data_abort_handler     = _default_handler);
 PROVIDE(_irq_handler            = _default_handler);
 /* NB: There is no default C-language FIQ handler */
 
-/* Check the stack sizes are all a multiple of eight bytes */
-ASSERT(_und_stack_size % 8 == 0, "
-ERROR(z7link.x): UND stack size (_und_stack_size) is not a multiple of 8 bytes");
-ASSERT(_svc_stack_size % 8 == 0, "
-ERROR(z7link.x): SVC stack size (_svc_stack_size) is not a multiple of 8 bytes");
-ASSERT(_abt_stack_size % 8 == 0, "
-ERROR(z7link.x): ABT stack size (_abt_stack_size) is not a multiple of 8 bytes");
-ASSERT(_hyp_stack_size % 8 == 0, "
-ERROR(z7link.x): HYP stack size (_hyp_stack_size) is not a multiple of 8 bytes");
-ASSERT(_irq_stack_size % 8 == 0, "
-ERROR(z7link.x): IRQ stack size (_irq_stack_size) is not a multiple of 8 bytes");
-ASSERT(_fiq_stack_size % 8 == 0, "
-ERROR(z7link.x): FIQ stack size (_fiq_stack_size) is not a multiple of 8 bytes");
-ASSERT(_sys_stack_size % 8 == 0, "
-ERROR(z7link.x): SYS stack size (_sys_stack_size) is not a multiple of 8 bytes");
+/* Check the values are all reasonable */
+ASSERT(_region_alignment % 4 == 0, "
+ERROR(z7link.x): Region alignment (_region_alignment) is not a multiple of 4 bytes");
+ASSERT(_region_alignment >= 4, "
+ERROR(z7link.x): Region alignment (_region_alignment) is not at least four bytes");
+ASSERT(_stack_alignment % 8 == 0, "
+ERROR(z7link.x): Stack alignment (_stack_alignment) is not a multiple of 8 bytes");
+ASSERT(_stack_alignment >= 8, "
+ERROR(z7link.x): Stack alignment (_stack_alignment) is not at least eight bytes");
+ASSERT(_inter_stack_padding % _stack_alignment == 0, "
+ERROR(z7link.x): Inter-stack padding (_inter_stack_padding) is not a multiple of the stack alignment");
+ASSERT(_und_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): UND stack size (_und_stack_size) is not a multiple of the stack alignment");
+ASSERT(_svc_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): SVC stack size (_svc_stack_size) is not a multiple of the stack alignment");
+ASSERT(_abt_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): ABT stack size (_abt_stack_size) is not a multiple of the stack alignment");
+ASSERT(_hyp_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): HYP stack size (_hyp_stack_size) is not a multiple of the stack alignment");
+ASSERT(_irq_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): IRQ stack size (_irq_stack_size) is not a multiple of the stack alignment");
+ASSERT(_fiq_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): FIQ stack size (_fiq_stack_size) is not a multiple of the stack alignment");
+ASSERT(_sys_stack_size % _stack_alignment == 0, "
+ERROR(z7link.x): SYS stack size (_sys_stack_size) is not a multiple of the stack alignment");
 ASSERT(_num_cores != 0, "
 ERROR(z7link.x): Number of cores cannot be zero");
 
