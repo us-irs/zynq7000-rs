@@ -2,7 +2,6 @@
 #![no_main]
 
 use aarch32_cpu::asm::nop;
-use arbitrary_int::u5;
 use core::panic::PanicInfo;
 use embassy_executor::{InterruptExecutor, Spawner};
 use embassy_time::{Duration, Ticker};
@@ -10,7 +9,7 @@ use embedded_io::Write as _;
 use log::error;
 use zynq7000_hal::{
     clocks, generic_interrupt_handler,
-    gic::SgiInterrupt,
+    gic::{Priority, SgiInterrupt},
     gpio::{self, Output},
     gtc,
     time::Hertz,
@@ -64,8 +63,8 @@ async fn main(_spawner: Spawner) -> ! {
         zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, logger)
             .expect("TX UART init failed");
 
-    gic.set_sgi_interrupt_priority(sgi_interrupt_low_prio, u5::new(2));
-    gic.set_sgi_interrupt_priority(sgi_interrupt_med_prio, u5::new(1));
+    gic.set_sgi_interrupt_priority(sgi_interrupt_low_prio, Priority::P2);
+    gic.set_sgi_interrupt_priority(sgi_interrupt_med_prio, Priority::P1);
 
     zynq7000_hal::register_interrupt(
         zynq7000_hal::Interrupt::Sgi(sgi_interrupt_low_prio),

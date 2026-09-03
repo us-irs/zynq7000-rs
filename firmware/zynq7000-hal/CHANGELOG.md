@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+## Changed
+
+- `Configurator::set_sgi_interrupt_priority`/`read_sgi_interrupt_priority` now take/return the new
+  `gic::Priority` enum (`P0`..`P31`) instead of a raw `u5`.
+
+## Added
+
+- Added `Configurator::set_ppi_interrupt_priority`/`read_ppi_interrupt_priority` and
+  `set_spi_interrupt_priority`/`read_spi_interrupt_priority`, mirroring the existing SGI priority
+  API for the other interrupt classes.
+
 # [v0.2.0] 2026-08-20
 
 ## Added

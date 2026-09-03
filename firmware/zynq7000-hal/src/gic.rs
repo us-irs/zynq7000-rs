@@ -51,6 +51,114 @@ pub const ACTIVATE_ALL_SGIS_MASK_ISER: u32 = 0x0000_FFFF;
 /// Mask for activating all private peripheral interrupts.
 pub const ACTIVATE_ALL_PPIS_MASK_ISER: u32 = 0xF800_0000;
 
+/// Interrupt priority level.
+///
+/// The GIC IPR registers store the priority in the upper 5 bits of an 8-bit field, so there
+/// are 32 priority levels. `P0` is the highest priority, `P31` the lowest, similar to how
+/// embassy encodes NVIC priorities.
+#[derive(
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    num_enum::TryFromPrimitive,
+    num_enum::IntoPrimitive,
+)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[repr(u8)]
+pub enum Priority {
+    /// Highest priority.
+    P0 = 0,
+    /// Priority level 1.
+    P1 = 1,
+    /// Priority level 2.
+    P2 = 2,
+    /// Priority level 3.
+    P3 = 3,
+    /// Priority level 4.
+    P4 = 4,
+    /// Priority level 5.
+    P5 = 5,
+    /// Priority level 6.
+    P6 = 6,
+    /// Priority level 7.
+    P7 = 7,
+    /// Priority level 8.
+    P8 = 8,
+    /// Priority level 9.
+    P9 = 9,
+    /// Priority level 10.
+    P10 = 10,
+    /// Priority level 11.
+    P11 = 11,
+    /// Priority level 12.
+    P12 = 12,
+    /// Priority level 13.
+    P13 = 13,
+    /// Priority level 14.
+    P14 = 14,
+    /// Priority level 15.
+    P15 = 15,
+    /// Priority level 16.
+    P16 = 16,
+    /// Priority level 17.
+    P17 = 17,
+    /// Priority level 18.
+    P18 = 18,
+    /// Priority level 19.
+    P19 = 19,
+    /// Priority level 20.
+    P20 = 20,
+    /// Priority level 21.
+    P21 = 21,
+    /// Priority level 22.
+    P22 = 22,
+    /// Priority level 23.
+    P23 = 23,
+    /// Priority level 24.
+    P24 = 24,
+    /// Priority level 25.
+    P25 = 25,
+    /// Priority level 26.
+    P26 = 26,
+    /// Priority level 27.
+    P27 = 27,
+    /// Priority level 28.
+    P28 = 28,
+    /// Priority level 29.
+    P29 = 29,
+    /// Priority level 30.
+    P30 = 30,
+    /// Lowest priority.
+    P31 = 31,
+}
+
+impl Priority {
+    /// Convert to the raw IPR register value, placing the priority in the upper 5 bits.
+    #[inline]
+    pub const fn to_raw(self) -> u8 {
+        (self as u8) << 3
+    }
+
+    /// Create from a raw IPR register value, ignoring the lower 3 bits.
+    #[inline]
+    pub fn from_raw(raw: u8) -> Self {
+        // Unwrap okay, shifting a u8 down by 3 always yields a value in [0, 31].
+        Self::try_from(raw >> 3).unwrap()
+    }
+
+    /// Create from a priority level in the range `[0, 31]`, where 0 is the highest priority.
+    #[inline]
+    pub fn try_from_level(level: u8) -> Result<Self, InvalidPriorityValue> {
+        Self::try_from(level).map_err(|_| InvalidPriorityValue(level))
+    }
+}
+
 /// Shared peripheral interrupt sensitivity.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -527,25 +635,57 @@ impl Configurator {
     }
 
     /// Set the interrupt priority for a SGI interrupt.
-    ///
-    /// There are 32 priority levels, and a lower value means a higher priority.
     #[inline]
-    pub fn set_sgi_interrupt_priority(&mut self, sgi: SgiInterrupt, priority: u5) {
-        // The IPR arrays are byte accessible.
-        let base_ptr = self.gicd.pointer_to_ipr_start() as *mut u8;
-        let raw_index = sgi.raw_id();
-        unsafe {
-            core::ptr::write_volatile(base_ptr.add(raw_index), priority.as_u8() << 3);
-        }
+    pub fn set_sgi_interrupt_priority(&mut self, sgi: SgiInterrupt, priority: Priority) {
+        self.write_priority(sgi.raw_id(), priority);
     }
 
     /// Read the interrupt priority for a SGI interrupt.
     #[inline]
-    pub fn read_sgi_interrupt_priority(&mut self, sgi: SgiInterrupt) -> u5 {
+    pub fn read_sgi_interrupt_priority(&mut self, sgi: SgiInterrupt) -> Priority {
+        self.read_priority(sgi.raw_id())
+    }
+
+    /// Set the interrupt priority for a PPI interrupt.
+    #[inline]
+    pub fn set_ppi_interrupt_priority(&mut self, ppi_int: PpiInterrupt, priority: Priority) {
+        self.write_priority(ppi_int as usize, priority);
+    }
+
+    /// Read the interrupt priority for a PPI interrupt.
+    #[inline]
+    pub fn read_ppi_interrupt_priority(&mut self, ppi_int: PpiInterrupt) -> Priority {
+        self.read_priority(ppi_int as usize)
+    }
+
+    /// Set the interrupt priority for a SPI interrupt.
+    #[inline]
+    pub fn set_spi_interrupt_priority(&mut self, spi_int: SpiInterrupt, priority: Priority) {
+        self.write_priority(spi_int as usize, priority);
+    }
+
+    /// Read the interrupt priority for a SPI interrupt.
+    #[inline]
+    pub fn read_spi_interrupt_priority(&mut self, spi_int: SpiInterrupt) -> Priority {
+        self.read_priority(spi_int as usize)
+    }
+
+    /// Write the raw priority byte for an arbitrary interrupt ID in the IPR array.
+    #[inline]
+    fn write_priority(&mut self, raw_id: usize, priority: Priority) {
+        // The IPR arrays are byte accessible.
+        let base_ptr = self.gicd.pointer_to_ipr_start() as *mut u8;
+        unsafe {
+            core::ptr::write_volatile(base_ptr.add(raw_id), priority.to_raw());
+        }
+    }
+
+    /// Read the raw priority byte for an arbitrary interrupt ID in the IPR array.
+    #[inline]
+    fn read_priority(&mut self, raw_id: usize) -> Priority {
         // The IPR arrays are byte accessible.
         let base_ptr = self.gicd.pointer_to_ipr_start() as *const u8;
-        let raw_index = sgi.raw_id();
-        unsafe { u5::new(core::ptr::read_volatile(base_ptr.add(raw_index)) >> 3) }
+        Priority::from_raw(unsafe { core::ptr::read_volatile(base_ptr.add(raw_id)) })
     }
 
     /// Utility function to set all SPI interrupt targets to CPU0.
