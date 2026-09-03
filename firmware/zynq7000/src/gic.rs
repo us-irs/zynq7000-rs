@@ -206,7 +206,10 @@ pub struct DistributorRegisters {
     /// Active Bit Registers
     pub abr: [u32; 0x3],
     _reserved_10: [u32; 0x3D],
-    /// Interrupt Priority Registers
+    /// Interrupt Priority Registers.
+    ///
+    /// Interrupt priority as 8-bit fields. Only the upper 5 bits of each field are writable,
+    /// the lower bits are always 0. There are 32 priority levels.
     pub ipr: [u32; 0x18],
     _reserved_11: [u32; 0xE8],
     /// Interrupt Processor Targets Registers
@@ -264,6 +267,13 @@ pub struct DistributorRegisters {
 }
 
 const_assert_eq!(core::mem::size_of::<DistributorRegisters>(), 0x1000);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, iser), 0x100);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, icer), 0x180);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, ispr), 0x200);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, icpr), 0x280);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, abr), 0x300);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, ipr), 0x400);
+const_assert_eq!(core::mem::offset_of!(DistributorRegisters, sgir), 0xF00);
 
 impl DistributorRegisters {
     /// Create a new Global Interrupt Controller Distributor MMIO instance at the fixed address of
