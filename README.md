@@ -107,8 +107,8 @@ In a single invocation it:
   [`z7-ps7init-extract`](./host/z7-ps7init-extract) (the replacement for a raw `ps7_init.tcl`
   script in this flow). This includes the post-config step that brings the PL out of its power-on
   reset state.
-- Optionally flashes a FPGA design to the programmable logic by calling out to the external
-  [`openFPGALoader`](https://github.com/trabucayre/openFPGALoader) tool.
+- Optionally flashes a FPGA design to the programmable logic, using
+  [`x7dap`](https://github.com/adamgreig/x7dap)'s native `probe-rs` JTAG access.
 - Flashes and runs the given ELF file.
 - Optionally attaches to a serial console and prints anything the target sends.
 
@@ -129,8 +129,6 @@ the example apps provided in this repo and also installs the [`z7-run`](./host/z
   machine building `z7-run` (e.g. `apt install pkg-config libudev-dev` on Debian/Ubuntu), since
   `z7-run` pulls in `probe-rs`, which links against `libudev` for USB device enumeration. This is
   only required for the `host` workspace; it is not needed to build the `firmware` workspace.
-- [`openFPGALoader`](https://github.com/trabucayre/openFPGALoader) installed and on `PATH`, if you
-  want the bitstream flashing step.
 - A valid Z7 bitstream for you board if you include the bitstream flashing step.
 - A RON file containing the Z7 register initialization, generated from a `ps7_init.tcl` script using
   the [`z7-ps7init-extract`](./host/z7-ps7init-extract) tool. We provide a Zedboard compatible
@@ -143,8 +141,8 @@ the example apps provided in this repo and also installs the [`z7-run`](./host/z
    bitstream in one go).
 
 2. Optionally adapt the sample [`scripts/z7_run.toml`](./scripts/z7_run.toml) config file, which
-   configures the bitstream path/`openFPGALoader` board name and an optional serial console to
-   attach to once the target is running.
+   configures the bitstream path and an optional serial console to attach to once the target is
+   running.
 
 3. Set the `runner` in your `firmware/.cargo/config.toml` to `just run` (see
    [`firmware/.cargo/config.toml`](./firmware/.cargo/config.toml)), then use `cargo run` as usual,
