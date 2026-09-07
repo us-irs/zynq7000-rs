@@ -17,6 +17,7 @@ use probe_rs::{
     probe::{DebugProbeSelector, Probe, WireProtocol, list::Lister},
 };
 use tracing_subscriber::EnvFilter;
+use x7dap::{Bitstream, X7, auto_tap_idx, fixup_zynq_ir_lengths};
 use z7_run_data::{PsInitOps, RegOp, RegOpKind};
 
 /// Default chunk size for RAM writes during `commit()`, in bytes. Without chunking, each RAM
@@ -24,11 +25,14 @@ use z7_run_data::{PsInitOps, RegOp, RegOpKind};
 /// 100% - see [`ProgressBars`]. Overridable via `--ram-chunk-size`.
 const DEFAULT_RAM_CHUNK_SIZE: u64 = 64 * 1024;
 
-/// Default `openFPGALoader` board name, used when `OPENFPGALOADER_BOARD` isn't set.
-const DEFAULT_OPENFPGALOADER_BOARD: &str = "zedboard";
-
 /// Config file name looked up in the current directory when `--config` isn't given.
 const DEFAULT_CONFIG_FILE_NAME: &str = "z7_run.toml";
+
+/// Default JTAG speed for the bitstream flash step specifically, in kHz, when
+/// `--jtag-speed-khz`/the config isn't set. Every other step in this tool falls back to the
+/// probe's own default speed instead, but that default is very conservative and flashing a
+/// multi-MB bitstream at it is painfully slow - matches openFPGALoader's own default.
+const DEFAULT_FLASH_JTAG_SPEED_KHZ: u32 = 6_000;
 
 /// Parses a `u64` from either decimal or `0x`/`0X`-prefixed hex, for CLI args like `--check-ddr`
 /// where the natural way to write the value is as a hex address.
@@ -61,8 +65,8 @@ fn resolve_relative_to_config(config_path: &Path, path: &Path) -> PathBuf {
 /// - Connects to the probe.
 /// - Resets the target.
 /// - Executes the PS7 (PLL/clock/DDR) init sequence.
-/// - Optionally flashes a bitstream to the programmable logic, by calling out to the external
-///   `openFPGALoader` program.
+/// - Optionally flashes a bitstream to the programmable logic, via x7dap's native probe-rs
+///   JTAG access.
 /// - Flashes and runs the given ELF file.
 #[derive(clap::Parser, Debug)]
 #[command(version, about, verbatim_doc_comment)]
@@ -80,10 +84,10 @@ struct Cli {
     #[arg(long, value_parser = parse_maybe_hex_u64)]
     check_ddr: Option<u64>,
 
-    /// Path to a config TOML file (bitstream/openFPGALoader setup, serial console). If not given,
-    /// looks for `z7_run.toml` in the current directory; if that isn't found either, the
-    /// bitstream step falls back to the `ZYNQ_BITSTREAM`/`OPENFPGALOADER_BOARD` env vars and the
-    /// serial console step is skipped entirely.
+    /// Path to a config TOML file (bitstream path, serial console). If not given, looks for
+    /// `z7_run.toml` in the current directory; if that isn't found either, the bitstream step
+    /// falls back to the `ZYNQ_BITSTREAM` env var and the serial console step is skipped
+    /// entirely.
     #[arg(long)]
     config: Option<PathBuf>,
 
@@ -117,9 +121,9 @@ struct Cli {
 }
 
 /// Config for things that don't belong on the command line, split by what they actually
-/// describe: `fpga` is genuinely board-specific (bitstream, openFPGALoader board name/args), but
-/// `serial` mostly isn't - which serial port shows up depends on what's plugged into *this*
-/// machine, not on the board - it just lives in the same file for convenience.
+/// describe: `fpga` is genuinely board-specific (the bitstream to load), but `serial` mostly
+/// isn't - which serial port shows up depends on what's plugged into *this* machine, not on the
+/// board - it just lives in the same file for convenience.
 #[derive(Debug, Default, serde::Deserialize)]
 struct Config {
     #[serde(default)]
@@ -136,21 +140,13 @@ struct Config {
 
 #[derive(Debug, Default, serde::Deserialize)]
 struct FpgaConfig {
-    /// Path to the bitstream to load via openFPGALoader before the ELF is flashed. Overridden by
-    /// the `ZYNQ_BITSTREAM` env var when set, so a quick one-off override doesn't require editing
-    /// the config file. Relative paths are resolved relative to the config file's own directory,
-    /// not the current working directory, so the config stays self-contained wherever `z7-run`
-    /// is invoked from.
+    /// Path to the bitstream to load before the ELF is flashed. Overridden by the
+    /// `ZYNQ_BITSTREAM` env var when set, so a quick one-off override doesn't require editing the
+    /// config file. Relative paths are resolved relative to the config file's own directory, not
+    /// the current working directory, so the config stays self-contained wherever `z7-run` is
+    /// invoked from.
     #[serde(default)]
     bitstream: Option<PathBuf>,
-    /// Board name passed to openFPGALoader via `-b`. Overridden by the `OPENFPGALOADER_BOARD` env
-    /// var when set; defaults to [`DEFAULT_OPENFPGALOADER_BOARD`] if neither is set.
-    #[serde(default)]
-    board: Option<String>,
-    /// Extra arguments appended to the openFPGALoader invocation, after `-b <board> <bitstream>`
-    /// (e.g. `["--freq", "10e6"]` or a cable selector).
-    #[serde(default)]
-    args: Vec<String>,
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -170,16 +166,24 @@ fn default_baud_rate() -> u32 {
 /// probe-rs's own `--probe`) and errors if that doesn't resolve to exactly one probe. Without a
 /// selector: opens the only probe if there's just one, or prompts interactively to choose among
 /// several - there's no correct default to silently pick when more than one probe is connected.
-fn select_probe(lister: &Lister, selector: Option<&DebugProbeSelector>) -> anyhow::Result<Probe> {
+///
+/// Also returns a concrete [`DebugProbeSelector`] identifying exactly the probe that was opened,
+/// so a later re-open (releasing and re-acquiring the same USB interface, e.g. to switch between
+/// raw JTAG access and an ARM debug session) can pass it back in and skip the interactive prompt
+/// the second time around.
+fn select_probe(
+    lister: &Lister,
+    selector: Option<&DebugProbeSelector>,
+) -> anyhow::Result<(Probe, DebugProbeSelector)> {
     use std::io::Write as _;
 
     let probes = lister.list(selector);
-    match probes.len() {
+    let info = match probes.len() {
         0 => match selector {
             Some(selector) => anyhow::bail!("no debug probe found matching --probe {selector}"),
             None => anyhow::bail!("no debug probes found"),
         },
-        1 => Ok(probes[0].open()?),
+        1 => &probes[0],
         _ => {
             if let Some(selector) = selector {
                 anyhow::bail!(
@@ -201,12 +205,13 @@ fn select_probe(lister: &Lister, selector: Option<&DebugProbeSelector>) -> anyho
                 .trim()
                 .parse()
                 .with_context(|| format!("invalid probe selection: {:?}", input.trim()))?;
-            let probe = probes
+            probes
                 .get(index)
-                .ok_or_else(|| anyhow::anyhow!("selection {index} is out of range"))?;
-            Ok(probe.open()?)
+                .ok_or_else(|| anyhow::anyhow!("selection {index} is out of range"))?
         }
-    }
+    };
+    let selector = DebugProbeSelector::from(info);
+    Ok((info.open()?, selector))
 }
 
 /// Renders [`ProgressEvent`]s emitted by [`flashing::FlashLoader::commit`] as live terminal
@@ -286,24 +291,57 @@ impl FlashProgressBars {
     }
 }
 
-/// Flashes the given bitstream with `openFPGALoader`, passing `-b <board>` as its own explicit
-/// argument (rather than folding it into `extra_args`) plus whatever else `extra_args` carries.
+/// Flashes the given bitstream via x7dap's native probe-rs JTAG access.
 ///
-/// Must be called with no probe-rs `Session`/`Probe` alive: `openFPGALoader` needs exclusive
-/// access to the same USB JTAG interface, and will fail to open it while probe-rs is still
-/// holding it (same reason `zynq7000-init.py` sleeps after xsct disconnects, before probe-rs
-/// tries to open the same interface).
-fn flash_bitstream(bitstream: &str, board: &str, extra_args: &[String]) -> anyhow::Result<()> {
-    tracing::info!("flashing bitstream via openFPGALoader: {bitstream} (board: {board})");
-    let status = std::process::Command::new("openFPGALoader")
-        .args(["-b", board])
-        .arg(bitstream)
-        .args(extra_args)
-        .status()
-        .with_context(|| "failed to spawn openFPGALoader (is it on PATH?)")?;
-    if !status.success() {
-        anyhow::bail!("openFPGALoader exited with {status}");
+/// Must be called with no probe-rs `Session` alive on `probe`: a raw JTAG access and an ARM
+/// debug session can't be held open on the same probe at once.
+///
+/// Shows progress in the same style as [`FlashProgressBars`] (rather than x7dap's own bar, so it
+/// looks consistent with the rest of `z7-run`'s output) unless `no_progress`.
+fn flash_bitstream(probe: &mut Probe, data: &[u8], no_progress: bool) -> anyhow::Result<()> {
+    let bar = if no_progress {
+        ProgressBar::hidden()
+    } else {
+        let bar = ProgressBar::new(data.len().max(1) as u64);
+        bar.set_style(
+            ProgressStyle::with_template(
+                "{msg:>13.green.bold} {spinner} {percent:>3}% [{bar:20}] {bytes:>10} @ \
+                 {bytes_per_sec:>12} (ETA {eta})",
+            )
+            .expect("static progress bar template is valid")
+            .progress_chars("##-"),
+        );
+        bar.set_message("Writing FPGA");
+        bar.enable_steady_tick(Duration::from_millis(100));
+        bar
+    };
+
+    probe.attach_to_unspecified()?;
+    let jtag = probe
+        .try_as_jtag_probe()
+        .with_context(|| "selected probe does not support JTAG")?;
+
+    let chain = jtag.scan_chain()?.to_vec();
+
+    // auto_tap_idx only looks at each TAP's IDCODE, never at its IR length, so it works
+    // correctly even before the IR length fixup below.
+    let (tap_idx, idcode) =
+        auto_tap_idx(&chain).with_context(|| "no 7-series IDCODE found in JTAG chain")?;
+
+    // Zynq-7000's two-TAP PL/PS chain is a shape the generic IR length detection can get
+    // backward without reporting an error - see fixup_zynq_ir_lengths. Only apply it once a
+    // Zynq-7000 is actually confirmed present, per its documented precondition.
+    if idcode.is_zynq7000()
+        && let Some(fixed) = fixup_zynq_ir_lengths(&chain)
+    {
+        jtag.set_scan_chain(&fixed)?;
     }
+
+    jtag.select_target(tap_idx)?;
+
+    let mut x7 = X7::new(jtag, idcode);
+    x7.program_with_callback(data, |n| bar.set_position(n as u64))?;
+    bar.finish();
     Ok(())
 }
 
@@ -534,8 +572,7 @@ fn main() -> anyhow::Result<()> {
             )
         })?;
 
-    // A quick `ZYNQ_BITSTREAM=... z7-run ...`/`OPENFPGALOADER_BOARD=... z7-run ...` shouldn't
-    // require editing the config file.
+    // A quick `ZYNQ_BITSTREAM=... z7-run ...` shouldn't require editing the config file.
     let bitstream = std::env::var("ZYNQ_BITSTREAM").ok().or_else(|| {
         let bitstream = config.fpga.bitstream.as_ref()?;
         let resolved = match &config_path {
@@ -544,10 +581,6 @@ fn main() -> anyhow::Result<()> {
         };
         Some(resolved.display().to_string())
     });
-    let board = std::env::var("OPENFPGALOADER_BOARD")
-        .ok()
-        .or_else(|| config.fpga.board.clone())
-        .unwrap_or_else(|| DEFAULT_OPENFPGALOADER_BOARD.to_string());
 
     tracing::info!("loading PS7 init ops from: {}", regs.display());
     let ron_str = std::fs::read_to_string(&regs)
@@ -558,7 +591,9 @@ fn main() -> anyhow::Result<()> {
     let jtag_speed_khz = cli.jtag_speed_khz.or(config.jtag_speed_khz);
 
     let lister = Lister::new();
-    let mut probe = select_probe(&lister, cli.probe.as_ref())?;
+    // `probe_selector` identifies exactly this probe, so re-opening it later (to switch
+    // between raw JTAG access and an ARM debug session) doesn't need to re-prompt.
+    let (mut probe, probe_selector) = select_probe(&lister, cli.probe.as_ref())?;
     probe.select_protocol(WireProtocol::Jtag)?;
     if let Some(jtag_speed_khz) = jtag_speed_khz {
         tracing::info!("setting JTAG speed to {jtag_speed_khz} kHz");
@@ -605,21 +640,41 @@ fn main() -> anyhow::Result<()> {
 
     drop(core);
 
-    // openFPGALoader needs exclusive access to the same USB JTAG interface probe-rs is holding
-    // open, so fully release the probe/session before spawning it, then re-attach afterward.
-    // Reprogramming the PL (FPGA fabric) doesn't touch the PS's DDR/PLL/SLCR state, so the init
-    // done above survives the round trip - only the JTAG connection itself needs to be redone.
-    // Skip the whole dance when there's nothing to flash, to avoid the extra latency/reset churn.
+    // Flashing the bitstream via x7dap needs raw JTAG access, but `Session` doesn't expose a way
+    // to get that back out of an already-attached probe - `Probe::attach()` consumes the `Probe`
+    // into `Session`'s private `interfaces` field, and there's no `into_probe()` or equivalent to
+    // reverse it. So this isn't a USB/hardware necessity, it's a probe-rs API limitation: we drop
+    // the session, open a fresh `Probe` (via the cached `probe_selector`, so it doesn't re-prompt)
+    // to do the raw JTAG flash, then re-attach a new session afterward. Reprogramming the PL
+    // (FPGA fabric) doesn't touch the PS's DDR/PLL/SLCR state, so the init done above survives the
+    // round trip - only the JTAG connection itself needs to be redone. Skip the whole dance when
+    // there's nothing to flash, to avoid the extra latency/reset churn.
+    //
+    // TODO(robin): look into adding a `Session::into_probe()` (or equivalent) upstream in
+    // probe-rs, so this can go back to a single open/attach with no reopen at all.
     if let Some(bitstream) = &bitstream {
+        tracing::info!("Flashing FPGA design: {bitstream}");
+        let data = Bitstream::from_path(bitstream)
+            .with_context(|| format!("failed to load bitstream {bitstream}"))?;
+
         // `probe` was already consumed by `probe.attach()` above; dropping `session` alone
         // releases the underlying USB JTAG handle.
         drop(session);
 
-        flash_bitstream(bitstream, &board, &config.fpga.args)?;
+        let lister = Lister::new();
+        let (mut probe, _) = select_probe(&lister, Some(&probe_selector))?;
+        probe.select_protocol(WireProtocol::Jtag)?;
+        probe.set_speed(jtag_speed_khz.unwrap_or(DEFAULT_FLASH_JTAG_SPEED_KHZ))?;
+        flash_bitstream(&mut probe, data.data(), cli.no_progress)?;
+
+        // Shadowing `probe` below does not drop this one early - it would otherwise stay
+        // open (holding the USB interface) until the end of this block, causing the
+        // re-open just below to fail with "interface is busy".
+        drop(probe);
 
         tracing::info!("re-attaching probe after bitstream flash");
         let lister = Lister::new();
-        let mut probe = select_probe(&lister, cli.probe.as_ref())?;
+        let (mut probe, _) = select_probe(&lister, Some(&probe_selector))?;
         probe.select_protocol(WireProtocol::Jtag)?;
         if let Some(jtag_speed_khz) = jtag_speed_khz {
             probe.set_speed(jtag_speed_khz)?;
