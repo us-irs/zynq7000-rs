@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    io::{Read, Write},
     path::{Path, PathBuf},
     sync::atomic::{AtomicBool, Ordering},
     time::{Duration, Instant},
@@ -27,6 +28,20 @@ const DEFAULT_RAM_CHUNK_SIZE: u64 = 64 * 1024;
 
 /// Config file name looked up in the current directory when `--config` isn't given.
 const DEFAULT_CONFIG_FILE_NAME: &str = "z7_run.toml";
+
+/// Progress-bar template shared by every bar `z7-run` shows for an operation with a known total
+/// length (bitstream flash, RAM writes with a known size). Adopted from probe-rs's own CLI
+/// (`probe-rs-tools/src/bin/probe-rs/util/flash.rs`'s `active()`), so output looks consistent
+/// with `probe-rs`'s own flashing progress.
+const PROGRESS_TEMPLATE_KNOWN_LENGTH: &str = "{msg:>13.green.bold} {spinner} {percent:>3}% [{bar:20}] {bytes:>10} @ {bytes_per_sec:>12} (ETA {eta})";
+
+/// Builds the [`ProgressStyle`] shared by every bar `z7-run` shows, from an indicatif template
+/// string. Panics if `template` is invalid - only ever called with static templates.
+fn progress_bar_style(template: &str) -> ProgressStyle {
+    ProgressStyle::with_template(template)
+        .expect("static progress bar template is valid")
+        .progress_chars("##-")
+}
 
 /// Default JTAG speed for the bitstream flash step specifically, in kHz, when
 /// `--jtag-speed-khz`/the config isn't set. Every other step in this tool falls back to the
@@ -158,7 +173,8 @@ struct SerialConfig {
     baud_rate: u32,
 }
 
-fn default_baud_rate() -> u32 {
+#[inline]
+const fn default_baud_rate() -> u32 {
     115_200
 }
 
@@ -175,8 +191,6 @@ fn select_probe(
     lister: &Lister,
     selector: Option<&DebugProbeSelector>,
 ) -> anyhow::Result<(Probe, DebugProbeSelector)> {
-    use std::io::Write as _;
-
     let probes = lister.list(selector);
     let info = match probes.len() {
         0 => match selector {
@@ -212,6 +226,19 @@ fn select_probe(
     };
     let selector = DebugProbeSelector::from(info);
     Ok((info.open()?, selector))
+}
+
+/// Opens a probe via [`select_probe`] and switches it to JTAG protocol. This is a fresh `Probe`
+/// handle every time, which is what's needed whenever switching between raw JTAG access and an
+/// ARM debug session on the same probe - a `Session` consumes the `Probe` it's attached from with
+/// no way to get it back out, so getting back to raw JTAG means releasing and re-opening it.
+fn open_probe_as_jtag(
+    selector: Option<&DebugProbeSelector>,
+) -> anyhow::Result<(Probe, DebugProbeSelector)> {
+    let lister = Lister::new();
+    let (mut probe, probe_selector) = select_probe(&lister, selector)?;
+    probe.select_protocol(WireProtocol::Jtag)?;
+    Ok((probe, probe_selector))
 }
 
 /// Renders [`ProgressEvent`]s emitted by [`flashing::FlashLoader::commit`] as live terminal
@@ -262,15 +289,11 @@ impl FlashProgressBars {
                     None => ProgressBar::no_length(),
                 });
                 let template = if bar.length().is_some() {
-                    "{msg:>13.green.bold} {spinner} {percent:>3}% [{bar:20}] {bytes:>10} @ {bytes_per_sec:>12} (ETA {eta})"
+                    PROGRESS_TEMPLATE_KNOWN_LENGTH
                 } else {
                     "{msg:>13.green.bold} {spinner} {elapsed}"
                 };
-                bar.set_style(
-                    ProgressStyle::with_template(template)
-                        .expect("static progress bar template is valid")
-                        .progress_chars("##-"),
-                );
+                bar.set_style(progress_bar_style(template));
                 bar.set_message(Self::operation_label(operation));
                 bar.enable_steady_tick(Duration::from_millis(100));
                 self.bars.insert(Self::operation_label(operation), bar);
@@ -303,14 +326,7 @@ fn flash_bitstream(probe: &mut Probe, data: &[u8], no_progress: bool) -> anyhow:
         ProgressBar::hidden()
     } else {
         let bar = ProgressBar::new(data.len().max(1) as u64);
-        bar.set_style(
-            ProgressStyle::with_template(
-                "{msg:>13.green.bold} {spinner} {percent:>3}% [{bar:20}] {bytes:>10} @ \
-                 {bytes_per_sec:>12} (ETA {eta})",
-            )
-            .expect("static progress bar template is valid")
-            .progress_chars("##-"),
-        );
+        bar.set_style(progress_bar_style(PROGRESS_TEMPLATE_KNOWN_LENGTH));
         bar.set_message("Writing FPGA");
         bar.enable_steady_tick(Duration::from_millis(100));
         bar
@@ -364,12 +380,14 @@ static SHUTDOWN_REQUESTED: AtomicBool = AtomicBool::new(false);
 /// bytes that arrive during that gap get printed in order, before anything live, once
 /// [`run_serial_console`] starts draining it - not interleaved with the flashing progress bars
 /// or tracing output still on screen at that point, so the overall sequence stays clean.
-fn open_serial_console(
-    serial: &SerialConfig,
-) -> anyhow::Result<(
+/// Receiving end of the channel [`open_serial_console`] forwards bytes into, plus the handle of
+/// the background thread reading them - what [`run_serial_console`] then drains.
+type SerialReader = (
     std::sync::mpsc::Receiver<Vec<u8>>,
     std::thread::JoinHandle<()>,
-)> {
+);
+
+fn open_serial_console(serial: &SerialConfig) -> anyhow::Result<SerialReader> {
     tracing::info!(
         "attaching to serial console: {} @ {} baud",
         serial.port,
@@ -394,8 +412,6 @@ fn serial_reader_loop(
     mut port: Box<dyn serialport::SerialPort>,
     tx: std::sync::mpsc::Sender<Vec<u8>>,
 ) {
-    use std::io::Read;
-
     let mut buf = [0u8; 1024];
     loop {
         if SHUTDOWN_REQUESTED.load(Ordering::Relaxed) {
@@ -431,12 +447,7 @@ fn serial_reader_loop(
 /// time this loop ends the thread is already finished or about to be; `handle.join()` below just
 /// confirms that and surfaces a panic there instead of silently treating it as a clean
 /// disconnect.
-fn run_serial_console(
-    rx: std::sync::mpsc::Receiver<Vec<u8>>,
-    handle: std::thread::JoinHandle<()>,
-) -> anyhow::Result<()> {
-    use std::io::Write;
-
+fn run_serial_console((rx, handle): SerialReader) -> anyhow::Result<()> {
     let mut stdout = std::io::stdout();
     for chunk in rx {
         stdout.write_all(&chunk)?;
@@ -590,11 +601,9 @@ fn main() -> anyhow::Result<()> {
 
     let jtag_speed_khz = cli.jtag_speed_khz.or(config.jtag_speed_khz);
 
-    let lister = Lister::new();
     // `probe_selector` identifies exactly this probe, so re-opening it later (to switch
     // between raw JTAG access and an ARM debug session) doesn't need to re-prompt.
-    let (mut probe, probe_selector) = select_probe(&lister, cli.probe.as_ref())?;
-    probe.select_protocol(WireProtocol::Jtag)?;
+    let (mut probe, probe_selector) = open_probe_as_jtag(cli.probe.as_ref())?;
     if let Some(jtag_speed_khz) = jtag_speed_khz {
         tracing::info!("setting JTAG speed to {jtag_speed_khz} kHz");
         probe.set_speed(jtag_speed_khz)?;
@@ -661,9 +670,7 @@ fn main() -> anyhow::Result<()> {
         // releases the underlying USB JTAG handle.
         drop(session);
 
-        let lister = Lister::new();
-        let (mut probe, _) = select_probe(&lister, Some(&probe_selector))?;
-        probe.select_protocol(WireProtocol::Jtag)?;
+        let (mut probe, _) = open_probe_as_jtag(Some(&probe_selector))?;
         probe.set_speed(jtag_speed_khz.unwrap_or(DEFAULT_FLASH_JTAG_SPEED_KHZ))?;
         flash_bitstream(&mut probe, data.data(), cli.no_progress)?;
 
@@ -673,9 +680,7 @@ fn main() -> anyhow::Result<()> {
         drop(probe);
 
         tracing::info!("re-attaching probe after bitstream flash");
-        let lister = Lister::new();
-        let (mut probe, _) = select_probe(&lister, Some(&probe_selector))?;
-        probe.select_protocol(WireProtocol::Jtag)?;
+        let (mut probe, _) = open_probe_as_jtag(Some(&probe_selector))?;
         if let Some(jtag_speed_khz) = jtag_speed_khz {
             probe.set_speed(jtag_speed_khz)?;
         }
@@ -721,10 +726,11 @@ fn main() -> anyhow::Result<()> {
     // the target can start UARTing out its boot log the instant `core.run()` returns, and both
     // that and `core1.run()` below are themselves slow JTAG round-trips, so opening the port
     // only after them would reliably lose the target's first output.
-    let opt_serial_rx_and_join_handle = match &config.serial {
-        Some(serial) => Some(open_serial_console(serial)?),
-        None => None,
-    };
+    let serial_reader = config
+        .serial
+        .as_ref()
+        .map(open_serial_console)
+        .transpose()?;
 
     tracing::info!("running core");
     core.run()?;
@@ -737,8 +743,8 @@ fn main() -> anyhow::Result<()> {
     let mut core1 = session.core(1)?;
     core1.run()?;
 
-    if let Some((rx, join_handle)) = opt_serial_rx_and_join_handle {
-        run_serial_console(rx, join_handle)?;
+    if let Some(serial_reader) = serial_reader {
+        run_serial_console(serial_reader)?;
     }
 
     Ok(())
