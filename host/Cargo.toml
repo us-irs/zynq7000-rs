@@ -7,5 +7,5 @@ members = [
   "z7-ps7init-extract",
   "z7-boot-image",
   "z7-run",
-  "z7-run-data",
+  "z7-ps7init",
 ]

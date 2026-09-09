@@ -2095,6 +2095,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "z7-ps7init"
+version = "0.1.0"
+dependencies = [
+ "regex",
+ "ron",
+ "serde",
+]
+
+[[package]]
 name = "z7-ps7init-extract"
 version = "0.1.0"
 dependencies = [
@@ -2107,7 +2116,7 @@ dependencies = [
  "serde_json",
  "simple_logger",
  "syn 3.0.3",
- "z7-run-data",
+ "z7-ps7init",
  "zynq7000",
 ]
 
@@ -2127,15 +2136,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "x7dap",
- "z7-run-data",
-]
-
-[[package]]
-name = "z7-run-data"
-version = "0.1.0"
-dependencies = [
- "ron",
- "serde",
+ "z7-ps7init",
 ]
 
 [[package]]
