@@ -1,6 +1,11 @@
 # Example z7-run config file. Pass it with:
 #   z7-run --config z7_run.toml --regs <path-to-ron> <path-to-elf>
-#
+
+# This works for the Zedboard. Did not test this for non-FTDI probes or other boards.
+fpga_jtag_speed = "15M"
+# Slower regular JTAG speed
+jtag_speed = "2M"
+
 # Everything here is optional. Values left unset fall back to their env var (ZYNQ_BITSTREAM) or
 # built-in default, or the corresponding step (bitstream flashing, serial console) is skipped
 # entirely. The RON ops path is deliberately not configurable here - pass it via --regs or the

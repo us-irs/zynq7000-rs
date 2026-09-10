@@ -7,7 +7,9 @@ use std::{
 };
 
 use anyhow::Context;
+use clap_num::si_number;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use serde::Deserialize;
 use probe_rs::{
     Core, MemoryInterface, Permissions,
     architecture::arm::dp::DpAddress,
@@ -43,11 +45,11 @@ fn progress_bar_style(template: &str) -> ProgressStyle {
         .progress_chars("##-")
 }
 
-/// Default JTAG speed for the bitstream flash step specifically, in kHz, when
-/// `--jtag-speed-khz`/the config isn't set. Every other step in this tool falls back to the
-/// probe's own default speed instead, but that default is very conservative and flashing a
+/// Default JTAG speed for the bitstream flash step specifically, in Hz, when
+/// `--fpga-jtag-speed`/the config isn't set. Every other step in this tool falls back to
+/// the probe's own default speed instead, but that default is very conservative and flashing a
 /// multi-MB bitstream at it is painfully slow - matches openFPGALoader's own default.
-const DEFAULT_FLASH_JTAG_SPEED_KHZ: u32 = 6_000;
+const DEFAULT_FPGA_JTAG_SPEED_HZ: u32 = 6_000_000;
 
 /// Parses a `u64` from either decimal or `0x`/`0X`-prefixed hex, for CLI args like `--check-ddr`
 /// where the natural way to write the value is as a hex address.
@@ -126,10 +128,18 @@ struct Cli {
     #[arg(long)]
     no_progress: bool,
 
-    /// JTAG clock speed in kHz. Overrides the config file's `jtag_speed_khz` when given. If
-    /// neither is set, the probe's own default speed is used.
-    #[arg(long)]
-    jtag_speed_khz: Option<u32>,
+    /// JTAG clock speed in Hz, for everything except the bitstream flash step (see
+    /// `--fpga-jtag-speed` for that). Accepts `k`/`M` suffixes, e.g. `4M` (same as x7dap's
+    /// `--freq`). Overrides the config file's `jtag_speed` when given. If neither is set, the
+    /// probe's own default speed is used.
+    #[arg(long, value_name = "HZ", value_parser = si_number::<u32>)]
+    jtag_speed: Option<u32>,
+
+    /// JTAG clock speed in Hz, for the bitstream flash step only. Accepts `k`/`M` suffixes, e.g.
+    /// `15M`. Overrides the config file's `fpga_jtag_speed` when given. If neither is set, falls
+    /// back to [`DEFAULT_FPGA_JTAG_SPEED_HZ`].
+    #[arg(long, value_name = "HZ", value_parser = si_number::<u32>)]
+    fpga_jtag_speed: Option<u32>,
 
     /// Read the ELF back off the target after flashing and compare it against what was written.
     /// Off by default, since verification takes roughly as long as the write itself.
@@ -149,10 +159,28 @@ struct Config {
     /// step is done and the target is running.
     #[serde(default)]
     serial: Option<SerialConfig>,
-    /// JTAG clock speed in kHz. Overridden by `--jtag-speed-khz` when given; if neither is set,
-    /// the probe's own default speed is used.
-    #[serde(default)]
-    jtag_speed_khz: Option<u32>,
+    /// JTAG clock speed in Hz, for everything except the bitstream flash step. Written as a
+    /// string to allow the same `k`/`M` suffixes as the CLI flags, e.g. `"4M"`. Overridden by
+    /// `--jtag-speed` when given; if neither is set, the probe's own default speed is used.
+    #[serde(default, deserialize_with = "deserialize_si_speed")]
+    jtag_speed: Option<u32>,
+    /// JTAG clock speed in Hz, for the bitstream flash step only. Written as a string, e.g.
+    /// `"15M"`. Overridden by `--fpga-jtag-speed` when given; if neither is set, falls back to
+    /// [`DEFAULT_FPGA_JTAG_SPEED_HZ`].
+    #[serde(default, deserialize_with = "deserialize_si_speed")]
+    fpga_jtag_speed: Option<u32>,
+}
+
+/// Parses a config-file speed value the same way the `--jtag-speed`/`--fpga-jtag-speed` CLI
+/// flags do, so `"15M"` in the TOML file means the same thing as `--fpga-jtag-speed 15M`.
+fn deserialize_si_speed<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match Option::<String>::deserialize(deserializer)? {
+        Some(s) => si_number::<u32>(&s).map(Some).map_err(serde::de::Error::custom),
+        None => Ok(None),
+    }
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
@@ -609,14 +637,28 @@ fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to parse PS7 init ops file {}", regs.display()))?
     };
 
-    let jtag_speed_khz = cli.jtag_speed_khz.or(config.jtag_speed_khz);
+    let jtag_speed = cli.jtag_speed.or(config.jtag_speed);
+    // Kept separate from `jtag_speed` above so that raising the flash speed doesn't also
+    // bump the speed used for DDR/PLL init and the ELF download.
+    let fpga_jtag_speed = cli
+        .fpga_jtag_speed
+        .or(config.fpga_jtag_speed)
+        .unwrap_or(DEFAULT_FPGA_JTAG_SPEED_HZ);
+    tracing::info!("FPGA bitstream flash JTAG speed: {fpga_jtag_speed} Hz");
 
     // `probe_selector` identifies exactly this probe, so re-opening it later (to switch
     // between raw JTAG access and an ARM debug session) doesn't need to re-prompt.
     let (mut probe, probe_selector) = open_probe_as_jtag(cli.probe.as_ref())?;
-    if let Some(jtag_speed_khz) = jtag_speed_khz {
-        tracing::info!("setting JTAG speed to {jtag_speed_khz} kHz");
-        probe.set_speed(jtag_speed_khz)?;
+    match jtag_speed {
+        Some(jtag_speed) => {
+            tracing::info!("general JTAG speed: {jtag_speed} Hz");
+            // Round up rather than truncate, same as x7dap: 0 kHz has special meaning to some
+            // backends (e.g. FTDI treats it as "use the maximum supported speed" instead of a
+            // slow one), so a sub-1000Hz speed truncating to 0 would silently do the opposite of
+            // what was asked.
+            probe.set_speed(jtag_speed.div_ceil(1000))?;
+        }
+        None => tracing::info!("general JTAG speed: probe default"),
     }
 
     tracing::info!("attaching to target board");
@@ -681,7 +723,7 @@ fn main() -> anyhow::Result<()> {
         drop(session);
 
         let (mut probe, _) = open_probe_as_jtag(Some(&probe_selector))?;
-        probe.set_speed(jtag_speed_khz.unwrap_or(DEFAULT_FLASH_JTAG_SPEED_KHZ))?;
+        probe.set_speed(fpga_jtag_speed.div_ceil(1000))?;
         flash_bitstream(&mut probe, data.data(), cli.no_progress)?;
 
         // Shadowing `probe` below does not drop this one early - it would otherwise stay
@@ -691,8 +733,8 @@ fn main() -> anyhow::Result<()> {
 
         tracing::info!("re-attaching probe after bitstream flash");
         let (mut probe, _) = open_probe_as_jtag(Some(&probe_selector))?;
-        if let Some(jtag_speed_khz) = jtag_speed_khz {
-            probe.set_speed(jtag_speed_khz)?;
+        if let Some(jtag_speed) = jtag_speed {
+            probe.set_speed(jtag_speed.div_ceil(1000))?;
         }
         session = probe.attach("X7Z", Permissions::default())?;
     }
