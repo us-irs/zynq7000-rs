@@ -2,7 +2,7 @@
 use core::convert::Infallible;
 
 use arbitrary_int::prelude::*;
-use zynq7000::uart::{InterruptControl, InterruptStatus, MmioRegisters};
+use zynq7000::uart::{FifoTrigger, InterruptControl, InterruptStatus, MmioRegisters};
 
 use super::FIFO_DEPTH;
 
@@ -73,7 +73,7 @@ impl Rx {
     /// Read one byte from the FIFO in a non-blocking manner.
     #[inline]
     pub fn read_fifo(&mut self) -> nb::Result<u8, Infallible> {
-        if self.regs.read_sr().rx_empty() {
+        if self.regs.read_status().rx_empty() {
             return Err(nb::Error::WouldBlock);
         }
         Ok(self.regs.read_fifo().fifo())
@@ -93,17 +93,17 @@ impl Rx {
     /// bit clock, so this value times 4 is the number of UART clock ticks until a timeout occurs.
     #[inline]
     pub fn set_rx_timeout_value(&mut self, rto: u8) {
-        self.regs.write_rx_tout(rto as u32);
+        self.regs.write_rx_timeout(rto as u32);
     }
 
     /// Perform a soft-reset of the RX side of the UART.
     #[inline]
     pub fn soft_reset(&mut self) {
-        self.regs.modify_cr(|mut cr| {
-            cr.set_rx_rst(true);
+        self.regs.modify_control(|mut cr| {
+            cr.set_rx_reset(true);
             cr
         });
-        while self.regs.read_cr().rx_rst() {}
+        while self.regs.read_control().rx_reset() {}
     }
 
     /// Helper function to start the interrupt driven reception of data.
@@ -114,10 +114,22 @@ impl Rx {
     ///
     /// This should be called once at system start-up. After that, you only need to call
     /// [Self::on_interrupt] in the interrupt handler for the UART peripheral.
-    pub fn start_interrupt_driven_reception(&mut self) {
+    ///
+    /// You can also configure a RX timeout by setting the RX timeout value `rto` which has a unit
+    /// of bit periods times 4. Setting a value of 0 disables the timeout feature of the hardware,
+    /// but this is strongly discouraged.
+    pub fn start_interrupt_driven_reception(&mut self, rto: u8) {
         self.soft_reset();
+        self.set_rx_fifo_trigger_level((FIFO_DEPTH / 2) as u8);
+        self.set_rx_timeout_value(rto);
         self.clear_interrupts();
         self.enable_interrupts();
+    }
+
+    /// Sets the RX FIFO trigger level.
+    pub fn set_rx_fifo_trigger_level(&mut self, level: u8) {
+        self.regs
+            .write_rx_fifo_trigger(FifoTrigger::new_with_raw_value(level as u32));
     }
 
     /// Enables all interrupts relevant for the RX side of the UART.
@@ -125,11 +137,11 @@ impl Rx {
     /// It is recommended to also clear all interrupts immediately after enabling them.
     #[inline]
     pub fn enable_interrupts(&mut self) {
-        self.regs.write_ier(
+        self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_over(false)
                 .with_tx_near_full(false)
-                .with_tx_trig(false)
+                .with_tx_trigger(false)
                 .with_rx_dms(false)
                 .with_rx_timeout(true)
                 .with_rx_parity(true)
@@ -139,7 +151,7 @@ impl Rx {
                 .with_tx_empty(false)
                 .with_rx_full(true)
                 .with_rx_empty(false)
-                .with_rx_trg(true)
+                .with_rx_trigger(true)
                 .build(),
         );
     }
@@ -153,9 +165,9 @@ impl Rx {
         reset_rx_timeout: bool,
     ) -> RxInterruptResult {
         let mut result = RxInterruptResult::default();
-        let imr = self.regs.read_imr();
+        let imr = self.regs.read_enabled_interrupts();
         if !imr.rx_full()
-            && !imr.rx_trg()
+            && !imr.rx_trigger()
             && !imr.rx_parity()
             && !imr.rx_framing()
             && !imr.rx_over()
@@ -163,16 +175,10 @@ impl Rx {
         {
             return result;
         }
-        let isr = self.regs.read_isr();
-        if isr.rx_full() {
-            // Read all bytes in the full RX fifo.
-            for byte in buf.iter_mut() {
-                *byte = self.read_fifo_unchecked();
-            }
-            result.read_bytes = FIFO_DEPTH;
-        } else if isr.rx_trg() {
+        let isr = self.regs.read_interrupt_status();
+        if self.regs.read_interrupt_status().rx_trigger() {
             // It is guaranteed that we can read the FIFO level amount of data
-            let fifo_trigger = self.regs.read_rx_fifo_trigger().trig().as_usize();
+            let fifo_trigger = self.regs.read_rx_fifo_trigger().trigger().as_usize();
             (0..fifo_trigger).for_each(|i| {
                 buf[i] = self.read_fifo_unchecked();
             });
@@ -197,8 +203,8 @@ impl Rx {
         }
         // Handle timeout event.
         if isr.rx_timeout() && reset_rx_timeout {
-            self.regs.modify_cr(|mut cr| {
-                cr.set_rstto(true);
+            self.regs.modify_control(|mut cr| {
+                cr.set_restart_timeout(true);
                 cr
             });
         }
@@ -209,7 +215,7 @@ impl Rx {
     /// This clears all RX related interrupts.
     #[inline]
     pub fn clear_interrupts(&mut self) {
-        self.regs.write_isr(
+        self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_over(false)
                 .with_tx_near_full(false)
@@ -223,7 +229,7 @@ impl Rx {
                 .with_tx_empty(false)
                 .with_rx_full(true)
                 .with_rx_empty(true)
-                .with_rx_trg(true)
+                .with_rx_trigger(true)
                 .build(),
         );
     }
@@ -256,7 +262,7 @@ impl embedded_io::Read for Rx {
         }
         let mut read = 0;
         loop {
-            if !self.regs.read_sr().rx_empty() {
+            if !self.regs.read_status().rx_empty() {
                 break;
             }
         }

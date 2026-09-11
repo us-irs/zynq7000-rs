@@ -1,10 +1,16 @@
 //! # GIC (Generic Interrupt Controller) register module.
 pub use crate::mpcore::{GICC_BASE_ADDR, GICD_BASE_ADDR};
-use arbitrary_int::{u2, u3, u5, u10};
+use arbitrary_int::{u2, u3, u4, u5, u10, u11};
 use static_assertions::const_assert_eq;
 
 /// Distributor Control Register
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DistributorControlRegister {
     #[bit(1, rw)]
     enable_non_secure: bool,
@@ -13,7 +19,7 @@ pub struct DistributorControlRegister {
 }
 
 /// Read only bit. This register only returns fixed constants.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct TypeRegister {
     #[bits(11..=15, r)]
     lspi: u5,
@@ -40,18 +46,14 @@ impl TypeRegister {
 
 pub type Typer = TypeRegister;
 
-// TODO: Use bitbybit debug derive if new release was released.
-/// Interrupt processor target register (IPTR).
-#[bitbybit::bitfield(u32)]
-#[derive(Debug, PartialEq, Eq)]
+#[bitbybit::bitfield(u32, debug)]
+#[derive(PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InterruptProcessorTargetRegister {
     /// Target array. Every register holds the information for 4 interrupts.
     #[bits(0..=1, rw, stride = 8)]
     targets: [u2; 4],
 }
-
-#[deprecated(note = "Use DistributorRegisters instead")]
-pub type GicDistributorTyper = DistributorRegisters;
 
 /// GIC Distributor registers.
 #[derive(derive_mmio::Mmio)]
@@ -87,7 +89,7 @@ pub struct DistributorRegisters {
     /// Interrupt Priority Registers
     pub ipr: [u32; 0x18],
     _reserved_11: [u32; 0xE8],
-    /// Interrupt Processor Targes Registers
+    /// Interrupt Processor Targets Registers
     pub iptr_sgi: [InterruptProcessorTargetRegister; 0x4],
     /// These are read-only because they always target their private CPU.
     #[mmio(PureRead)]
@@ -97,6 +99,7 @@ pub struct DistributorRegisters {
     _reserved_12: [u32; 0xE8],
     /// Interrupt Configuration Registers
     /// Interupt sensitivity register for software generated interrupts (SGI)
+    #[mmio(PureRead)]
     pub icfr_0_sgi: u32,
     /// Interupt sensitivity register for private peripheral interrupts (PPI)
     pub icfr_1_ppi: u32,
@@ -110,7 +113,7 @@ pub struct DistributorRegisters {
     pub spi_status_1: u32,
     _reserved_14: [u32; 0x7D],
     /// Software Generated Interrupt Register.
-    pub sgir: u32,
+    pub sgir: SoftwareGeneratedInterruptRegister,
     _reserved_15: [u32; 0x33],
     pub pidr_4: u32,
     pub pidr_5: u32,
@@ -141,7 +144,13 @@ impl DistributorRegisters {
 }
 
 /// CPU interface control register.
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterfaceControl {
     #[bit(4, rw)]
     sbpr: bool,
@@ -156,14 +165,14 @@ pub struct InterfaceControl {
 }
 
 /// Priority Mask Register
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct PriorityRegister {
     #[bits(0..=7, rw)]
     priority: u8,
 }
 
 /// Interrupt acknowledge register.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct InterruptSignalRegister {
     #[bits(10..=12, rw)]
     cpu_id: u3,
@@ -171,8 +180,45 @@ pub struct InterruptSignalRegister {
     ack_int_id: u10,
 }
 
-#[deprecated(note = "Use DistributorRegisters instead")]
-pub type GicCpuInterfaceIar = CpuInterfaceRegisters;
+#[bitbybit::bitenum(u1, exhaustive = true)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, PartialEq, Eq)]
+pub enum SecurityCondition {
+    IfConfiguredAsSecure = 0,
+    IfConfiguredAsNonSecure = 1,
+}
+
+#[bitbybit::bitenum(u2, exhaustive = true)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+#[derive(Debug, PartialEq, Eq)]
+pub enum TargetListFilter {
+    SendToCpusInTargetList = 0b00,
+    SendToAllOtherCpus = 0b01,
+    SendToSelf = 0b10,
+    Reserved = 0b11,
+}
+
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
+pub struct SoftwareGeneratedInterruptRegister {
+    #[bits(24..=25, rw)]
+    target_list_filter: TargetListFilter,
+    #[bits(16..=23, rw)]
+    cpu_target_list: u8,
+    /// SATT field.
+    #[bit(15, rw)]
+    security_condition: SecurityCondition,
+    /// Should be zero.
+    #[bits(4..=14, rw)]
+    sbz: u11,
+    #[bits(0..=3, rw)]
+    interrupt_id: u4,
+}
 
 /// GIC CPU interface registers.
 #[derive(derive_mmio::Mmio)]

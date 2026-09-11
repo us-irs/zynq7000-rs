@@ -266,7 +266,8 @@ pub fn calculate_divisors(
     for divisor_a in 1..=4 {
         for divisor_b in 1..=64 {
             let i2c_clock = cpu_1x_clk / (22 * divisor_a * divisor_b);
-            let deviation = (target_speed.raw() as i32 - i2c_clock.raw() as i32).unsigned_abs();
+            let deviation =
+                (target_speed.to_raw() as i32 - i2c_clock.to_raw() as i32).unsigned_abs();
             if deviation < smallest_deviation {
                 smallest_deviation = deviation;
                 best_div_a = divisor_a;
@@ -352,8 +353,7 @@ impl I2c {
             I2cId::I2c1 => crate::PeriphSelect::I2c1,
         };
         enable_amba_peripheral_clock(periph_sel);
-        //reset(id);
-        regs.write_cr(
+        regs.write_control(
             Control::builder()
                 .with_div_a(u2::new(clk_cfg.div_a()))
                 .with_div_b(u6::new(clk_cfg.div_b()))
@@ -378,7 +378,7 @@ impl I2c {
 
     #[inline]
     pub fn set_hold_bit(&mut self) {
-        self.regs.modify_cr(|mut cr| {
+        self.regs.modify_control(|mut cr| {
             cr.set_hold_bus(true);
             cr
         });
@@ -386,7 +386,7 @@ impl I2c {
 
     #[inline]
     pub fn clear_hold_bit(&mut self) {
-        self.regs.modify_cr(|mut cr| {
+        self.regs.modify_control(|mut cr| {
             cr.set_hold_bus(false);
             cr
         });
@@ -398,7 +398,7 @@ impl I2c {
         data: &[u8],
         generate_stop: bool,
     ) -> Result<(), I2cTxError> {
-        self.regs.modify_cr(|mut cr| {
+        self.regs.modify_control(|mut cr| {
             cr.set_acken(true);
             cr.set_mode(zynq7000::i2c::Mode::Master);
             cr.set_clear_fifo(true);
@@ -412,7 +412,7 @@ impl I2c {
         let mut addr_set = false;
         let mut written = 0;
         // Clear the interrupt status register before using it to monitor the transfer.
-        self.regs.modify_isr(|isr| isr);
+        self.regs.modify_interrupt_status(|isr| isr);
         loop {
             let bytes_to_write = core::cmp::min(
                 FIFO_DEPTH - self.regs.read_transfer_size().size() as usize,
@@ -429,13 +429,13 @@ impl I2c {
                 self.start_transfer(addr);
                 addr_set = true;
             }
-            let mut status = self.regs.read_sr();
+            let mut status = self.regs.read_status();
             // While the hardware is busy sending out data, we poll for errors.
             while status.tx_busy() {
-                let isr = self.regs.read_isr();
+                let isr = self.regs.read_interrupt_status();
                 self.check_and_handle_tx_errors(isr, first_write_cycle, bytes_to_write)?;
                 // Re-read for next check.
-                status = self.regs.read_sr();
+                status = self.regs.read_status();
             }
             first_write_cycle = false;
             // Just need to poll to completion now.
@@ -444,8 +444,8 @@ impl I2c {
             }
         }
         // Poll to completion.
-        while !self.regs.read_isr().complete() {
-            let isr = self.regs.read_isr();
+        while !self.regs.read_interrupt_status().complete() {
+            let isr = self.regs.read_interrupt_status();
             self.check_and_handle_tx_errors(isr, first_write_cycle, data.len())?;
         }
         if generate_stop {
@@ -489,7 +489,7 @@ impl I2c {
     }
 
     pub fn clean_up_after_transfer_or_on_error(&mut self) {
-        self.regs.modify_cr(|mut cr| {
+        self.regs.modify_control(|mut cr| {
             cr.set_acken(false);
             cr.set_clear_fifo(true);
             cr
@@ -497,7 +497,7 @@ impl I2c {
     }
 
     pub fn read_transfer_blocking(&mut self, addr: u8, data: &mut [u8]) -> Result<(), I2cRxError> {
-        self.regs.modify_cr(|mut cr| {
+        self.regs.modify_control(|mut cr| {
             cr.set_acken(true);
             cr.set_mode(zynq7000::i2c::Mode::Master);
             cr.set_clear_fifo(true);
@@ -512,23 +512,23 @@ impl I2c {
             return Err(I2cRxError::ReadDataLenTooLarge);
         }
         // Clear the interrupt status register before using it to monitor the transfer.
-        self.regs.modify_isr(|isr| isr);
+        self.regs.modify_interrupt_status(|isr| isr);
         self.regs
             .write_transfer_size(TransferSize::new_with_raw_value(data.len() as u32));
         self.start_transfer(addr);
         loop {
-            let mut status = self.regs.read_sr();
+            let mut status = self.regs.read_status();
             loop {
-                let isr = self.regs.read_isr();
+                let isr = self.regs.read_interrupt_status();
                 self.check_and_handle_rx_errors(read, isr)?;
                 if status.rx_valid() {
                     break;
                 }
                 // Re-read for next check.
-                status = self.regs.read_sr();
+                status = self.regs.read_status();
             }
             // Data to be read.
-            while self.regs.read_sr().rx_valid() {
+            while self.regs.read_status().rx_valid() {
                 data[read] = self.regs.read_data().data();
                 read += 1;
             }
@@ -544,8 +544,8 @@ impl I2c {
         }
 
         // Poll to completion.
-        while !self.regs.read_isr().complete() {
-            let isr = self.regs.read_isr();
+        while !self.regs.read_interrupt_status().complete() {
+            let isr = self.regs.read_interrupt_status();
             self.check_and_handle_rx_errors(read, isr)?
         }
         self.clear_hold_bit();
@@ -678,8 +678,8 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 0);
         assert_eq!(clk_cfg.div_b(), 55);
         let speed = calculate_i2c_speed(111.MHz(), clk_cfg);
-        assert!(speed.raw() < 100_000);
-        assert!(speed.raw() > 85_000);
+        assert!(speed.to_raw() < 100_000);
+        assert!(speed.to_raw() > 85_000);
     }
 
     #[test]
@@ -688,8 +688,8 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 0);
         assert_eq!(clk_cfg.div_b(), 12);
         let speed = calculate_i2c_speed(111.MHz(), clk_cfg);
-        assert!(speed.raw() < 400_000);
-        assert!(speed.raw() > 360_000);
+        assert!(speed.to_raw() < 400_000);
+        assert!(speed.to_raw() > 360_000);
     }
 
     #[test]
@@ -698,8 +698,8 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 1);
         assert_eq!(clk_cfg.div_b(), 33);
         let speed = calculate_i2c_speed(133.MHz(), clk_cfg);
-        assert!(speed.raw() < 100_000);
-        assert!(speed.raw() > 85_000);
+        assert!(speed.to_raw() < 100_000);
+        assert!(speed.to_raw() > 85_000);
     }
 
     #[test]
@@ -708,7 +708,7 @@ mod tests {
         assert_eq!(clk_cfg.div_a(), 0);
         assert_eq!(clk_cfg.div_b(), 15);
         let speed = calculate_i2c_speed(133.MHz(), clk_cfg);
-        assert!(speed.raw() < 400_000);
-        assert!(speed.raw() > 360_000);
+        assert!(speed.to_raw() < 400_000);
+        assert!(speed.to_raw() > 360_000);
     }
 }

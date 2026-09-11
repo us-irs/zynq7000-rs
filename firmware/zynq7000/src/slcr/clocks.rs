@@ -4,6 +4,7 @@
 use super::{CLOCK_CONTROL_OFFSET, SLCR_BASE_ADDR};
 use arbitrary_int::{u4, u6, u7, u10};
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Bypass {
     NotBypassed = 0b00,
     /// This is the default reset value.
@@ -12,7 +13,13 @@ pub enum Bypass {
     BypassedRegardlessOfPinStrapping = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct PllControl {
     /// Feedback divisor for the PLL.
     ///
@@ -68,7 +75,7 @@ impl PllControl {
     }
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct PllConfig {
     #[bits(12..=21, rw)]
     lock_count: u10,
@@ -80,7 +87,7 @@ pub struct PllConfig {
     loop_resistor: u4,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct PllStatus {
     #[bit(5, r)]
     io_pll_stable: bool,
@@ -96,7 +103,7 @@ pub struct PllStatus {
     arm_pll_lock: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, defmt_fields(feature = "defmt"), forbid_overlaps)]
 pub struct FpgaClockControl {
     // Reset value 0x1
     #[bits(20..=25, rw)]
@@ -128,7 +135,7 @@ pub enum SrcSelArm {
     IoPll = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, default = 0x0)]
 pub struct ArmClockControl {
     #[bit(28, rw)]
     cpu_peri_clk_act: bool,
@@ -178,24 +185,32 @@ pub struct DciClockControl {
     clk_act: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, default = 0x0)]
 pub struct ClockRatioSelectReg {
     /// Reset value: 0x1 (6:2:1 clock)
     #[bit(0, rw)]
-    sel: ClockkRatioSelect,
+    sel: CpuClockRatio,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug)]
-pub enum ClockkRatioSelect {
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum CpuClockRatio {
     /// 4:2:1 clock ratio, which is an abbreviation for 4:2:2:1.
+    ///
+    /// The 4x clock is calculated by dividing the reference clock
+    /// by the divisor, the rest by dividing by 2, 2 and 4 respectively.
     FourToTwoToOne = 0b0,
     /// 6:2:1 clock ratio, which is an abbreviation for 6:3:2:1.
+    ///
+    /// The 6x clock is calculated by dividing the reference clock
+    /// by the divisor, the rest by dividing by 2, 3 and 6 respectively.
     SixToTwoToOne = 0b1,
 }
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SrcSelIo {
     IoPll = 0b00,
     IoPllAlt = 0b01,
@@ -222,7 +237,13 @@ impl PartialEq for SrcSelIo {
     }
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct GigEthClockControl {
     #[bits(20..=25, rw)]
     divisor_1: u6,
@@ -237,13 +258,20 @@ pub struct GigEthClockControl {
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SrcSelGigEthRclk {
     Mio = 0,
     Emio = 1,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct GigEthRclkControl {
     #[bit(4, rw)]
     srcsel: SrcSelGigEthRclk,
@@ -252,8 +280,13 @@ pub struct GigEthRclkControl {
     clk_enable: bool,
 }
 
-#[bitbybit::bitfield(u32)]
-#[derive(Debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct CanClockControl {
     #[bits(20..=25, rw)]
     divisor_1: u6,
@@ -267,7 +300,13 @@ pub struct CanClockControl {
     clk_0_act: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct SingleCommonPeriphIoClockControl {
     #[bits(8..=13, rw)]
     divisor: u6,
@@ -277,7 +316,13 @@ pub struct SingleCommonPeriphIoClockControl {
     clk_act: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct DualCommonPeriphIoClockControl {
     #[bits(8..=13, rw)]
     divisor: u6,
@@ -290,7 +335,8 @@ pub struct DualCommonPeriphIoClockControl {
 }
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SrcSelTpiu {
     IoPll = 0b000,
     IoPllAlt = 0b001,
@@ -302,7 +348,13 @@ pub enum SrcSelTpiu {
     EmioTraceClkAlt2 = 0b111,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct TracePortClockControl {
     #[bits(8..=13, rw)]
     divisor: u6,
@@ -317,7 +369,13 @@ pub struct TracePortClockControl {
 /// AMBA peripheral clock control.
 ///
 /// These clocks must be enabled if you want to read from the peripheral register space.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct AperClockControl {
     #[bit(24, rw)]
     smc_1x_clk_act: bool,
@@ -399,7 +457,7 @@ pub struct ClockControlRegisters {
     #[mmio(Inner)]
     fpga_3_clk_ctrl: FpgaClockControlRegisters,
     _gap1: [u32; 5],
-    clk_621_true: ClockRatioSelectReg,
+    clk_ratio_select: ClockRatioSelectReg,
 }
 
 impl ClockControlRegisters {

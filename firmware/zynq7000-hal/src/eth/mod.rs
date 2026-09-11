@@ -1,4 +1,6 @@
 //! # Ethernet module
+use core::{cell::UnsafeCell, mem::MaybeUninit};
+
 use arbitrary_int::{u2, u3};
 pub use zynq7000::eth::MdcClockDivisor;
 use zynq7000::eth::{
@@ -18,9 +20,59 @@ pub mod tx_descr;
 pub const MTU: usize = 1536;
 pub const MAX_MDC_SPEED: Hertz = Hertz::from_raw(2_500_000);
 
+/// Ethernet buffer type used for singleton checks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BufferId {
+    /// RX buffers for ETH0.
+    Eth0Rx,
+    /// TX buffers for ETH0.
+    Eth0Tx,
+    /// RX buffers for ETH1.
+    Eth1Rx,
+    /// TX buffers for ETH1.
+    Eth1Tx,
+}
+
 #[repr(C, align(32))]
 #[derive(Debug, Clone, Copy)]
 pub struct AlignedBuffer(pub [u8; MTU]);
+
+/// This is a low level wrapper to simplify declaring a global descriptor list.
+///
+/// It allows placing the descriptor structure statically in memory which might not
+/// be zero-initialized.
+#[repr(transparent)]
+pub struct UninitBufferList<const SLOTS: usize>(
+    pub UnsafeCell<MaybeUninit<[AlignedBuffer; SLOTS]>>,
+);
+
+// This allows static placement. Safety is ensure by singleton API.
+unsafe impl<const SLOTS: usize> Sync for UninitBufferList<SLOTS> {}
+
+impl<const SLOTS: usize> UninitBufferList<SLOTS> {
+    #[inline]
+    pub const fn new() -> Self {
+        Self(UnsafeCell::new(MaybeUninit::uninit()))
+    }
+
+    /// Initializes the buffers and returns a mutable reference to them.
+    ///
+    /// # Safety
+    ///
+    /// This allows creating aliasing mutable references and circumventing ownership and safety
+    /// guarantees of the HAL. You MUST call this function only once per buffer list instance.
+    pub unsafe fn take(&self) -> &'static mut [AlignedBuffer; SLOTS] {
+        let descr = unsafe { &mut *self.0.get() };
+        descr.write([const { AlignedBuffer([0; MTU]) }; SLOTS]);
+        unsafe { descr.assume_init_mut() }
+    }
+}
+
+impl<const SLOTS: usize> Default for UninitBufferList<SLOTS> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 use crate::gpio::mio::{
@@ -179,7 +231,10 @@ impl Eth1RxData3Pin for Pin<Mio38> {}
 /// Calculate the CPU 1x clock divisor required to achieve a clock speed which is below
 /// 2.5 MHz, as specified by the 802.3 standard.
 pub fn calculate_mdc_clk_div(arm_clks: &ArmClocks) -> Option<MdcClockDivisor> {
-    let div = arm_clks.cpu_1x_clk().raw().div_ceil(MAX_MDC_SPEED.raw());
+    let div = arm_clks
+        .cpu_1x_clk()
+        .to_raw()
+        .div_ceil(MAX_MDC_SPEED.to_raw());
     match div {
         0..8 => Some(MdcClockDivisor::Div8),
         8..16 => Some(MdcClockDivisor::Div16),
@@ -490,6 +545,10 @@ impl Ethernet {
         ll.configure_clock(config.clk_config_1000_mbps, true);
         let mut mdio = mdio::Mdio::new(&ll, true);
         mdio.configure_clock_div(config.mdc_clk_div);
+        ll.regs.modify_net_ctrl(|mut val| {
+            val.set_management_port_enable(true);
+            val
+        });
         Ethernet {
             ll,
             mdio,
@@ -547,10 +606,14 @@ impl Ethernet {
         // to disable the other addresses here.
         ll.regs.write_addr1_low(macaddr_lsbs);
         ll.regs.write_addr1_high(macaddr_msbs);
+        // Set hash reg to all-1 and enable multicast hash filtering to receive all multicast.
+        ll.regs.write_hash_low(0xffff_ffff);
+        ll.regs.write_hash_high(0xffff_ffff);
         ll.regs.modify_net_cfg(|mut val| {
             val.set_rx_enable_1536(true);
             val.set_rx_checksum_enable(true);
             val.set_no_broadcast(false);
+            val.set_multicast_hash_enable(true);
             // val.set_pause_enable(true);
             val
         });

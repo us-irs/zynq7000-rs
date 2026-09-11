@@ -20,14 +20,15 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    configure_level_shifter, generic_interrupt_handler,
+    gic::Configurator,
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
-    spi::{self, SpiAsync, SpiId, SpiWithHwCs, SpiWithHwCsAsync, on_interrupt},
+    log::asynch::UartLoggerRunner,
+    spi::{self, SpiAsync, SpiWithHwCs, SpiWithHwCsAsync},
     time::Hertz,
-    uart::{self, TxAsync, on_interrupt_tx},
+    uart::{self, TxAsync},
 };
 
 use zynq7000::{Peripherals, slcr::LevelShifterConfig, spi::DelayControl};
@@ -56,15 +57,20 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let mut clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    // SPI reference clock must be larger than the CPU 1x clock.
-    let spi_ref_clk_div = spi::calculate_largest_allowed_spi_ref_clk_divisor(&clocks)
-        .unwrap()
-        .value()
-        - 1;
-    spi::configure_spi_ref_clk(&mut clocks, arbitrary_int::u6::new(spi_ref_clk_div as u8));
+    let target_spi_ref_clock = clocks.arm_clocks().cpu_1x_clk() * 2;
+    // SPI reference clock must be larger than the CPU 1x clock. Also, taking the largest value
+    // actually seems to be problematic. We take 200 MHz here, which is significantly larger than
+    // the CPU 1x clock which is around 110 MHz.
+    spi::configure_spi_ref_clock(&mut clocks, target_spi_ref_clock);
+
+    assert!(
+        clocks.io_clocks().spi_clk().to_raw()
+            > (clocks.arm_clocks().cpu_1x_clk().to_raw() as f32 * 1.2) as u32,
+        "SPI reference clock must be larger than CPU 1x clock"
+    );
 
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -76,7 +82,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -90,30 +96,33 @@ async fn main(spawner: Spawner) -> ! {
     .unwrap();
     uart.write_all(b"-- Zynq 7000 Zedboard SPI L3GD20H example --\n\r")
         .unwrap();
-    zynq7000_hal::log::rb::init(log::LevelFilter::Trace);
+
+    let (tx, _) = uart.split();
+    // Safety: We are not forgetting any futures.
+    let tx_async = unsafe { TxAsync::new(tx, true) };
+    let log_runner =
+        zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, tx_async).unwrap();
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     if DEBUG_SPI_CLK_CONFIG {
         info!(
-            "SPI Clock Information: CPU 1x: {:?}, IO Ref Clk: {:?}, SPI Ref Clk: {:?}, DIV: {:?}",
+            "SPI Clock Information: CPU 1x: {:?}, IO Ref Clk: {:?}, SPI Ref Clk: {:?}",
             clocks.arm_clocks().cpu_1x_clk(),
             clocks.io_clocks().ref_clk(),
             clocks.io_clocks().spi_clk(),
-            spi_ref_clk_div
         );
     }
 
     let mut spi = spi::Spi::new_one_hw_cs(
         dp.spi_1,
-        clocks.io_clocks(),
         spi::Config::new(
             // 10 MHz maximum rating of the sensor.
             zynq7000::spi::BaudDivSel::By64,
-            //l3gd20::MODE,
+            // l3gd20::MODE,
             embedded_hal::spi::MODE_3,
-            spi::SlaveSelectConfig::AutoWithAutoStart,
+            spi::SlaveSelectConfig::AutoCsAutoStart,
         ),
         (
             gpio_pins.mio.mio12,
@@ -123,10 +132,13 @@ async fn main(spawner: Spawner) -> ! {
         gpio_pins.mio.mio13,
     )
     .unwrap();
+    let sclk = Hertz::from_raw(
+        clocks.io_clocks().spi_clk().to_raw() / zynq7000::spi::BaudDivSel::By64.div_value() as u32,
+    );
     let mod_id = spi.regs().read_mod_id();
     assert_eq!(mod_id, spi::MODULE_ID);
-    assert!(spi.sclk() <= Hertz::from_raw(10_000_000));
-    let min_delay = (spi.sclk().raw() * 5) / 1_000_000_000;
+    assert!(sclk <= Hertz::from_raw(10_000_000));
+    let min_delay = (sclk.to_raw() * 5) / 1_000_000_000;
     spi.inner().configure_delays(
         DelayControl::builder()
             .with_inter_word_cs_deassert(0)
@@ -155,25 +167,17 @@ async fn main(spawner: Spawner) -> ! {
         }
     }
 
-    spawner.spawn(logger_task(uart).unwrap());
+    spawner.spawn(logger_task(log_runner).unwrap());
     if BLOCKING {
-        blocking_application(mio_led, emio_leds, spi).await;
+        blocking_application(mio_led, emio_leds, spi).await
     } else {
-        non_blocking_application(mio_led, emio_leds, spi).await;
+        non_blocking_application(mio_led, emio_leds, spi).await
     }
 }
 
 #[embassy_executor::task]
-pub async fn logger_task(uart: uart::Uart) {
-    let (tx, _) = uart.split();
-    let mut tx_async = TxAsync::new(tx);
-    let frame_queue = zynq7000_hal::log::rb::get_frame_queue();
-    let mut log_buf: [u8; 2048] = [0; 2048];
-    loop {
-        let next_frame_len = frame_queue.receive().await;
-        zynq7000_hal::log::rb::read_next_frame(next_frame_len, &mut log_buf);
-        tx_async.write(&log_buf[0..next_frame_len]).await;
-    }
+pub async fn logger_task(mut log_runner: UartLoggerRunner) -> ! {
+    log_runner.run().await
 }
 
 pub async fn blocking_application(
@@ -211,7 +215,8 @@ pub async fn non_blocking_application(
     spi: spi::Spi,
 ) -> ! {
     let mut delay = Delay;
-    let spi_async = SpiAsync::new(spi);
+    // Safety: We do not forget any futures.
+    let spi_async = unsafe { SpiAsync::new(spi) };
     let spi_dev = SpiWithHwCsAsync::new(spi_async, spi::ChipSelect::Slave0, delay.clone());
     let mut l3gd20 = l3gd20::asynchronous::spi::L3gd20::new(spi_dev)
         .await
@@ -237,30 +242,13 @@ pub async fn non_blocking_application(
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => {
-            if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Spi1 {
-                on_interrupt(SpiId::Spi1);
-            } else if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Uart1 {
-                on_interrupt_tx(zynq7000_hal::uart::UartId::Uart1);
-            }
-        }
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[unsafe(no_mangle)]

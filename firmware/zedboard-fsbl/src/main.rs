@@ -16,7 +16,7 @@ use embedded_io::Write as _;
 use log::{error, info};
 use zedboard_bsp::qspi_spansion::{self, QspiSpansionS25Fl256SLinearMode};
 use zynq7000_boot_image::DestinationDevice;
-use zynq7000_hal::priv_tim;
+use zynq7000_hal::clocks::ArmClocks;
 use zynq7000_hal::{
     BootMode,
     clocks::{
@@ -24,12 +24,13 @@ use zynq7000_hal::{
         pll::{PllConfig, configure_arm_pll, configure_io_pll},
     },
     ddr::{DdrClockSetupConfig, configure_ddr_for_ddr3, memtest},
-    devcfg, gic, gpio, l2_cache,
+    gic, gpio, l2_cache,
     prelude::*,
     qspi::{self, QSPI_START_ADDRESS},
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
 };
+use zynq7000_hal::{generic_interrupt_handler, priv_tim};
 
 // PS clock input frequency.
 const PS_CLK: Hertz = Hertz::from_raw(33_333_333);
@@ -43,7 +44,7 @@ const IO_CLK: Hertz = Hertz::from_raw(1_000_000_000);
 const DDR_FREQUENCY: Hertz = Hertz::from_raw(533_333_333);
 
 /// 1067 MHz.
-const DDR_CLK: Hertz = Hertz::from_raw(2 * DDR_FREQUENCY.raw());
+const DDR_CLK: Hertz = Hertz::from_raw(2 * DDR_FREQUENCY.to_raw());
 
 const PERFORM_DDR_MEMTEST: bool = false;
 
@@ -75,6 +76,20 @@ fn main() -> ! {
     );
 
     let mut periphs = zynq7000::Peripherals::take().unwrap();
+    l2_cache::disable();
+
+    // Initialize the ARM clock. Safety: We only run this once.
+    unsafe {
+        ArmClocks::new_with_cpu_clock_init(
+            ARM_CLK,
+            zynq7000_hal::clocks::CpuClockRatio::SixToTwoToOne,
+            u6::new(2),
+        );
+        // This is done by the AMD FSBL.
+        zynq7000_hal::Slcr::with(|val| {
+            val.gpiob().modify_ctrl(|val| val.with_vref_en(true));
+        });
+    }
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLK).unwrap();
@@ -94,17 +109,10 @@ fn main() -> ! {
     logger_uart
         .write_all(b"-- Zedboard Rust FSBL --\n\r")
         .unwrap();
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            logger_uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(logger_uart, log::LevelFilter::Trace, true);
 
     // Set up the global interrupt controller.
-    let mut gic = gic::GicConfigurator::new_with_init(periphs.gicc, periphs.gicd);
+    let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -175,6 +183,7 @@ fn main() -> ! {
             spansion_qspi.into_linear_addressed(qspi_spansion::QSPI_DEV_COMBINATION_REV_F.into());
         qspi_boot(spansion_lqspi, priv_tim);
     }
+
     loop {
         aarch32_cpu::asm::nop();
     }
@@ -264,7 +273,7 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
                     };
                     // The DMA will read from the linear mapped QSPI directly, so it
                     // has to be configured for reads using the guard!
-                    devcfg::configure_bitstream_non_secure(true, boot_bin_slice)
+                    zynq7000_hal::pl::configure_bitstream_non_secure(true, boot_bin_slice)
                         .expect("unexpected unaligned address");
                     log::info!("loaded bitstream successfully");
                 }
@@ -312,6 +321,10 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
         }
     }
 
+    // The PL is in reset state after power-up. This method needs to be called in the first-stage
+    // bootloader to put it out of reset.
+    zynq7000_hal::pl::deassert_reset();
+
     match opt_jump_addr {
         Some(jump_addr) => {
             log::info!("jumping to address {}", jump_addr);
@@ -321,6 +334,7 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
             zynq7000_hal::cache::clean_and_invalidate_data_cache();
             aarch32_cpu::register::TlbIAll::write();
             aarch32_cpu::register::BpIAll::write();
+            l2_cache::disable();
             aarch32_cpu::asm::dsb();
             aarch32_cpu::asm::isb();
 
@@ -328,6 +342,15 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
             jump_func();
         }
         None => panic!("did not find application elf to boot inside boot binary!"),
+    }
+}
+
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        log::warn!("Generic interrupt handler failed handling {:?}", e);
     }
 }
 

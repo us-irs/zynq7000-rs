@@ -2,7 +2,13 @@
 
 pub const CPU_PRIV_TIM_BASE_ADDR: usize = super::mpcore::MPCORE_BASE_ADDR + 0x0000_0600;
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct Control {
     #[bits(8..=15, rw)]
     prescaler: u8,
@@ -14,7 +20,13 @@ pub struct Control {
     enable: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterruptStatus {
     /// Cleared by writing a one.
     #[bit(0, rw)]

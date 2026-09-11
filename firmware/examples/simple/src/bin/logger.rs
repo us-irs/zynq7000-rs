@@ -10,7 +10,7 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    gic::{self, Configurator, Interrupt},
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -32,7 +32,7 @@ fn main() -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -60,13 +60,7 @@ fn main() -> ! {
     uart.write_all(b"-- Zynq 7000 Logging example --\n\r")
         .unwrap();
     // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {boot_mode:?}");
@@ -85,13 +79,12 @@ fn main() -> ! {
 
 #[zynq7000_rt::irq]
 fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
+    let mut gic_helper = gic::InterruptGuard::new();
+    let irq_info = gic_helper.interrupt_info();
     match irq_info.interrupt() {
         Interrupt::Sgi(_) => (),
         Interrupt::Ppi(ppi_interrupt) => {
             if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                // TODO: Call embassy on interrupt handler here soon.
                 MS_TICKS.fetch_add(1, core::sync::atomic::Ordering::Relaxed);
             }
         }

@@ -8,12 +8,12 @@ use super::UartId;
 /// Transmitter (TX) driver.
 pub struct Tx {
     pub(crate) regs: MmioRegisters<'static>,
-    pub(crate) idx: UartId,
+    pub(crate) id: UartId,
 }
 
 impl core::fmt::Debug for Tx {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("Tx").field("idx", &self.idx).finish()
+        f.debug_struct("Tx").field("idx", &self.id).finish()
     }
 }
 
@@ -24,17 +24,17 @@ impl Tx {
     ///
     /// Circumvents safety guarantees provided by the compiler.
     #[inline]
-    pub const unsafe fn steal(idx: UartId) -> Self {
+    pub const unsafe fn steal(id: UartId) -> Self {
         Tx {
-            regs: unsafe { idx.regs() },
-            idx,
+            regs: unsafe { id.regs() },
+            id,
         }
     }
 
-    /// UART index.
+    /// UART ID.
     #[inline]
-    pub const fn uart_idx(&self) -> UartId {
-        self.idx
+    pub const fn uart_id(&self) -> UartId {
+        self.id
     }
 
     /// Direct access to the UART MMIO registers.
@@ -48,7 +48,7 @@ impl Tx {
     /// [nb] API which returns [nb::Error::WouldBlock] if the FIFO is full.
     #[inline]
     pub fn write_fifo(&mut self, word: u8) -> nb::Result<(), Infallible> {
-        if self.regs.read_sr().tx_full() {
+        if self.regs.read_status().tx_full() {
             return Err(nb::Error::WouldBlock);
         }
         self.write_fifo_unchecked(word);
@@ -61,9 +61,9 @@ impl Tx {
         if with_reset {
             self.soft_reset();
         }
-        self.regs.modify_cr(|mut val| {
-            val.set_tx_en(true);
-            val.set_tx_dis(false);
+        self.regs.modify_control(|mut val| {
+            val.set_tx_enable(true);
+            val.set_tx_disable(false);
             val
         });
     }
@@ -71,9 +71,9 @@ impl Tx {
     /// Disables TX side of the UART.
     #[inline]
     pub fn disable(&mut self) {
-        self.regs.modify_cr(|mut val| {
-            val.set_tx_en(false);
-            val.set_tx_dis(true);
+        self.regs.modify_control(|mut val| {
+            val.set_tx_enable(false);
+            val.set_tx_disable(true);
             val
         });
     }
@@ -81,12 +81,12 @@ impl Tx {
     /// Performs a soft-reset of the TX side of the UART.
     #[inline]
     pub fn soft_reset(&mut self) {
-        self.regs.modify_cr(|mut val| {
-            val.set_tx_rst(true);
+        self.regs.modify_control(|mut val| {
+            val.set_tx_reset(true);
             val
         });
         loop {
-            if !self.regs.read_cr().tx_rst() {
+            if !self.regs.read_control().tx_reset() {
                 break;
             }
         }
@@ -94,7 +94,7 @@ impl Tx {
 
     /// Flushes the TX FIFO by blocking until it is empty.
     pub fn flush(&mut self) {
-        while !self.regs.read_sr().tx_empty() {}
+        while !self.regs.read_status().tx_empty() {}
     }
 
     /// Write a byte to the TX FIFO without checking if there is space available.
@@ -105,12 +105,12 @@ impl Tx {
 
     /// Enables interrupts relevant for the TX side of the UART except the TX trigger interrupt.
     #[inline]
-    pub fn enable_interrupts(&mut self) {
-        self.regs.write_ier(
+    pub fn enable_interrupts(&mut self, tx_trig: bool) {
+        self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_over(true)
-                .with_tx_near_full(true)
-                .with_tx_trig(false)
+                .with_tx_near_full(false)
+                .with_tx_trigger(tx_trig)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -120,7 +120,7 @@ impl Tx {
                 .with_tx_empty(true)
                 .with_rx_full(false)
                 .with_rx_empty(false)
-                .with_rx_trg(false)
+                .with_rx_trigger(false)
                 .build(),
         );
     }
@@ -128,11 +128,11 @@ impl Tx {
     /// Disable interrupts relevant for the TX side of the UART except the TX trigger interrupt.
     #[inline]
     pub fn disable_interrupts(&mut self) {
-        self.regs.write_idr(
+        self.regs.write_interrupt_disable(
             InterruptControl::builder()
                 .with_tx_over(true)
-                .with_tx_near_full(true)
-                .with_tx_trig(false)
+                .with_tx_near_full(false)
+                .with_tx_trigger(true)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -142,7 +142,7 @@ impl Tx {
                 .with_tx_empty(true)
                 .with_rx_full(false)
                 .with_rx_empty(false)
-                .with_rx_trg(false)
+                .with_rx_trigger(false)
                 .build(),
         );
     }
@@ -150,11 +150,11 @@ impl Tx {
     /// Clears interrupts relevant for the TX side of the UART except the TX trigger interrupt.
     #[inline]
     pub fn clear_interrupts(&mut self) {
-        self.regs.write_isr(
+        self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_over(true)
                 .with_tx_near_full(true)
-                .with_tx_trig(false)
+                .with_tx_trig(true)
                 .with_rx_dms(false)
                 .with_rx_timeout(false)
                 .with_rx_parity(false)
@@ -164,7 +164,7 @@ impl Tx {
                 .with_tx_empty(true)
                 .with_rx_full(false)
                 .with_rx_empty(false)
-                .with_rx_trg(false)
+                .with_rx_trigger(false)
                 .build(),
         );
     }
@@ -181,7 +181,7 @@ impl embedded_hal_nb::serial::Write for Tx {
     }
 
     fn flush(&mut self) -> nb::Result<(), Self::Error> {
-        if self.regs.read_sr().tx_empty() {
+        if self.regs.read_status().tx_empty() {
             return Ok(());
         }
         Err(nb::Error::WouldBlock)
@@ -199,7 +199,7 @@ impl embedded_io::Write for Tx {
         }
         let mut written = 0;
         loop {
-            if !self.regs.read_sr().tx_full() {
+            if !self.regs.read_status().tx_full() {
                 break;
             }
         }

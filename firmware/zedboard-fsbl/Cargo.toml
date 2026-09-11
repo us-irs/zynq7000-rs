@@ -9,7 +9,7 @@ repository = "https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs"
 license = "MIT OR Apache-2.0"
 
 [dependencies]
-aarch32-cpu = { version = "0.2", features = ["critical-section-single-core"] }
+aarch32-cpu = { version = "0.3", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../zynq7000-rt" }
 zynq7000 = { path = "../zynq7000" }
 zynq7000-hal = { path = "../zynq7000-hal" }
@@ -17,7 +17,7 @@ zynq7000-boot-image = { path = "../../host/zynq7000-boot-image" }
 zedboard-bsp = { path = "../zedboard-bsp" }
 embedded-io = "0.7"
 embedded-hal = "1"
-fugit = "0.3"
+fugit = "0.4"
 log = "0.4"
 arbitrary-int = "2"
 

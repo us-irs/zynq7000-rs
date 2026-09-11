@@ -4,8 +4,7 @@ use arbitrary_int::{u2, u5};
 pub const GEM_0_BASE_ADDR: usize = 0xE000_B000;
 pub const GEM_1_BASE_ADDR: usize = 0xE000_C000;
 
-#[bitbybit::bitfield(u32)]
-#[derive(Debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
 pub struct NetworkControl {
     #[bit(18, w)]
     flush_next_rx_dpram_pkt: bool,
@@ -41,6 +40,7 @@ pub struct NetworkControl {
 
 /// The speed mode selects between 10 Mbps and 100 Mbps if the Gigabit enable bit is cleared.
 #[bitbybit::bitenum(u1, exhaustive = true)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[derive(Debug, PartialEq, Eq)]
 pub enum SpeedMode {
     Low10Mbps = 0,
@@ -49,6 +49,7 @@ pub enum SpeedMode {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PcsSelect {
     GmiiMii = 0,
     Tbi = 1,
@@ -56,6 +57,7 @@ pub enum PcsSelect {
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum MdcClockDivisor {
     Div8 = 0,
     Div16 = 1,
@@ -82,7 +84,13 @@ impl MdcClockDivisor {
     }
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct NetworkConfig {
     #[bit(30, rw)]
     ignore_ipg_rx_error: bool,
@@ -140,7 +148,7 @@ pub struct NetworkConfig {
 }
 
 /// PHY management status information.
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_fields(feature = "defmt"))]
 pub struct NetworkStatus {
     #[bit(6, r)]
     pfc_pri_pause_neg: bool,
@@ -159,6 +167,7 @@ pub struct NetworkStatus {
 }
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BurstLength {
     Single,
     #[default]
@@ -180,12 +189,14 @@ impl BurstLength {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum AhbEndianess {
     Little = 0,
     Big = 1,
 }
 
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct DmaRxBufSize(u8);
 
 impl DmaRxBufSize {
@@ -213,7 +224,13 @@ impl DmaRxBufSize {
     }
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct DmaConfig {
     #[bit(24, rw)]
     discard_when_ahb_full: bool,
@@ -241,7 +258,7 @@ pub struct DmaConfig {
     burst_length: u5,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct TxStatus {
     #[bit(8, rw)]
     hresp_not_ok: bool,
@@ -272,7 +289,7 @@ impl TxStatus {
     }
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct RxStatus {
     #[bit(3, rw)]
     hresp_not_ok: bool,
@@ -290,7 +307,13 @@ impl RxStatus {
     }
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct InterruptStatus {
     #[bit(26, rw)]
     tsu_sec_incr: bool,
@@ -381,13 +404,20 @@ impl InterruptControl {
 }
 
 #[bitbybit::bitenum(u2, exhaustive = false)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum PhyOperation {
     Read = 0b10,
     Write = 0b01,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct PhyMaintenance {
     /// Must be 1 for Clause 22 operations.
     #[bit(30, rw)]
@@ -404,13 +434,25 @@ pub struct PhyMaintenance {
     data: u16,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct PauseQuantum {
     #[bits(0..=15, rw)]
     value: u16,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct MatchRegister {
     #[bit(31, rw)]
     copy_enable: bool,

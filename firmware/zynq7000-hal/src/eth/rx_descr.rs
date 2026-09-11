@@ -1,13 +1,11 @@
 //! RX buffer descriptor module.
-use core::{cell::UnsafeCell, mem::MaybeUninit, sync::atomic::AtomicBool};
+use core::{cell::UnsafeCell, mem::MaybeUninit};
 
 use crate::{cache::clean_and_invalidate_data_cache_range, eth::AlignedBuffer};
 
 pub use super::shared::Ownership;
 use arbitrary_int::{prelude::*, u2, u3, u13, u30};
 use vcell::VolatileCell;
-
-static RX_DESCR_TAKEN: AtomicBool = AtomicBool::new(false);
 
 /// RX buffer descriptor.
 ///
@@ -137,13 +135,15 @@ impl<const SLOTS: usize> DescriptorList<SLOTS> {
     }
 
     /// Initializes the RX descriptors and returns a mutable reference to them.
-    pub fn take(&self) -> Option<&'static mut [Descriptor; SLOTS]> {
-        if RX_DESCR_TAKEN.swap(true, core::sync::atomic::Ordering::SeqCst) {
-            return None; // Already taken, return None
-        }
+    ///
+    /// # Safety
+    ///
+    /// This allows creating aliasing mutable references and circumventing ownership and safety
+    /// guarantees of the HAL. You MUST call this function only once per descriptor instance.
+    pub unsafe fn take(&self) -> &'static mut [Descriptor; SLOTS] {
         let descr = unsafe { &mut *self.0.get() };
         descr.write([const { Descriptor::new() }; SLOTS]);
-        Some(unsafe { descr.assume_init_mut() })
+        unsafe { descr.assume_init_mut() }
     }
 }
 

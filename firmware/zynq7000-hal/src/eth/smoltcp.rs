@@ -1,11 +1,10 @@
 //! smoltcp driver for the Zynq 7000 ethernet peripheral.
 use arbitrary_int::u14;
 
+#[cfg(feature = "eth-cache-maintenance")]
+use crate::cache::{self, CACHE_LINE_SIZE};
 pub use crate::eth::{EthernetId, InterruptResult};
-use crate::{
-    cache::{CACHE_LINE_SIZE, clean_and_invalidate_data_cache_range, invalidate_data_cache_range},
-    eth::{rx_descr, tx_descr},
-};
+use crate::eth::{rx_descr, tx_descr};
 
 /// This interrupt handler should be called when a Gigabit Ethernet interrupt occurs.
 pub fn on_interrupt(eth_id: EthernetId) -> InterruptResult {
@@ -46,18 +45,19 @@ impl SmoltcpRxToken<'_> {
         // The DMA will write the received frame into DDR. The L1 and L2 cache lines for the
         // particular reception address need to be invalidated, to avoid fetching stale data from
         // the cache instead of the DDR.
+        #[cfg(feature = "eth-cache-maintenance")]
         let clean_invalidate_len = (self.rx_size + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
-        invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
+        #[cfg(feature = "eth-cache-maintenance")]
+        cache::invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
             .expect("RX buffer or buffer size not aligned to cache line size");
+
+        #[cfg(feature = "eth-packet-trace")]
         log::debug!("eth rx {} bytes", self.rx_size);
+        #[cfg(feature = "eth-packet-trace")]
         log::trace!("rx data: {:x?}", &self.rx_buf.0[0..self.rx_size]);
         let result = f(&mut self.rx_buf.0[0..self.rx_size]);
         self.descr_list.clear_slot(self.slot_index);
-        // Okay, this is weird, but we have to do this. I encountered this bug where ICMP replies
-        // were duplicated after the descriptor rings wrapped. My theory is that there is
-        // some data in the cache after the embassy reception function which needs to be cleaned.
-        clean_and_invalidate_data_cache_range(self.rx_buf.0.as_ptr() as u32, clean_invalidate_len)
-            .expect("RX buffer or buffer size not aligned to cache line size");
+
         result
     }
 }
@@ -97,12 +97,18 @@ impl SmoltcpTxToken<'_> {
         let buffer = self.tx_bufs.get_mut(tx_idx).unwrap();
         let addr = buffer.0.as_ptr() as u32;
         let result = f(&mut buffer.0[0..len]);
-        let clean_invalidate_len = (len + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
+
         // DMA accesses the DDR memory directly, so we need to flush everything that might
         // still be in the L1 or L2 cache to the DDR.
-        clean_and_invalidate_data_cache_range(buffer.0.as_ptr() as u32, clean_invalidate_len)
+        #[cfg(feature = "eth-cache-maintenance")]
+        let clean_invalidate_len = (len + CACHE_LINE_SIZE - 1) & !(CACHE_LINE_SIZE - 1);
+        #[cfg(feature = "eth-cache-maintenance")]
+        cache::clean_data_cache_range(buffer.0.as_ptr() as u32, clean_invalidate_len)
             .expect("TX buffer or buffer size not aligned to cache line size");
+
+        #[cfg(feature = "eth-packet-trace")]
         log::debug!("eth tx {len} bytes");
+        #[cfg(feature = "eth-packet-trace")]
         log::trace!("tx data: {:x?}", &buffer.0[0..len]);
         self.descr_list
             .prepare_transfer_unchecked(Some(addr), u14::new(len as u16), true, false);
@@ -144,9 +150,9 @@ impl smoltcp::phy::Device for Driver {
         capabilities.medium = smoltcp::phy::Medium::Ethernet;
         capabilities.max_transmission_unit = super::MTU;
         capabilities.max_burst_size = Some(self.0.burst_size);
-        capabilities.checksum.ipv4 = smoltcp::phy::Checksum::Both;
-        capabilities.checksum.udp = smoltcp::phy::Checksum::Both;
-        capabilities.checksum.tcp = smoltcp::phy::Checksum::Both;
+        capabilities.checksum.ipv4 = smoltcp::phy::Checksum::None;
+        capabilities.checksum.udp = smoltcp::phy::Checksum::None;
+        capabilities.checksum.tcp = smoltcp::phy::Checksum::None;
         capabilities
     }
 }
@@ -245,12 +251,13 @@ impl CommonSmoltcpDriver {
             rx_descr::FrameScanResult::SingleFrame {
                 index,
                 size,
-                status,
+                status: _status,
             } => {
+                #[cfg(feature = "eth-packet-trace")]
                 log::trace!(
                     "eth rx frame, fsc status {:?}, cksum status {:?}",
-                    status.fcs_status(),
-                    status.type_id_match_info_or_chksum_status()
+                    _status.fcs_status(),
+                    _status.type_id_match_info_or_chksum_status()
                 );
 
                 let rx_buf = self.bufs.rx_bufs.get_mut(index).unwrap();

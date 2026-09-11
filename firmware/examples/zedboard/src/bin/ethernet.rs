@@ -42,7 +42,8 @@ use zynq7000_hal::{
     eth::{
         AlignedBuffer, ClockDivSet, EthernetConfig, EthernetLowLevel, embassy_net::InterruptResult,
     },
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    generic_interrupt_handler,
+    gic::{Configurator, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -216,7 +217,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -227,7 +228,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -241,7 +242,7 @@ async fn main(spawner: Spawner) -> ! {
     .unwrap();
     uart.write_all(INIT_STRING.as_bytes()).unwrap();
     // Safety: We are not multi-threaded yet.
-    unsafe { zynq7000_hal::log::uart_blocking::init_unsafe_single_core(uart, LOG_LEVEL, false) };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, LOG_LEVEL, false);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -257,8 +258,9 @@ async fn main(spawner: Spawner) -> ! {
     let rx_bufs = ETH_RX_BUFS.take();
     let tx_bufs = ETH_TX_BUFS.take();
 
-    let rx_descr = RX_DESCRIPTORS.take().unwrap();
-    let tx_descr = TX_DESCRIPTORS.take().unwrap();
+    // Safety: We only call this once here.
+    let rx_descr = unsafe { RX_DESCRIPTORS.take() };
+    let tx_descr = unsafe { TX_DESCRIPTORS.take() };
     // Unwraps okay, list length is not 0
     let mut rx_descr_ref =
         zynq7000_hal::eth::rx_descr::DescriptorListWrapper::new(rx_descr.as_mut_slice());
@@ -278,6 +280,12 @@ async fn main(spawner: Spawner) -> ! {
         "Calculated RGMII clock configuration: {:?}, errors (missmatch from ideal rate in hertz): {:?}",
         clk_divs, clk_errors
     );
+
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Eth0),
+        custom_eth_interupt_handler,
+    );
+
     // Unwrap okay, we use a standard clock config, and the clock config should never fail.
     let eth_cfg = EthernetConfig::new(
         zynq7000_hal::eth::ClockConfig::new(clk_divs.cfg_1000_mbps),
@@ -346,15 +354,18 @@ async fn main(spawner: Spawner) -> ! {
         rng.next_u64(),
     );
 
+    const N_SLOTS: usize = 8;
+    const BUFSIZE: usize = N_SLOTS * 1024;
+
     // Ensure those are in the data section by making them static.
-    static RX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; 8]> =
-        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; 8]);
-    static TX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; 8]> =
-        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; 8]);
-    static TX_UDP_BUFS: static_cell::ConstStaticCell<[u8; zynq7000_hal::eth::MTU]> =
-        static_cell::ConstStaticCell::new([0; zynq7000_hal::eth::MTU]);
-    static RX_UDP_BUFS: static_cell::ConstStaticCell<[u8; zynq7000_hal::eth::MTU]> =
-        static_cell::ConstStaticCell::new([0; zynq7000_hal::eth::MTU]);
+    static RX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; N_SLOTS]> =
+        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; N_SLOTS]);
+    static TX_UDP_META: static_cell::ConstStaticCell<[embassy_net::udp::PacketMetadata; N_SLOTS]> =
+        static_cell::ConstStaticCell::new([embassy_net::udp::PacketMetadata::EMPTY; N_SLOTS]);
+    static TX_UDP_BUFS: static_cell::ConstStaticCell<[u8; BUFSIZE]> =
+        static_cell::ConstStaticCell::new([0; BUFSIZE]);
+    static RX_UDP_BUFS: static_cell::ConstStaticCell<[u8; BUFSIZE]> =
+        static_cell::ConstStaticCell::new([0; BUFSIZE]);
 
     let udp_socket = UdpSocket::new(
         stack,
@@ -461,36 +472,24 @@ async fn main(spawner: Spawner) -> ! {
     }
 }
 
-#[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => {
-            if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Eth0 {
-                // This generic library provided interrupt handler takes care of waking
-                // the driver on received or sent frames while also reporting anomalies
-                // and errors.
-                let result = zynq7000_hal::eth::embassy_net::on_interrupt(
-                    zynq7000_hal::eth::EthernetId::Eth0,
-                );
-                if result.has_errors() {
-                    ETH_ERR_QUEUE.try_send(result).ok();
-                }
-            }
-        }
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+// Safety: Only called by interrupt handler, registered in global interrupt handler map.
+unsafe fn custom_eth_interupt_handler() {
+    // This generic library provided interrupt handler takes care of waking
+    // the driver on received or sent frames while also reporting anomalies
+    // and errors.
+    let result = zynq7000_hal::eth::embassy_net::on_interrupt(zynq7000_hal::eth::EthernetId::Eth0);
+    if result.has_errors() {
+        ETH_ERR_QUEUE.try_send(result).ok();
     }
-    gic_helper.end_of_interrupt(irq_info);
+}
+
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
+    }
 }
 
 #[zynq7000_rt::exception(DataAbort)]

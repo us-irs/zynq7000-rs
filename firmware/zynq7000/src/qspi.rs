@@ -6,6 +6,7 @@ pub const QSPI_BASE_ADDR: usize = 0xE000D000;
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum InterfaceMode {
     LegacySpi = 0,
     FlashMemoryInterface = 1,
@@ -13,6 +14,7 @@ pub enum InterfaceMode {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Endianness {
     Little = 0,
     Big = 1,
@@ -21,6 +23,7 @@ pub enum Endianness {
 /// Baud rate divisor register values.
 #[bitbybit::bitenum(u3, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BaudRateDivisor {
     _2 = 0b000,
     _4 = 0b001,
@@ -48,9 +51,13 @@ impl BaudRateDivisor {
     }
 }
 
-// TODO: Use bitbybit debug support as soon as support for write fields has been implemented.
-#[bitbybit::bitfield(u32, default = 0x0)]
-#[derive(Debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_fields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct Config {
     #[bit(31, rw)]
     interface_mode: InterfaceMode,

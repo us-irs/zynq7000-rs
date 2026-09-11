@@ -40,6 +40,12 @@ def main():
         action="store_true",
         help="No bitstream flashing for initialization with SDT.",
     )
+    parser.add_argument(
+        "-s",
+        "--skip-reset",
+        action="store_true",
+        help="Skip device reset",
+    )
     parser.add_argument("-a", "--app", dest="app", help="Path to the app to program")
     default_ip = os.getenv("HW_SERVER_IP")
     if not default_ip:
@@ -141,6 +147,8 @@ def main():
     if args.app:
         cmd_list.append("--app")
         cmd_list.append(args.app)
+    if args.skip_reset:
+        cmd_list.append("-s")
 
     # Join safely for shell execution
     xsct_cmd = shlex.join(cmd_list)

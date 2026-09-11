@@ -13,13 +13,15 @@ set bitstream ""
 proc usage {} {
   puts "Usage: xsct xsct-helper.tcl <init.tcl> \[-a|--app app.elf\] \[-b|--bit design.bit]"
   puts "Options:"
-  puts "  -a, --app    Path to application ELF to download"
-  puts "  -b, --bit    Path to FPGA bitstream (.bit) to program"
-  puts "  -h, --help   Show this help"
+  puts "  -a, --app         Path to application ELF to download"
+  puts "  -b, --bit         Path to FPGA bitstream (.bit) to program"
+  puts "  -s, --skip-reset  Skip reset"
+  puts "  -h, --help        Show this help"
 }
 
 # Compact, robust parser
 set expecting ""
+set skip_reset 0
 set endopts 0
 foreach arg $argv {
   # If previous option expects a value, take this arg
@@ -34,6 +36,7 @@ foreach arg $argv {
     if {$arg eq "--"} { set endopts 1; continue }
     if {$arg eq "-h" || $arg eq "--help"} { usage; exit 0 }
     if {$arg eq "-a" || $arg eq "--app"} { set expecting app; continue }
+    if {$arg eq "-s" || $arg eq "--skip-reset"} { set skip_reset 1; continue }
     if {$arg eq "-b" || $arg eq "--bit"} { set expecting bitstream; continue }
     puts "error: unknown option: $arg"; usage; exit 1
   }
@@ -100,10 +103,11 @@ target $apu_device_num
 # Resetting the target involved problems when an image is stored on the flash.
 # It has turned out that it is not essential to reset the system before loading
 # the software components into the device.
-puts "Reset target"
-# TODO: Make the reset optional/configurable via input argument.
-# Reset the target
-rst
+if {!$skip_reset} {
+  puts "Reset target"
+  # Reset the target
+  rst
+}
 
 # Check if bitstream is set and the file exists before programming FPGA
 if {$bitstream eq ""} {

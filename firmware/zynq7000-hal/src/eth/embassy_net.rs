@@ -85,11 +85,11 @@ impl embassy_net_driver::Driver for Driver {
         let mut capabilities = embassy_net_driver::Capabilities::default();
         capabilities.max_transmission_unit = super::MTU;
         capabilities.max_burst_size = Some(self.0.burst_size);
-        capabilities.checksum.ipv4 = embassy_net_driver::Checksum::Both;
-        capabilities.checksum.udp = embassy_net_driver::Checksum::Both;
-        capabilities.checksum.tcp = embassy_net_driver::Checksum::Both;
-        capabilities.checksum.icmpv4 = embassy_net_driver::Checksum::None;
-        capabilities.checksum.icmpv6 = embassy_net_driver::Checksum::None;
+        capabilities.checksum.ipv4 = embassy_net_driver::Checksum::None;
+        capabilities.checksum.udp = embassy_net_driver::Checksum::None;
+        capabilities.checksum.tcp = embassy_net_driver::Checksum::None;
+        capabilities.checksum.icmpv4 = embassy_net_driver::Checksum::Both;
+        capabilities.checksum.icmpv6 = embassy_net_driver::Checksum::Both;
         capabilities
     }
 

@@ -20,8 +20,8 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    configure_level_shifter, generic_interrupt_handler,
+    gic::Configurator,
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     i2c, l2_cache,
@@ -54,7 +54,7 @@ async fn main(_spawner: Spawner) -> ! {
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -66,7 +66,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -80,14 +80,8 @@ async fn main(_spawner: Spawner) -> ! {
     .unwrap();
     uart.write_all(b"-- Zynq 7000 Zedboard I2C L3GD20H example --\n\r")
         .unwrap();
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -153,24 +147,13 @@ async fn main(_spawner: Spawner) -> ! {
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(_spi_interrupt) => (),
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[unsafe(no_mangle)]

@@ -6,9 +6,10 @@ pub use crate::{SpiClockPhase, SpiClockPolarity};
 pub const SPI_0_BASE_ADDR: usize = 0xE000_6000;
 pub const SPI_1_BASE_ADDR: usize = 0xE000_7000;
 
-/// The SPI reference block will be divided by a divisor value.
+/// The SPI reference clock will be divided by a divisor value.
 #[bitbybit::bitenum(u3)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum BaudDivSel {
     By4 = 0b001,
     By8 = 0b010,
@@ -33,8 +34,15 @@ impl BaudDivSel {
     }
 }
 
-// TODO: Use bitbybit debug support as soon as it was added.
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitenum(u1, exhaustive = true)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
+pub enum Mode {
+    Slave = 0,
+    Master = 1,
+}
+
+#[bitbybit::bitfield(u32, default = 0x0, debug, defmt_bitfields(feature = "defmt"))]
 pub struct Config {
     #[bit(17, rw)]
     modefail_gen_en: bool,
@@ -64,10 +72,19 @@ pub struct Config {
     cpol: SpiClockPolarity,
     /// Master mode enable. 1 is master mode.
     #[bit(0, rw)]
+    mode: Mode,
+    // Deprecated access to bit 0.
+    #[bit(0, rw)]
     master_ern: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterruptStatus {
     #[bit(6, rw)]
     tx_underflow: bool,
@@ -75,18 +92,26 @@ pub struct InterruptStatus {
     rx_full: bool,
     #[bit(4, rw)]
     rx_not_empty: bool,
+    /// Switches to 1 when the FIFO becomes full and then remains asserted until the FIFO falls
+    /// below the configured threshold level.
     #[bit(3, rw)]
     tx_full: bool,
+    /// TX FIFO level below configured threshold.
     #[bit(2, rw)]
-    tx_not_full: bool,
+    tx_below_threshold: bool,
     #[bit(1, rw)]
     mode_fault: bool,
     /// Receiver overflow interrupt.
     #[bit(0, rw)]
-    rx_ovr: bool,
+    rx_overrun: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 #[derive(Debug)]
 pub struct InterruptControl {
     #[bit(6, w)]
@@ -97,8 +122,9 @@ pub struct InterruptControl {
     rx_not_empty: bool,
     #[bit(3, w)]
     tx_full: bool,
+    /// Interrupt when TX FIFO level below configured threshold.
     #[bit(2, w)]
-    tx_trig: bool,
+    tx_below_threshold: bool,
     #[bit(1, w)]
     mode_fault: bool,
     /// Receiver overflow interrupt.
@@ -106,18 +132,33 @@ pub struct InterruptControl {
     rx_ovr: bool,
 }
 
-#[bitbybit::bitfield(u32, debug)]
-pub struct InterruptMask {
+impl InterruptControl {
+    pub const ALL: Self = Self::builder()
+        .with_tx_underflow(true)
+        .with_rx_full(true)
+        .with_rx_not_empty(true)
+        .with_tx_full(true)
+        .with_tx_below_threshold(true)
+        .with_mode_fault(true)
+        .with_rx_ovr(true)
+        .build();
+}
+
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"), forbid_overlaps)]
+pub struct InterruptEnabled {
     #[bit(6, r)]
     tx_underflow: bool,
     #[bit(5, r)]
     rx_full: bool,
     #[bit(4, r)]
     rx_not_empty: bool,
+    /// Switches to 1 when the FIFO becomes full and then remains asserted until the FIFO falls
+    /// below the configured threshold level.
     #[bit(3, r)]
     tx_full: bool,
+    /// Interrupt when TX FIFO level below configured threshold.
     #[bit(2, r)]
-    tx_trig: bool,
+    tx_below_threshold: bool,
     #[bit(1, r)]
     mode_fault: bool,
     /// Receiver overflow interrupt.
@@ -126,6 +167,7 @@ pub struct InterruptMask {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoWrite(arbitrary_int::UInt<u32, 8>);
 
 impl FifoWrite {
@@ -146,6 +188,7 @@ impl FifoWrite {
 }
 
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoRead(arbitrary_int::UInt<u32, 8>);
 
 impl FifoRead {
@@ -161,7 +204,13 @@ impl FifoRead {
 }
 
 /// The numbers specified in the register fields are always specified in number of
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct DelayControl {
     /// Number of cycles the chip select is de-asserted between words when CPHA = 0
     #[bits(24..=31, rw)]
@@ -181,24 +230,24 @@ pub struct DelayControl {
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct Registers {
-    cr: Config,
+    config: Config,
     #[mmio(PureRead, Write)]
-    isr: InterruptStatus,
+    interrupt_status: InterruptStatus,
     /// Interrupt Enable Register.
     #[mmio(Write)]
-    ier: InterruptControl,
+    interrupt_enable: InterruptControl,
     /// Interrupt Disable Register.
     #[mmio(Write)]
-    idr: InterruptControl,
+    interupt_disable: InterruptControl,
     /// Interrupt Mask Register.
     #[mmio(PureRead)]
-    imr: InterruptMask,
+    enabled_interrupts: InterruptEnabled,
     enable: u32,
     delay_control: DelayControl,
     #[mmio(Write)]
-    txd: FifoWrite,
+    tx_data: FifoWrite,
     #[mmio(Read)]
-    rxd: FifoRead,
+    rx_data: FifoRead,
     sicr: u32,
     tx_trig: u32,
     rx_trig: u32,

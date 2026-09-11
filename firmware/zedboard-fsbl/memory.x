@@ -25,3 +25,9 @@ SECTIONS
     _ebss_uncached = .;
   } > UNCACHED
 }
+
+PROVIDE(_und_stack_size = 2K);
+PROVIDE(_svc_stack_size = 2K);
+PROVIDE(_abt_stack_size = 2K);
+PROVIDE(_hyp_stack_size = 2K);
+PROVIDE(_sys_stack_size = 32K);

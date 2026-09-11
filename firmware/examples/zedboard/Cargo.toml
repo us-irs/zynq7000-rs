@@ -11,11 +11,10 @@ keywords = ["no-std", "arm", "cortex-a", "amd", "zynq7000"]
 categories = ["embedded", "no-std", "hardware-support"]
 
 [dependencies]
-aarch32-cpu = { version = "0.2" }
+aarch32-cpu = { version = "0.3", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
-zynq7000-hal = { path = "../../zynq7000-hal" }
-zynq7000-embassy = { path = "../../zynq7000-embassy" }
+zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
 zedboard-bsp = { path = "../../zedboard-bsp" }
 num_enum = { version = "0.7", default-features = false }
 l3gd20 = { git = "https://github.com/us-irs/l3gd20.git", branch = "add-async-if" }
@@ -27,20 +26,22 @@ critical-section = "1"
 static_cell = "2"
 embedded-alloc = "0.7"
 embedded-hal = "1"
+embedded-hal-bus = { version = "0.3", features = ["async"] }
 embedded-hal-async = "1"
-fugit = "0.3"
+dummy-pin = "1"
+fugit = "0.4"
+fugit-03 = { version = "0.3", package = "fugit" }
+embedded-graphics = "0.8"
 log = "0.4"
+ssd1306 = { version = "0.10", features = ["async"] }
+tinybmp = "0.7"
 rand = { version = "0.10", default-features = false }
 
-embassy-executor = { git = "https://github.com/us-irs/embassy.git", rev = "fd40f3e2f2efb67434a9e7d90eb35a30e30d1736", features = [
-  "arch-cortex-ar",
-  "executor-thread",
-]}
-# TODO: Remove generic-queue-16 feature as soon as upstream executor is used again.
-embassy-time = { version = "0.5", features = ["tick-hz-1_000_000", "generic-queue-16"] }
-embassy-net = { version = "0.8", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp"] }
-embassy-sync = { version = "0.7" }
-# TODO: Bump as soon as new compatible smoltcp/embassy-net version is released.
-heapless = "0.8"
+embassy-executor = { version = "0.10", features = ["platform-cortex-ar", "executor-thread"] }
+embassy-time = { version = "0.5", features = ["tick-hz-1_000_000"] }
+embassy-net = { version = "0.9", features = ["dhcpv4", "packet-trace", "medium-ethernet", "icmp", "tcp", "udp", "auto-icmp-echo-reply"] }
+embedded-sdmmc = { git = "https://github.com/robamu/embedded-sdmmc-rs.git", branch = "all-features" }
+embassy-sync = { version = "0.8" }
+heapless = "0.9"
 axi-uartlite = { version = "0.1" }
 axi-uart16550 = { version = "0.1" }

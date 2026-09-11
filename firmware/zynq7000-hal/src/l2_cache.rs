@@ -81,3 +81,10 @@ pub fn init(
     }
     l2c_mmio.write_control(Control::new_enabled());
 }
+
+/// Disable the L2 cache.
+#[inline]
+pub fn disable() {
+    let mut l2c_mmio = unsafe { zynq7000::l2_cache::Registers::new_mmio_fixed() };
+    l2c_mmio.write_control(Control::new_disabled());
+}

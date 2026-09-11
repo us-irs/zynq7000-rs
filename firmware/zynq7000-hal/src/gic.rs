@@ -1,7 +1,10 @@
 //! # Global Interrupt Controller (GIC) module
 //!
 //! The primary interface to configure and allow handling the interrupts are the
-//! [GicConfigurator] and the [GicInterruptHelper] structures.
+//! [Configurator] and the [InterruptGuard] structures.
+//!
+//! The HAL provides a more convenient interface through the [crate::register_interrupt] and
+//! [crate::generic_interrupt_handler] functions.
 #![deny(missing_docs)]
 use arbitrary_int::prelude::*;
 
@@ -85,8 +88,9 @@ bitflags::bitflags! {
 }
 
 /// Private Peripheral Interrupt (PPI) which are private to the CPU.
-#[derive(Debug, Eq, PartialEq, Clone, Copy, num_enum::TryFromPrimitive)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash, num_enum::TryFromPrimitive)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum PpiInterrupt {
     /// Global timer.
@@ -102,8 +106,9 @@ pub enum PpiInterrupt {
 }
 
 /// Shared Peripheral Interrupt IDs.
-#[derive(Debug, Eq, PartialEq, Clone, Copy, num_enum::TryFromPrimitive)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, Hash, num_enum::TryFromPrimitive)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[repr(u8)]
 pub enum SpiInterrupt {
     /// CPU 0.
@@ -231,8 +236,9 @@ pub enum SpiInterrupt {
 }
 
 /// Interrupt ID wrapper.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Interrupt {
     /// Software-generated interrupt (SGI).
     Sgi(usize),
@@ -247,8 +253,9 @@ pub enum Interrupt {
 }
 
 /// Interrupt information structure.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct InterruptInfo {
     raw_reg: InterruptSignalRegister,
     interrupt: Interrupt,
@@ -334,16 +341,16 @@ pub struct InvalidSgiInterruptId(pub usize);
 ///    with [Self::enable] which assumes a certain configuration.
 /// 5. Enable interrupts for the Cortex-A core by calling [Self::enable_interrupts].
 ///
-/// For the handling of the interrupts, you can use the [GicInterruptHelper] which assumes a
+/// For the handling of the interrupts, you can use the [InterruptGuard] which assumes a
 /// properly configured GIC.
-pub struct GicConfigurator {
+pub struct Configurator {
     /// GIC CPU interface registers.
     pub gicc: MmioCpuInterfaceRegisters<'static>,
     /// GIC Distributor interface registers.
     pub gicd: MmioDistributorRegisters<'static>,
 }
 
-impl GicConfigurator {
+impl Configurator {
     /// Create a new GIC controller instance and calls [Self::initialize] to perform
     /// strongly recommended initialization routines for the GIC.
     #[inline]
@@ -351,7 +358,7 @@ impl GicConfigurator {
         gicc: MmioCpuInterfaceRegisters<'static>,
         gicd: MmioDistributorRegisters<'static>,
     ) -> Self {
-        let mut gic = GicConfigurator { gicc, gicd };
+        let mut gic = Configurator { gicc, gicd };
         gic.initialize();
         gic
     }
@@ -365,7 +372,7 @@ impl GicConfigurator {
     /// used inside the interrupt handler.
     #[inline]
     pub unsafe fn steal() -> Self {
-        GicConfigurator {
+        Configurator {
             gicc: unsafe { CpuInterfaceRegisters::new_mmio_fixed() },
             gicd: unsafe { DistributorRegisters::new_mmio_fixed() },
         }
@@ -648,21 +655,31 @@ impl GicConfigurator {
 }
 
 /// Helper structure which should only be used inside the interrupt handler once the GIC has
-/// been configured with the [GicConfigurator].
-pub struct GicInterruptHelper(MmioCpuInterfaceRegisters<'static>);
+/// been configured with the [Configurator].
+pub struct InterruptGuard {
+    regs: MmioCpuInterfaceRegisters<'static>,
+    interrupt_info: InterruptInfo,
+    acknowledged: bool,
+}
 
-impl GicInterruptHelper {
+impl InterruptGuard {
     /// Create the interrupt helper with the fixed GICC MMIO instance.
-    pub const fn new() -> Self {
-        GicInterruptHelper(unsafe { CpuInterfaceRegisters::new_mmio_fixed() })
+    pub fn new() -> Self {
+        let mut regs = unsafe { CpuInterfaceRegisters::new_mmio_fixed() };
+        let interrupt_info = Self::acknowledge_interrupt(&mut regs);
+        InterruptGuard {
+            regs: unsafe { CpuInterfaceRegisters::new_mmio_fixed() },
+            interrupt_info,
+            acknowledged: false,
+        }
     }
 
     /// Acknowledges an interrupt by reading the IAR register and returning the interrupt context
     /// information structure.
     ///
     /// This should be called at the start of an interrupt handler.
-    pub fn acknowledge_interrupt(&mut self) -> InterruptInfo {
-        let iar = self.0.read_iar();
+    fn acknowledge_interrupt(regs: &mut MmioCpuInterfaceRegisters<'static>) -> InterruptInfo {
+        let iar = regs.read_iar();
         let int_id = iar.ack_int_id().as_u32();
         let interrupt = match int_id {
             0..=15 => Interrupt::Sgi(int_id as usize),
@@ -678,16 +695,33 @@ impl GicInterruptHelper {
         }
     }
 
+    /// Returns the interrupt information structure which was read from the IAR register.
+    ///
+    /// This is used to determine the cause of the interrupt.
+    #[inline]
+    pub fn interrupt_info(&self) -> InterruptInfo {
+        self.interrupt_info
+    }
+
     /// Acknowledges the end of an interrupt by writing the EOIR register of the GICC.
     ///
     /// This should be called at the end of an interrupt handler.
     pub fn end_of_interrupt(&mut self, irq_info: InterruptInfo) {
-        self.0.write_eoir(irq_info.raw_reg())
+        self.acknowledged = true;
+        self.regs.write_eoir(irq_info.raw_reg())
     }
 }
 
-impl Default for GicInterruptHelper {
+impl Default for InterruptGuard {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl Drop for InterruptGuard {
+    fn drop(&mut self) {
+        if !self.acknowledged {
+            self.regs.write_eoir(self.interrupt_info.raw_reg());
+        }
     }
 }

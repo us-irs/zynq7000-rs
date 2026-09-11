@@ -1,5 +1,8 @@
-all: check build check-fmt clippy docs-zynq
+# Common paths (single source of truth)
+INIT_SCRIPT := justfile_directory() / "scripts/zynq7000-init.py"
+GDB_CMD := justfile_directory() / "firmware/gdb.gdb"
 
+all: check build check-fmt clippy docs-zynq
 check: (check-dir "firmware") (check-dir "host")
 clean: (clean-dir "firmware") (clean-dir "host")
 build: build-zynq (build-dir "host")
@@ -13,8 +16,11 @@ check-dir target:
 build-dir target:
   cd {{target}} && cargo build
 
+[working-directory: 'firmware']
 build-zynq: (build-dir "firmware")
-  cd "firmware/zedboard-fsbl" && cargo build --release
+  cd "zynq7000" && cargo build --all-features
+  cd "zedboard-fsbl" && cargo build --release
+  cd "zynq7000-hal" && cargo build --features "time-driver-gtc"
 
 clean-dir target:
   cd {{target}} && cargo clean
@@ -50,14 +56,20 @@ bootgen:
   bootgen -arch zynq -image boot.bif -o boot.bin -w on
   echo "Generated boot.bin at zynq-boot-image/staging"
 
+# Internal helper to start GDB after running init.
+# Pass init flags (if any) via `init_args`.
 [no-cd]
-run binary:
-  # Run the initialization script. It needs to be run inside the justfile directory.
-  python3 {{justfile_directory()}}/scripts/zynq7000-init.py
+run_generic binary init_args="":
+  python3 {{INIT_SCRIPT}} {{init_args}}
+  gdb-multiarch -q -x {{GDB_CMD}} {{binary}} -tui
 
-  # Run the GDB debugger in GUI mode.
-  gdb-multiarch -q -x {{justfile_directory()}}/firmware/gdb.gdb {{binary}} -tui
+# Public targets
+[no-cd]
+run binary: (run_generic binary)
+
+[no-cd]
+run-no-reset binary: (run_generic binary "-s")
 
 flash-nor-zedboard boot_binary:
   cd {{justfile_directory()}}/firmware/zedboard-qspi-flasher && cargo build --release
-  xsct firmware/zedboard-qspi-flasher/qspi-flasher.tcl scripts/ps7_init.tcl -b {{boot_binary}}
+  xsct firmware/zedboard-qspi-flasher/qspi-flasher.tcl scripts/ps7_init.tcl -b {{invocation_directory()}}/{{boot_binary}}

@@ -8,6 +8,10 @@
 //! on top of it.
 //! [The Zynq7000 HAL library](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/zynq/zynq7000-hal)
 //! contains such a HAL which builds on this PAC.
+//!
+//! ## Features
+//!
+//! * `defmt` - Add support for the [`defmt`](https://github.com/knurling-rs/defmt) logging library.
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
@@ -29,6 +33,7 @@ pub mod l2_cache;
 pub mod mpcore;
 pub mod priv_tim;
 pub mod qspi;
+pub mod sdio;
 pub mod slcr;
 pub mod spi;
 pub mod ttc;
@@ -63,6 +68,8 @@ pub struct Peripherals {
     pub qspi: qspi::MmioRegisters<'static>,
     pub devcfg: devcfg::MmioRegisters<'static>,
     pub xadc: xadc::MmioRegisters<'static>,
+    pub sdio_0: sdio::MmioRegisters<'static>,
+    pub sdio_1: sdio::MmioRegisters<'static>,
 }
 
 impl Peripherals {
@@ -103,6 +110,8 @@ impl Peripherals {
                 qspi: qspi::Registers::new_mmio_fixed(),
                 devcfg: devcfg::Registers::new_mmio_fixed(),
                 xadc: xadc::Registers::new_mmio_fixed(),
+                sdio_0: sdio::Registers::new_mmio_fixed_0(),
+                sdio_1: sdio::Registers::new_mmio_fixed_1(),
             }
         }
     }
@@ -110,6 +119,7 @@ impl Peripherals {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiClockPhase {
     ActiveOutsideOfWord = 0,
     InactiveOutsideOfWord = 1,
@@ -117,6 +127,7 @@ pub enum SpiClockPhase {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum SpiClockPolarity {
     QuiescentLow = 0,
     QuiescentHigh = 1,

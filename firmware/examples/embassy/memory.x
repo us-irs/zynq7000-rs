@@ -3,14 +3,16 @@ MEMORY
   /* Zedboard: 512 MB DDR3. Only use 62 MB for now, should be plenty for a bare-metal app.
   1 MB stack memory and  1 MB of memory which will be configured as uncached device memory by the
   MMU. This is recommended for something like DMA descriptors. */
-  CODE(rx) : ORIGIN = 0x00100000, LENGTH = 62M
-  STACKS : ORIGIN = 0x3F00000, LENGTH = 1M
-  UNCACHED(rx): ORIGIN = 0x4000000, LENGTH = 1M
+  OCM : ORIGIN = 0x00000000, LENGTH = 192K
+  DDR : ORIGIN = 0x00100000, LENGTH = 63M
   OCM_UPPER(rx): ORIGIN = 0xFFFF0000, LENGTH = 64K
+  UNCACHED : ORIGIN = ORIGIN(DDR) + LENGTH(DDR), LENGTH = 1M
 }
 
-REGION_ALIAS("VECTORS", CODE);
-REGION_ALIAS("DATA", CODE);
+REGION_ALIAS("VECTORS", DDR);
+REGION_ALIAS("CODE", DDR);
+REGION_ALIAS("DATA", DDR);
+REGION_ALIAS("STACKS", DDR);
 
 SECTIONS
 {

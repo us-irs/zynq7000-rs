@@ -6,6 +6,7 @@ pub mod regs {
 
     #[bitbybit::bitenum(u2)]
     #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum DataBusWidth {
         _32Bit = 0b00,
         _16Bit = 0b01,
@@ -13,11 +14,18 @@ pub mod regs {
 
     #[bitbybit::bitenum(u1, exhaustive = true)]
     #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum SoftReset {
         Reset = 0,
         Active = 1,
     }
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DdrcControl {
         #[bit(16, rw)]
         disable_auto_refresh: bool,
@@ -37,7 +45,14 @@ pub mod regs {
         soft_reset: SoftReset,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct TwoRankConfig {
         #[bits(14..=18, rw)]
         addrmap_cs_bit0: u5,
@@ -50,7 +65,13 @@ pub mod regs {
     }
 
     /// Queue control for the low priority and high priority read queues.
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct LprHprQueueControl {
         #[bits(22..=25, rw)]
         xact_run_length: u4,
@@ -60,7 +81,13 @@ pub mod regs {
         min_non_critical_x32: u11,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct WriteQueueControl {
         #[bits(15..=25, rw)]
         max_starve_x32: u11,
@@ -70,7 +97,13 @@ pub mod regs {
         min_non_critical_x32: u11,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramParamReg0 {
         /// Minimum time to wait after coming out of self refresh before doing anything. This must be
         /// bigger than all the constraints that exist.
@@ -85,7 +118,13 @@ pub mod regs {
         t_rc: u6,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramParamReg1 {
         #[bits(28..=31, rw)]
         t_cke: u4,
@@ -101,7 +140,13 @@ pub mod regs {
         wr2pre: u5,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramParamReg2 {
         #[bits(28..=31, rw)]
         t_rcd: u4,
@@ -121,12 +166,19 @@ pub mod regs {
 
     /// Weird naming.
     #[bitbybit::bitenum(u1, exhaustive = true)]
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum MobileSetting {
         Ddr2Ddr3 = 0,
         Lpddr2 = 1,
     }
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramParamReg3 {
         #[bit(30, rw)]
         disable_pad_pd_feature: bool,
@@ -154,12 +206,19 @@ pub mod regs {
 
     #[bitbybit::bitenum(u1, exhaustive = true)]
     #[derive(Debug)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum ModeRegisterType {
         Write = 0,
         Read = 1,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramParamReg4 {
         #[bit(27, rw)]
         mr_rdata_valid: bool,
@@ -179,7 +238,13 @@ pub mod regs {
         enable_2t_timing_mode: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramInitParam {
         #[bits(11..=13, rw)]
         t_mrd: u3,
@@ -189,7 +254,13 @@ pub mod regs {
         final_wait_x32: u7,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramEmr {
         #[bits(16..=31, rw)]
         emr3: u16,
@@ -197,7 +268,13 @@ pub mod regs {
         emr2: u16,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramEmrMr {
         #[bits(16..=31, rw)]
         emr: u16,
@@ -205,7 +282,13 @@ pub mod regs {
         mr: u16,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramBurst8ReadWrite {
         #[bits(0..=3, rw)]
         burst_rdwr: u4,
@@ -217,7 +300,13 @@ pub mod regs {
         burstchop: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DisableDq {
         #[bit(1, rw)]
         dis_dq: bool,
@@ -225,7 +314,13 @@ pub mod regs {
         force_low_pri_n: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramAddrMapBank {
         #[bits(16..=19, rw)]
         addrmap_bank_b6: u4,
@@ -239,7 +334,13 @@ pub mod regs {
         addrmap_bank_b0: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramAddrMapColumn {
         #[bits(28..=31, rw)]
         addrmap_col_b11: u4,
@@ -259,7 +360,13 @@ pub mod regs {
         addrmap_col_b2: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramAddrMapRow {
         #[bits(24..=27, rw)]
         addrmap_row_b15: u4,
@@ -277,7 +384,13 @@ pub mod regs {
         addrmap_row_b0: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DramOdt {
         #[bits(16..=17, rw)]
         phy_idle_local_odt: u2,
@@ -291,7 +404,13 @@ pub mod regs {
         rank0_rd_odt: u3,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyCmdTimeoutRdDataCpt {
         #[bits(28..=31, rw)]
         wrlvl_num_of_dq0: u4,
@@ -314,19 +433,32 @@ pub mod regs {
     }
 
     #[bitbybit::bitenum(u1, exhaustive = true)]
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum DllCalibSel {
         Periodic = 0,
         Manual = 1,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DllCalib {
         #[bit(16, rw)]
         sel: DllCalibSel,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct OdtDelayHold {
         #[bits(12..=15, rw)]
         wr_odt_hold: u4,
@@ -338,7 +470,13 @@ pub mod regs {
         rd_odt_delay: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CtrlReg1 {
         #[bit(12, rw)]
         selfref_enable: bool,
@@ -356,7 +494,13 @@ pub mod regs {
         pageclose: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CtrlReg2 {
         #[bit(17, rw)]
         go_2_critcal_enable: bool,
@@ -364,7 +508,13 @@ pub mod regs {
         go_2_critical_hysteresis: u8,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CtrlReg3 {
         #[bits(16..=25, rw)]
         dfi_t_wlmrd: u10,
@@ -374,7 +524,13 @@ pub mod regs {
         wrlvl_ww: u8,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CtrlReg4 {
         #[bits(8..=15, rw)]
         dfi_t_ctrlupd_interval_max_x1024: u8,
@@ -382,7 +538,13 @@ pub mod regs {
         dfi_t_ctrlupd_interval_min_x1024: u8,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CtrlReg5 {
         #[bits(20..=25, rw)]
         t_ckesr: u6,
@@ -398,7 +560,13 @@ pub mod regs {
         dfi_t_ctrl_delay: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CtrlReg6 {
         #[bits(16..=19, rw)]
         t_cksx: u4,
@@ -412,7 +580,13 @@ pub mod regs {
         t_ckpde: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CheTZq {
         #[bits(22..=31, rw)]
         t_zq_short_nop: u10,
@@ -426,7 +600,13 @@ pub mod regs {
         dis_auto_zq: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CheTZqShortInterval {
         #[bits(20..=27, rw)]
         dram_rstn_x1024: u8,
@@ -434,7 +614,13 @@ pub mod regs {
         t_zq_short_interval: u20,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DeepPowerdown {
         #[bits(1..=8, rw)]
         deep_powerdown_to_x1024: u8,
@@ -442,7 +628,13 @@ pub mod regs {
         enable: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct Reg2c {
         #[bit(28, rw)]
         dfi_rd_data_eye_train: bool,
@@ -460,13 +652,25 @@ pub mod regs {
         dfi_wrlvl_max_x1024: u12,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct Reg2d {
         #[bit(9, rw)]
         skip_ocd: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct DfiTiming {
         #[bits(15..=24, rw)]
         dfi_t_ctrlup_max: u10,
@@ -476,7 +680,13 @@ pub mod regs {
         dfi_t_rddata_enable: u5,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct CheEccControl {
         #[bit(1, rw)]
         clear_correctable_errors: bool,
@@ -485,13 +695,20 @@ pub mod regs {
     }
 
     #[bitbybit::bitenum(u3, exhaustive = false)]
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum EccMode {
         NoEcc = 0b000,
         SecDecOverOneBeat = 0b100,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct EccScrub {
         #[bit(3, rw)]
         disable_scrub: bool,
@@ -499,7 +716,13 @@ pub mod regs {
         ecc_mode: Option<EccMode>,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyReceiverEnable {
         #[bits(4..=7, rw)]
         phy_dif_off: u4,
@@ -507,7 +730,13 @@ pub mod regs {
         phy_dif_on: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyConfig {
         #[bits(24..=30, rw)]
         dq_offset: u7,
@@ -521,7 +750,13 @@ pub mod regs {
         data_slice_in_use: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyInitRatio {
         #[bits(10..=19, rw)]
         gatelvl_init_ratio: u10,
@@ -529,7 +764,13 @@ pub mod regs {
         wrlvl_init_ratio: u10,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyDqsConfig {
         #[bits(11..=19, rw)]
         dqs_slave_delay: u9,
@@ -539,7 +780,13 @@ pub mod regs {
         dqs_slave_ratio: u10,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyWriteEnableConfig {
         #[bits(12..=20, rw)]
         fifo_we_in_delay: u9,
@@ -549,7 +796,13 @@ pub mod regs {
         fifo_we_slave_ratio: u11,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct PhyWriteDataSlaveConfig {
         #[bits(11..=19, rw)]
         wr_data_slave_delay: u9,
@@ -559,7 +812,13 @@ pub mod regs {
         wr_data_slave_ratio: u10,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct Reg64 {
         #[bit(30, rw)]
         cmd_latency: bool,
@@ -579,7 +838,13 @@ pub mod regs {
         bl2: bool,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct Reg65 {
         #[bits(18..=19, rw)]
         ctrl_slave_delay: u2,
@@ -599,7 +864,13 @@ pub mod regs {
         wr_rl_delay: u5,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct AxiPriorityWritePort {
         #[bit(18, rw)]
         disable_page_match: bool,
@@ -611,7 +882,13 @@ pub mod regs {
         pri_wr_port: u10,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct AxiPriorityReadPort {
         #[bit(19, rw)]
         enable_hpr: bool,
@@ -625,7 +902,13 @@ pub mod regs {
         pri_rd_port_n: u10,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct ExclusiveAccessConfig {
         #[bits(9..=17, rw)]
         access_id1_port: u9,
@@ -634,13 +917,20 @@ pub mod regs {
     }
 
     #[bitbybit::bitenum(u1, exhaustive = true)]
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum LpddrBit {
         Ddr2Ddr3 = 0,
         Lpddr2 = 1,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct LpddrControl0 {
         #[bits(4..=11, rw)]
         mr4_margin: u8,
@@ -652,13 +942,25 @@ pub mod regs {
         lpddr2: LpddrBit,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct LpddrControl1 {
         #[bits(0..=31, rw)]
         mr4_read_interval: u32,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct LpddrControl2 {
         #[bits(12..=21, rw)]
         t_mrw: u10,
@@ -668,7 +970,13 @@ pub mod regs {
         min_stable_clock_x1: u4,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct LpddrControl3 {
         #[bits(8..=17, rw)]
         dev_zqinit_x32: u10,
@@ -678,6 +986,7 @@ pub mod regs {
 
     #[bitbybit::bitenum(u3, exhaustive = true)]
     #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum OperatingMode {
         DdrcInit = 0,
         NormalOperation = 1,
@@ -703,12 +1012,19 @@ pub mod regs {
 
     #[bitbybit::bitenum(u1, exhaustive = true)]
     #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
     pub enum DebugStallBit {
         CommandsAccepted = 0,
         CommandsNotAccepted = 1,
     }
 
-    #[bitbybit::bitfield(u32, default = 0x0, debug)]
+    #[bitbybit::bitfield(
+        u32,
+        default = 0x0,
+        debug,
+        defmt_fields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct ModeStatus {
         #[bits(16..=20, r)]
         dbg_hpr_queue_depth: u5,

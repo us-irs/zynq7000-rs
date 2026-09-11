@@ -76,7 +76,7 @@ impl embedded_hal::delay::DelayNs for CpuPrivateTimer {
     fn delay_ns(&mut self, ns: u32) {
         // Even for a value of 1000 MHz for CPU 3x2x and u32::MAX for nanoseconds, this will
         // never overflow.
-        let ticks = (ns as u64 * self.cpu_3x2x_clock.raw() as u64) / 1_000_000_000;
+        let ticks = (ns as u64 * self.cpu_3x2x_clock.to_raw() as u64) / 1_000_000_000;
 
         // Split the total delay into manageable chunks (u32::MAX ticks max).
         let mut remaining = ticks;

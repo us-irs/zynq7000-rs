@@ -9,14 +9,12 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
-use fugit::RateExtU32;
 use log::{error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    configure_level_shifter, generic_interrupt_handler, gic,
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
@@ -105,7 +103,7 @@ async fn main(_spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = gic::Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -116,7 +114,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -131,13 +129,7 @@ async fn main(_spawner: Spawner) -> ! {
     log_uart.write_all(INIT_STRING.as_bytes()).unwrap();
 
     // Safety: Co-operative multi-tasking is used.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            log_uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(log_uart, log::LevelFilter::Trace, false);
 
     // UART0 routed through EMIO to PL pins.
     let mut uart_0 =
@@ -147,7 +139,8 @@ async fn main(_spawner: Spawner) -> ! {
 
     // TODO: Can we determine/read the clock frequency to the FPGAs as well?
     let (clk_config, error) =
-        axi_uart16550::ClockConfig::new_autocalc_with_error(100.MHz(), 115200).unwrap();
+        axi_uart16550::ClockConfig::new_autocalc_with_error(fugit_03::HertzU32::MHz(100), 115200)
+            .unwrap();
     assert!(error < 0.02);
     let mut uart_16550 = unsafe {
         AxiUart16550::new(
@@ -215,23 +208,12 @@ async fn main(_spawner: Spawner) -> ! {
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(_spi_interrupt) => (),
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

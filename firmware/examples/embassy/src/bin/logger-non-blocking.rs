@@ -8,17 +8,18 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write;
-use log::{error, info};
+use log::info;
 use zynq7000::Peripherals;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    generic_interrupt_handler,
+    gic::Configurator,
     gpio::{Output, PinState, mio},
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClockConfig, Config, TxAsync, Uart, on_interrupt_tx},
+    uart::{self, ClockConfig, Config, TxAsync, Uart},
 };
 
 use zynq7000_rt as _;
@@ -40,7 +41,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     gic.enable();
@@ -49,7 +50,7 @@ async fn main(spawner: Spawner) -> ! {
     }
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     let mio_pins = mio::Pins::new(dp.gpio);
 
@@ -68,56 +69,59 @@ async fn main(spawner: Spawner) -> ! {
     uart.flush().unwrap();
 
     let (tx, _rx) = uart.split();
-    let mut logger = TxAsync::new(tx);
+    // Safety: We are not forgetting any futures.
+    let logger = unsafe { TxAsync::new(tx, true) };
 
-    zynq7000_hal::log::rb::init(log::LevelFilter::Trace);
+    let mut log_runner =
+        zynq7000_hal::log::asynch::init_with_uart_tx(log::LevelFilter::Trace, logger).unwrap();
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
     let led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
-    spawner.spawn(led_task(led)).unwrap();
-    let mut log_buf: [u8; 2048] = [0; 2048];
-    let frame_queue = zynq7000_hal::log::rb::get_frame_queue();
-    loop {
-        let next_frame_len = frame_queue.receive().await;
-        zynq7000_hal::log::rb::read_next_frame(next_frame_len, &mut log_buf);
-        logger.write(&log_buf[0..next_frame_len]).await;
-    }
+    spawner.spawn(led_task(led).unwrap());
+    spawner.spawn(hello_task().unwrap());
+
+    log_runner.run().await
 }
 
 #[embassy_executor::task]
 async fn led_task(mut mio_led: Output) {
+    static ATOMIC_COUNTER: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     loop {
         mio_led.toggle().unwrap();
-        info!("Toggling LED");
+        info!(
+            "Toggling LED ({})",
+            ATOMIC_COUNTER.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
+        );
+        ticker.next().await;
+    }
+}
+#[embassy_executor::task]
+async fn hello_task() {
+    static ATOMIC_COUNTER: core::sync::atomic::AtomicUsize =
+        core::sync::atomic::AtomicUsize::new(0);
+
+    let mut ticker = Ticker::every(Duration::from_millis(1000));
+    loop {
+        info!(
+            "Hello from another task ({})",
+            ATOMIC_COUNTER.fetch_add(1, core::sync::atomic::Ordering::Relaxed)
+        );
         ticker.next().await;
     }
 }
 
-#[unsafe(no_mangle)]
-pub extern "C" fn _irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => {
-            if spi_interrupt == zynq7000_hal::gic::SpiInterrupt::Uart1 {
-                on_interrupt_tx(zynq7000_hal::uart::UartId::Uart1);
-            }
-        }
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+#[zynq7000_rt::irq]
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]
@@ -144,6 +148,7 @@ fn prefetch_handler(_faulting_addr: usize) -> ! {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {info:?}");
+    let mut uart = unsafe { uart::Uart::steal(uart::UartId::Uart1) };
+    writeln!(uart, "panic: {}\r", info).ok();
     loop {}
 }

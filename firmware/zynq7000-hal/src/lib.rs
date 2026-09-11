@@ -8,9 +8,16 @@
 //! [embedded-hal](https://github.com/rust-embedded/embedded-hal) project, making it compatible with
 //! various drivers in the embedded rust ecosystem.
 //!
+//! ## Features
+//!
+//! * `defmt` - Activates `defmt` support for various data structures
+//! * `7z010-7z007s-clg225`  - Chip variant which has a lower pin count
+//! * `time-driver-gtc` - Access to the `embassy-time` driver API which uses the global timer
+//!   counter (GTC).
+//!
 //! ## Examples
 //!
-//! All exaples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/examples)
+//! All examples can be found inside the [examples folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware/examples)
 //! and [firmware folder](https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/src/branch/main/firmware) of the project
 #![no_std]
 #![cfg_attr(docsrs, feature(doc_cfg))]
@@ -18,7 +25,7 @@
 #[cfg(feature = "alloc")]
 extern crate alloc;
 
-use slcr::Slcr;
+pub use slcr::Slcr;
 use zynq7000::{
     SpiClockPhase, SpiClockPolarity,
     slcr::{BootModeRegister, BootPllConfig, LevelShifterRegister},
@@ -27,23 +34,29 @@ use zynq7000::{
 pub mod cache;
 pub mod clocks;
 pub mod ddr;
-pub mod devcfg;
 pub mod eth;
 pub mod gic;
 pub mod gpio;
 pub mod gtc;
 pub mod i2c;
+pub mod interrupt;
 pub mod l2_cache;
 pub mod log;
+pub mod pl;
 pub mod prelude;
 pub mod priv_tim;
 pub mod qspi;
+pub mod sd;
 pub mod slcr;
 pub mod spi;
 pub mod time;
+#[cfg(feature = "time-driver-gtc")]
+pub mod time_driver_gtc;
 pub mod ttc;
 pub mod uart;
 
+pub use gic::{Interrupt, PpiInterrupt, SpiInterrupt};
+pub use interrupt::{generic_interrupt_handler, register_interrupt};
 pub use zynq7000 as pac;
 pub use zynq7000::slcr::LevelShifterConfig;
 
@@ -79,7 +92,7 @@ pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
         configure_level_shifter(config);
     }
     if let Some(interrupt_config) = config.interrupt_config {
-        let mut gic = gic::GicConfigurator::new_with_init(periphs.gicc, periphs.gicd);
+        let mut gic = gic::Configurator::new_with_init(periphs.gicc, periphs.gicd);
         match interrupt_config {
             InteruptConfig::AllInterruptsToCpu0 => {
                 gic.enable_all_interrupts();
@@ -207,7 +220,7 @@ pub fn enable_amba_peripheral_clock(select: PeriphSelect) {
                     PeriphSelect::Can1 => val.set_can_1_1x_clk_act(true),
                     PeriphSelect::Can0 => val.set_can_0_1x_clk_act(true),
                     PeriphSelect::Spi1 => val.set_spi_1_1x_clk_act(true),
-                    PeriphSelect::Spi0 => val.set_spi_1_1x_clk_act(true),
+                    PeriphSelect::Spi0 => val.set_spi_0_1x_clk_act(true),
                     PeriphSelect::Sdio1 => val.set_sdio_1_1x_clk_act(true),
                     PeriphSelect::Sdio0 => val.set_sdio_0_1x_clk_act(true),
                     PeriphSelect::Gem1 => val.set_gem_1_1x_clk_act(true),
@@ -240,7 +253,7 @@ pub fn disable_amba_periph_clk(select: PeriphSelect) {
                     PeriphSelect::Can1 => val.set_can_1_1x_clk_act(false),
                     PeriphSelect::Can0 => val.set_can_0_1x_clk_act(false),
                     PeriphSelect::Spi1 => val.set_spi_1_1x_clk_act(false),
-                    PeriphSelect::Spi0 => val.set_spi_1_1x_clk_act(false),
+                    PeriphSelect::Spi0 => val.set_spi_0_1x_clk_act(false),
                     PeriphSelect::Sdio1 => val.set_sdio_1_1x_clk_act(false),
                     PeriphSelect::Sdio0 => val.set_sdio_0_1x_clk_act(false),
                     PeriphSelect::Gem1 => val.set_gem_1_1x_clk_act(false),

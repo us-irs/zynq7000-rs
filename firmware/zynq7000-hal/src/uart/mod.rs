@@ -13,7 +13,7 @@ use core::convert::Infallible;
 use arbitrary_int::u3;
 use libm::round;
 use zynq7000::{
-    slcr::reset::DualRefAndClockReset,
+    slcr::reset::DualRefAndClockResetSpiUart,
     uart::{
         BaudRateDivisor, Baudgen, ChMode, ClockSelect, FifoTrigger, InterruptControl,
         MmioRegisters, Mode, UART_0_BASE, UART_1_BASE,
@@ -64,6 +64,32 @@ pub enum UartId {
     Uart0 = 0,
     /// UART 1.
     Uart1 = 1,
+}
+
+impl UartId {
+    /// Interrupt ID.
+    #[inline]
+    pub const fn interrupt_id(&self) -> crate::Interrupt {
+        match self {
+            UartId::Uart0 => crate::Interrupt::Spi(crate::SpiInterrupt::Uart0),
+            UartId::Uart1 => crate::Interrupt::Spi(crate::SpiInterrupt::Uart1),
+        }
+    }
+
+    /// Unsafely steal the register block.
+    ///
+    /// # Safety
+    ///
+    /// This API can be used to potentially create a driver to the same peripheral structure
+    /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
+    /// interfere with each other.
+    #[inline]
+    pub unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
+        match self {
+            UartId::Uart0 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_0() },
+            UartId::Uart1 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_1() },
+        }
+    }
 }
 
 /// Common trait for PS UART peripherals.
@@ -141,7 +167,7 @@ pub struct DivisorZero;
 macro_rules! pin_pairs {
     ($index:literal, $UartPeriph:path, ($( [$(#[$meta:meta], )? $TxMio:ident, $RxMio:ident] ),+ $(,)? )) => {
         $(
-            paste::paste! {
+            pastey::paste! {
                 $( #[$meta] )?
                 impl [<TxPin $index>] for Pin<$TxMio> {}
 
@@ -254,8 +280,8 @@ pub fn calculate_viable_configs(
     }
     let mut current_clk_config = ClockConfig::default();
     for bdiv in 4..u8::MAX {
-        let cd =
-            round(uart_clk.raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64)) as u64;
+        let cd = round(uart_clk.to_raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64))
+            as u64;
         if cd > u16::MAX as u64 {
             continue;
         }
@@ -290,8 +316,8 @@ pub fn calculate_raw_baud_cfg_smallest_error(
     let mut best_clk_config = ClockConfig::default();
     let mut smallest_error: f64 = 100.0;
     for bdiv in 4..u8::MAX {
-        let cd =
-            round(uart_clk.raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64)) as u64;
+        let cd = round(uart_clk.to_raw() as f64 / ((bdiv as u32 + 1) as f64 * target_baud as f64))
+            as u64;
         if cd > u16::MAX as u64 {
             continue;
         }
@@ -369,7 +395,7 @@ impl ClockConfig {
     /// Actual baudrate.
     #[inline]
     pub fn actual_baud(&self, sel_clk: Hertz) -> f64 {
-        sel_clk.raw() as f64 / (self.cd as f64 * (self.bdiv + 1) as f64)
+        sel_clk.to_raw() as f64 / (self.cd as f64 * (self.bdiv + 1) as f64)
     }
 }
 
@@ -466,7 +492,6 @@ impl Config {
 pub struct Uart {
     rx: Rx,
     tx: Tx,
-    cfg: Config,
 }
 
 /// Invalid PS UART error.
@@ -565,35 +590,40 @@ impl Uart {
             UartId::Uart0 => crate::PeriphSelect::Uart0,
             UartId::Uart1 => crate::PeriphSelect::Uart1,
         };
+        // Safety: We only touch register bits of the specified peripheral to enable the clock.
+        unsafe {
+            Slcr::with(|slcr| {
+                slcr.clk_ctrl().modify_uart_clk_ctrl(|val| match uart_id {
+                    UartId::Uart0 => val.with_clk_0_act(true),
+                    UartId::Uart1 => val.with_clk_1_act(true),
+                });
+            });
+        }
         enable_amba_peripheral_clock(periph_sel);
         reset(uart_id);
-        reg_block.modify_cr(|mut v| {
-            v.set_tx_dis(true);
-            v.set_rx_dis(true);
-            v
-        });
+        reg_block.modify_control(|v| v.with_tx_disable(true).with_rx_disable(true));
         // Disable all interrupts.
-        reg_block.write_idr(InterruptControl::new_with_raw_value(0xFFFF_FFFF));
+        reg_block.write_interrupt_disable(InterruptControl::new_with_raw_value(0xFFFF_FFFF));
         let mode = Mode::builder()
             .with_chmode(cfg.chmode)
-            .with_nbstop(match cfg.stopbits {
+            .with_stopbits(match cfg.stopbits {
                 Stopbits::One => zynq7000::uart::Stopbits::One,
                 Stopbits::OnePointFive => zynq7000::uart::Stopbits::OnePointFive,
                 Stopbits::Two => zynq7000::uart::Stopbits::Two,
             })
-            .with_par(match cfg.parity {
+            .with_parity(match cfg.parity {
                 Parity::Even => zynq7000::uart::Parity::Even,
                 Parity::Odd => zynq7000::uart::Parity::Odd,
                 Parity::None => zynq7000::uart::Parity::NoParity,
             })
-            .with_chrl(match cfg.chrl {
+            .with_charlen(match cfg.chrl {
                 CharLen::SixBits => zynq7000::uart::CharLen::SixBits,
                 CharLen::SevenBits => zynq7000::uart::CharLen::SevenBits,
                 CharLen::EightBits => zynq7000::uart::CharLen::EightBits,
             })
-            .with_clksel(cfg.clk_sel)
+            .with_clock_select(cfg.clk_sel)
             .build();
-        reg_block.write_mr(mode);
+        reg_block.write_mode(mode);
         reg_block.write_baudgen(
             Baudgen::builder()
                 .with_cd(cfg.raw_clk_config().cd())
@@ -605,9 +635,9 @@ impl Uart {
                 .build(),
         );
         // Soft reset for both TX and RX.
-        reg_block.modify_cr(|mut v| {
-            v.set_tx_rst(true);
-            v.set_rx_rst(true);
+        reg_block.modify_control(|mut v| {
+            v.set_tx_reset(true);
+            v.set_rx_reset(true);
             v
         });
 
@@ -617,11 +647,11 @@ impl Uart {
         ));
 
         // Enable TX and RX.
-        reg_block.modify_cr(|mut v| {
-            v.set_tx_dis(false);
-            v.set_rx_dis(false);
-            v.set_tx_en(true);
-            v.set_rx_en(true);
+        reg_block.modify_control(|mut v| {
+            v.set_tx_disable(false);
+            v.set_rx_disable(false);
+            v.set_tx_enable(true);
+            v.set_rx_enable(true);
             v
         });
 
@@ -631,16 +661,34 @@ impl Uart {
             },
             tx: Tx {
                 regs: reg_block,
-                idx: uart_id,
+                id: uart_id,
             },
-            cfg,
+        }
+    }
+
+    /// Steal a UART without doing ANY configuration.
+    ///
+    /// # Safety
+    ///
+    /// Circumvents ownership and safety guarantees by the HAL. Also, the driver will not work
+    /// unless the UART was configured beforehand.
+    pub unsafe fn steal(id: UartId) -> Uart {
+        let reg_block = unsafe { id.steal_regs() };
+        Self {
+            rx: Rx {
+                regs: unsafe { reg_block.clone() },
+            },
+            tx: Tx {
+                regs: reg_block,
+                id,
+            },
         }
     }
 
     /// Set character mode.
     #[inline]
     pub fn set_mode(&mut self, mode: ChMode) {
-        self.regs().modify_mr(|mut mr| {
+        self.regs().modify_mode(|mut mr| {
             mr.set_chmode(mode);
             mr
         });
@@ -650,12 +698,6 @@ impl Uart {
     #[inline]
     pub const fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.rx.regs
-    }
-
-    /// Configuration.
-    #[inline]
-    pub const fn cfg(&self) -> &Config {
-        &self.cfg
     }
 
     /// Split into TX and RX halves.
@@ -720,13 +762,13 @@ impl embedded_io::Read for Uart {
 #[inline]
 pub fn reset(id: UartId) {
     let assert_reset = match id {
-        UartId::Uart0 => DualRefAndClockReset::builder()
+        UartId::Uart0 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        UartId::Uart1 => DualRefAndClockReset::builder()
+        UartId::Uart1 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -736,9 +778,12 @@ pub fn reset(id: UartId) {
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_uart(assert_reset);
-            // Keep it in reset for one cycle.. not sure if this is necessary.
-            aarch32_cpu::asm::nop();
-            regs.reset_ctrl().write_uart(DualRefAndClockReset::DEFAULT);
+            // Keep it in reset for a few cycles.. not sure if this is necessary.
+            for _ in 0..5 {
+                aarch32_cpu::asm::nop();
+            }
+            regs.reset_ctrl()
+                .write_uart(DualRefAndClockResetSpiUart::ZERO);
         });
     }
 }

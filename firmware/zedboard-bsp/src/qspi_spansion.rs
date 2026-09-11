@@ -226,7 +226,7 @@ pub enum ProgramPageError {
     Addr(#[from] AddrError),
     #[error("program data is larger than page size {PAGE_SIZE}")]
     DataTooLarge,
-    #[error("program data is not aligned to 16 bytes")]
+    #[error("program data is not aligned to 4 bytes")]
     NotAligned,
     #[error("program data crosses page boundary")]
     CrossesPageBoundary,
@@ -519,7 +519,7 @@ impl QspiSpansionS25Fl256SIoMode {
     /// This function will block until the operation has completed.
     ///
     /// The data length may not exceed [MAX_DATA_BYTES_PER_WRITE]. Furthermore, the data needs
-    /// to be aligned to 16 bytes and the programming operation is not allowed to cross a page.
+    /// to be aligned to 4 bytes and the programming operation is not allowed to cross a page.
     /// boundary. It is recommended to program in 128 byte chunks.
     pub fn program(&mut self, addr: u32, data: &[u8]) -> Result<(), ProgramPageError> {
         if addr + data.len() as u32 > u24::MAX.as_u32() {
@@ -528,7 +528,7 @@ impl QspiSpansionS25Fl256SIoMode {
         if data.len() > MAX_DATA_BYTES_PER_WRITE {
             return Err(ProgramPageError::DataTooLarge);
         }
-        if !data.len().is_multiple_of(16) {
+        if !data.len().is_multiple_of(4) {
             return Err(ProgramPageError::NotAligned);
         }
         if (addr as usize % PAGE_SIZE) + data.len() > PAGE_SIZE {

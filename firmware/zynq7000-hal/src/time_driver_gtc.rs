@@ -1,4 +1,6 @@
-#![no_std]
+//! # Embassy time support for the AMD Zynq7000 SoC family using the global timer counter (GTC).
+//!
+//! The [crate::init] method must be called once for the time driver to work properly.
 use core::cell::{Cell, RefCell};
 
 use critical_section::{CriticalSection, Mutex};
@@ -6,11 +8,12 @@ use embassy_time_driver::{Driver, TICK_HZ, time_driver_impl};
 use embassy_time_queue_utils::Queue;
 use once_cell::sync::OnceCell;
 
-use zynq7000_hal::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
+use crate::{clocks::ArmClocks, gtc::GlobalTimerCounter, time::Hertz};
 
 static SCALE: OnceCell<u64> = OnceCell::new();
 static CPU_3X2X_CLK: OnceCell<Hertz> = OnceCell::new();
 
+#[derive(Debug)]
 struct AlarmState {
     timestamp: Cell<u64>,
 }
@@ -59,9 +62,19 @@ impl GtcTimerDriver {
     ///
     /// This has to be called ONCE at system initialization.
     pub unsafe fn init(&'static self, arm_clock: &ArmClocks, mut gtc: GlobalTimerCounter) {
+        fn safe_interrupt_handler() {
+            // Safety: See safety notes of [zynq7000_hal::generic_interrupt_handler].
+            unsafe {
+                on_interrupt();
+            }
+        }
+        crate::register_interrupt(
+            crate::gic::Interrupt::Ppi(crate::gic::PpiInterrupt::GlobalTimer),
+            safe_interrupt_handler,
+        );
         CPU_3X2X_CLK.set(arm_clock.cpu_3x2x_clk()).unwrap();
         SCALE
-            .set(arm_clock.cpu_3x2x_clk().raw() as u64 / TICK_HZ)
+            .set(arm_clock.cpu_3x2x_clk().to_raw() as u64 / TICK_HZ)
             .unwrap();
         gtc.set_cpu_3x2x_clock(arm_clock.cpu_3x2x_clk());
         gtc.set_prescaler(0);
@@ -140,6 +153,7 @@ impl GtcTimerDriver {
         }
     }
 }
+
 impl Driver for GtcTimerDriver {
     #[inline]
     fn now(&self) -> u64 {

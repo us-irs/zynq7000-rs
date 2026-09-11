@@ -275,7 +275,7 @@ impl Pwm {
         ref_clk: Hertz,
         freq: Hertz,
     ) -> Result<Self, FrequencyIsZeroError> {
-        if freq.raw() == 0 {
+        if freq.to_raw() == 0 {
             return Err(FrequencyIsZeroError);
         }
         let (prescaler_reg, tick_val) = calc_prescaler_reg_and_interval_ticks(ref_clk, freq);
@@ -289,7 +289,7 @@ impl Pwm {
     ///
     /// This resets the duty cycle to 0%.
     pub fn set_frequency(&mut self, freq: Hertz) -> Result<(), FrequencyIsZeroError> {
-        if freq.raw() == 0 {
+        if freq.to_raw() == 0 {
             return Err(FrequencyIsZeroError);
         }
         let id = self.channel.id() as usize;

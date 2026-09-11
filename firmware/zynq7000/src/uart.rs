@@ -5,7 +5,8 @@ pub const UART_0_BASE: usize = 0xE000_0000;
 pub const UART_1_BASE: usize = 0xE000_1000;
 
 #[bitbybit::bitenum(u3, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Parity {
     Even = 0b000,
     Odd = 0b001,
@@ -21,6 +22,7 @@ pub enum Parity {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum CharLen {
     SixBits = 0b11,
     SevenBits = 0b10,
@@ -31,6 +33,7 @@ pub enum CharLen {
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockSelect {
     #[default]
     UartRefClk = 0b0,
@@ -39,6 +42,7 @@ pub enum ClockSelect {
 
 #[bitbybit::bitenum(u2)]
 #[derive(Default, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Stopbits {
     #[default]
     One = 0b00,
@@ -48,6 +52,7 @@ pub enum Stopbits {
 
 #[bitbybit::bitenum(u2, exhaustive = true)]
 #[derive(Debug, Default)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ChMode {
     #[default]
     Normal = 0b00,
@@ -56,7 +61,13 @@ pub enum ChMode {
     RemoteLoopback = 0b11,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct Control {
     /// Stop transmitter break.
     #[bit(8, rw)]
@@ -66,73 +77,92 @@ pub struct Control {
     startbrk: bool,
     /// Restart receiver timeout counter.
     #[bit(6, rw)]
-    rstto: bool,
+    restart_timeout: bool,
     /// TX disable. If this is 1, TX is disabled, regardless of TXEN.
     #[bit(5, rw)]
-    tx_dis: bool,
+    tx_disable: bool,
     /// TX enable. TX will be enabled if this bit is 1 and the TXDIS is 0.
     #[bit(4, rw)]
-    tx_en: bool,
+    tx_enable: bool,
     /// RX disable. If this is 1, RX is disabled, regardless of RXEN.
     #[bit(3, rw)]
-    rx_dis: bool,
+    rx_disable: bool,
     /// RX enable. RX will be enabled if this bit is 1 and the RXDIS is 0.
     #[bit(2, rw)]
-    rx_en: bool,
+    rx_enable: bool,
     /// TX soft reset.
     #[bit(1, rw)]
-    tx_rst: bool,
+    tx_reset: bool,
     /// RX soft reset.
     #[bit(0, rw)]
-    rx_rst: bool,
+    rx_reset: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct Mode {
     #[bits(8..=9, rw)]
     chmode: ChMode,
     #[bits(6..=7, rw)]
-    nbstop: Option<Stopbits>,
+    stopbits: Option<Stopbits>,
     #[bits(3..=5, rw)]
-    par: Parity,
+    parity: Parity,
     /// Char length.
     #[bits(1..=2, rw)]
-    chrl: CharLen,
+    charlen: CharLen,
     #[bit(0, rw)]
-    clksel: ClockSelect,
+    clock_select: ClockSelect,
 }
 
-#[bitbybit::bitfield(u32, default = 0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct Baudgen {
     #[bits(0..=15, rw)]
     cd: u16,
 }
 
-#[bitbybit::bitfield(u32, default = 0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0,
+    debug,
+    forbid_overlaps,
+    defmt_fields(feature = "defmt")
+)]
 pub struct BaudRateDivisor {
     #[bits(0..=7, rw)]
     bdiv: u8,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_fields(feature = "defmt"))]
 pub struct Fifo {
     #[bits(0..=7, rw)]
     fifo: u8,
 }
 
 #[bitbybit::bitenum(u1, exhaustive = true)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum Ttrig {
     LessThanTTrig = 0b0,
     GreaterEqualTTrig = 0b1,
 }
 
-#[bitbybit::bitfield(u32, debug)]
+#[bitbybit::bitfield(u32, debug, forbid_overlaps, defmt_bitfields(feature = "defmt"))]
 pub struct Status {
     #[bit(14, r)]
     tx_near_full: bool,
     #[bit(13, r)]
-    tx_trig: Ttrig,
+    tx_trigger: Ttrig,
     #[bit(12, r)]
     flowdel: bool,
     /// Transmitter state machine active.
@@ -151,18 +181,23 @@ pub struct Status {
     rx_empty: bool,
     /// RX FIFO trigger level was reached.
     #[bit(0, r)]
-    rx_trg: bool,
+    rx_trigger: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0)]
-#[derive(Debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    forbid_overlaps,
+    defmt_bitfields(feature = "defmt")
+)]
 pub struct InterruptControl {
     #[bit(12, w)]
     tx_over: bool,
     #[bit(11, w)]
     tx_near_full: bool,
     #[bit(10, w)]
-    tx_trig: bool,
+    tx_trigger: bool,
     #[bit(9, w)]
     rx_dms: bool,
     /// Receiver timeout error interrupt.
@@ -183,25 +218,26 @@ pub struct InterruptControl {
     #[bit(1, w)]
     rx_empty: bool,
     #[bit(0, w)]
-    rx_trg: bool,
+    rx_trigger: bool,
 }
 
-#[bitbybit::bitfield(u32)]
+#[bitbybit::bitfield(u32, default = 0x0)]
 #[derive(Debug)]
+#[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FifoTrigger {
     #[bits(0..=5, rw)]
-    trig: u6,
+    trigger: u6,
 }
 
-#[bitbybit::bitfield(u32)]
-#[derive(Debug)]
+#[bitbybit::bitfield(u32, debug, defmt_bitfields(feature = "defmt"))]
+#[derive(PartialEq, Eq)]
 pub struct InterruptMask {
     #[bit(12, r)]
     tx_over: bool,
     #[bit(11, r)]
     tx_near_full: bool,
     #[bit(10, r)]
-    tx_trig: bool,
+    tx_trigger: bool,
     #[bit(9, r)]
     rx_dms: bool,
     /// Receiver timeout error interrupt.
@@ -223,10 +259,16 @@ pub struct InterruptMask {
     rx_empty: bool,
     /// RX FIFO trigger level reached.
     #[bit(0, r)]
-    rx_trg: bool,
+    rx_trigger: bool,
 }
 
-#[bitbybit::bitfield(u32, default = 0x0, debug)]
+#[bitbybit::bitfield(
+    u32,
+    default = 0x0,
+    debug,
+    defmt_bitfields(feature = "defmt"),
+    forbid_overlaps
+)]
 pub struct InterruptStatus {
     #[bit(12, rw)]
     tx_over: bool,
@@ -255,7 +297,7 @@ pub struct InterruptStatus {
     rx_empty: bool,
     /// RX FIFO trigger level reached.
     #[bit(0, rw)]
-    rx_trg: bool,
+    rx_trigger: bool,
 }
 
 impl InterruptStatus {
@@ -273,7 +315,7 @@ impl InterruptStatus {
             .with_tx_empty(false)
             .with_rx_full(false)
             .with_rx_empty(false)
-            .with_rx_trg(false)
+            .with_rx_trigger(false)
             .build()
     }
 }
@@ -283,34 +325,34 @@ impl InterruptStatus {
 #[repr(C)]
 pub struct Registers {
     /// Control Register
-    cr: Control,
+    control: Control,
     /// Mode register
-    mr: Mode,
+    mode: Mode,
     /// Interrupt enable register
     #[mmio(Write)]
-    ier: InterruptControl,
+    interrupt_enable: InterruptControl,
     /// Interrupt disable register
     #[mmio(Write)]
-    idr: InterruptControl,
+    interrupt_disable: InterruptControl,
     /// Interrupt mask register, showing enabled interrupts.
     #[mmio(PureRead)]
-    imr: InterruptMask,
+    enabled_interrupts: InterruptMask,
     /// Interrupt status register
     #[mmio(PureRead, Write)]
-    isr: InterruptStatus,
+    interrupt_status: InterruptStatus,
     /// Baudgen register
     baudgen: Baudgen,
     /// RX timeout register
-    rx_tout: u32,
+    rx_timeout: u32,
     /// RX FIFO trigger level register
     rx_fifo_trigger: FifoTrigger,
     /// Modem control register
-    modem_cr: u32,
+    modem_control: u32,
     /// Modem status register
-    modem_sr: u32,
+    modem_status: u32,
     /// Channel status register
     #[mmio(PureRead)]
-    sr: Status,
+    status: Status,
     /// FIFO register
     #[mmio(Read, Write)]
     fifo: Fifo,

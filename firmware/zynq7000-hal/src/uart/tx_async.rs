@@ -1,9 +1,11 @@
 //! Asynchronous UART transmitter (TX) implementation.
-use core::{cell::RefCell, convert::Infallible, sync::atomic::AtomicBool};
+use core::{cell::RefCell, convert::Infallible, marker::PhantomData, sync::atomic::AtomicBool};
 
+use arbitrary_int::u6;
 use critical_section::Mutex;
 use embassy_sync::waitqueue::AtomicWaker;
-use raw_slice::RawBufSlice;
+use raw_buffer::RawBufSlice;
+use zynq7000::uart::FifoTrigger;
 
 use crate::uart::{FIFO_DEPTH, Tx, UartId};
 
@@ -17,20 +19,30 @@ static TX_DONE: [AtomicBool; 2] = [const { AtomicBool::new(false) }; 2];
 /// This is a generic interrupt handler to handle asynchronous UART TX operations for a given
 /// UART peripheral.
 ///
+/// # Safety
+///
 /// The user has to call this once in the interrupt handler responsible for the TX interrupts on
 /// the given UART bank.
-pub fn on_interrupt_tx(peripheral: UartId) {
+pub unsafe fn on_interrupt_tx(peripheral: UartId) {
     let mut tx_with_irq = unsafe { Tx::steal(peripheral) };
     let idx = peripheral as usize;
-    let imr = tx_with_irq.regs().read_imr();
+    let enabled_irqs = tx_with_irq.regs().read_enabled_interrupts();
     // IRQ is not related to TX.
-    if !imr.tx_over() && !imr.tx_near_full() && !imr.tx_full() && !imr.tx_empty() && !imr.tx_full()
+    if !enabled_irqs.tx_over()
+        && !enabled_irqs.tx_near_full()
+        && !enabled_irqs.tx_full()
+        && !enabled_irqs.tx_empty()
+        && !enabled_irqs.tx_full()
     {
         return;
     }
 
-    let isr = tx_with_irq.regs().read_isr();
-    let unexpected_overrun = isr.tx_over();
+    let interrupt_status = tx_with_irq.regs().read_interrupt_status();
+    // Disable interrupts, re-enable them later.
+    tx_with_irq.disable_interrupts();
+    // Clear interrupts.
+    tx_with_irq.clear_interrupts();
+    let unexpected_overrun = interrupt_status.tx_over();
     let mut context = critical_section::with(|cs| {
         let context_ref = TX_CONTEXTS[idx].borrow(cs);
         *context_ref.borrow()
@@ -41,7 +53,7 @@ pub fn on_interrupt_tx(peripheral: UartId) {
     }
     let slice_len = context.slice.len().unwrap();
     context.tx_overrun = unexpected_overrun;
-    if (context.progress >= slice_len && isr.tx_empty()) || slice_len == 0 {
+    if (context.progress >= slice_len && interrupt_status.tx_empty()) || slice_len == 0 {
         // Write back updated context structure.
         critical_section::with(|cs| {
             let context_ref = TX_CONTEXTS[idx].borrow(cs);
@@ -57,8 +69,10 @@ pub fn on_interrupt_tx(peripheral: UartId) {
     // Safety: We documented that the user provided slice must outlive the future, so we convert
     // the raw pointer back to the slice here.
     let slice = unsafe { context.slice.get() }.expect("slice is invalid");
+
+    // Pump the FIFO.
     while context.progress < slice_len {
-        if tx_with_irq.regs().read_sr().tx_full() {
+        if tx_with_irq.regs().read_status().tx_full() {
             break;
         }
         // Safety: TX structure is owned by the future which does not write into the the data
@@ -66,14 +80,22 @@ pub fn on_interrupt_tx(peripheral: UartId) {
         tx_with_irq.write_fifo_unchecked(slice[context.progress]);
         context.progress += 1;
     }
+    let remaining = slice_len - context.progress;
+    if remaining > FIFO_DEPTH {
+        tx_with_irq.regs.write_tx_fifo_trigger(
+            FifoTrigger::builder()
+                .with_trigger(u6::new((FIFO_DEPTH / 2) as u8))
+                .build(),
+        );
+    }
 
     // Write back updated context structure.
     critical_section::with(|cs| {
         let context_ref = TX_CONTEXTS[idx].borrow(cs);
         *context_ref.borrow_mut() = context;
     });
-    // Clear interrupts.
-    tx_with_irq.clear_interrupts();
+
+    tx_with_irq.enable_interrupts(remaining > FIFO_DEPTH);
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -95,17 +117,24 @@ impl TxContext {
 }
 
 /// Transmission future for UART TX.
-pub struct TxFuture {
+pub struct TxFuture<'uart, 'buf> {
     id: UartId,
+    buffer_empty: bool,
+    phantom: core::marker::PhantomData<(&'uart (), &'buf ())>,
 }
 
-impl TxFuture {
-    /// # Safety
-    ///
-    /// This function stores the raw pointer of the passed data slice. The user MUST ensure
-    /// that the slice outlives the data structure.
-    pub unsafe fn new(tx_with_irq: &mut Tx, data: &[u8]) -> Self {
-        let idx = tx_with_irq.uart_idx() as usize;
+impl<'uart, 'buf> TxFuture<'uart, 'buf> {
+    /// Constructor for TX future.
+    pub fn new(tx_with_irq: &'uart mut Tx, data: &'buf [u8]) -> TxFuture<'uart, 'buf> {
+        if data.is_empty() {
+            // Nothing to transfer, return a future which is immediately ready.
+            return TxFuture {
+                id: tx_with_irq.uart_id(),
+                buffer_empty: true,
+                phantom: PhantomData,
+            };
+        }
+        let idx = tx_with_irq.uart_id() as usize;
         TX_DONE[idx].store(false, core::sync::atomic::Ordering::Relaxed);
         tx_with_irq.disable_interrupts();
         tx_with_irq.disable();
@@ -119,25 +148,39 @@ impl TxFuture {
             }
             context.progress = init_fill_count; // We fill the FIFO.
         });
-        tx_with_irq.enable(true);
+        // Apparently, we need to enable the UART before we are able to write something into
+        // the FIFO.
+        tx_with_irq.enable(false);
+        if data.len() > FIFO_DEPTH {
+            tx_with_irq.regs.write_tx_fifo_trigger(
+                FifoTrigger::builder()
+                    .with_trigger(u6::new((FIFO_DEPTH / 2) as u8))
+                    .build(),
+            );
+        }
         for data in data.iter().take(init_fill_count) {
             tx_with_irq.write_fifo_unchecked(*data);
         }
-        tx_with_irq.enable_interrupts();
+        tx_with_irq.enable_interrupts(data.len() > FIFO_DEPTH);
 
         Self {
-            id: tx_with_irq.uart_idx(),
+            id: tx_with_irq.uart_id(),
+            buffer_empty: false,
+            phantom: PhantomData,
         }
     }
 }
 
-impl Future for TxFuture {
+impl Future for TxFuture<'_, '_> {
     type Output = usize;
 
     fn poll(
         self: core::pin::Pin<&mut Self>,
         cx: &mut core::task::Context<'_>,
     ) -> core::task::Poll<Self::Output> {
+        if self.buffer_empty {
+            return core::task::Poll::Ready(0);
+        }
         UART_TX_WAKERS[self.id as usize].register(cx.waker());
         if TX_DONE[self.id as usize].swap(false, core::sync::atomic::Ordering::Relaxed) {
             let progress = critical_section::with(|cs| {
@@ -151,7 +194,7 @@ impl Future for TxFuture {
     }
 }
 
-impl Drop for TxFuture {
+impl Drop for TxFuture<'_, '_> {
     fn drop(&mut self) {
         let mut tx = unsafe { Tx::steal(self.id) };
         tx.disable_interrupts();
@@ -165,7 +208,43 @@ pub struct TxAsync {
 
 impl TxAsync {
     /// Constructor.
-    pub fn new(tx: Tx) -> Self {
+    ///
+    /// The second argument specifies whether the [on_interrupt_tx] function will be registered
+    /// in the HAL interrupt map. You might need to skip this in case you have your own
+    /// interrupt handler which also handles RX interrupts.
+    ///
+    /// # Safety
+    ///
+    /// This function stores the raw pointer of the passed data slice. The user MUST ensure
+    /// that the slice outlives the data structure.
+    pub unsafe fn new(tx: Tx, register_interrupt_handler: bool) -> Self {
+        if register_interrupt_handler {
+            match tx.uart_id() {
+                UartId::Uart0 => {
+                    unsafe fn uart0_interrupt_handler() {
+                        unsafe {
+                            on_interrupt_tx(UartId::Uart0);
+                        }
+                    }
+                    crate::register_interrupt(
+                        crate::gic::Interrupt::Spi(crate::gic::SpiInterrupt::Uart0),
+                        uart0_interrupt_handler,
+                    )
+                }
+                UartId::Uart1 => {
+                    unsafe fn uart1_interrupt_handler() {
+                        unsafe {
+                            on_interrupt_tx(UartId::Uart1);
+                        }
+                    }
+                    crate::register_interrupt(
+                        crate::gic::Interrupt::Spi(crate::gic::SpiInterrupt::Uart1),
+                        uart1_interrupt_handler,
+                    )
+                }
+            }
+        }
+
         Self { tx }
     }
 
@@ -173,12 +252,8 @@ impl TxAsync {
     ///
     /// This implementation is not side effect free, and a started future might have already
     /// written part of the passed buffer.
-    pub async fn write(&mut self, buf: &[u8]) -> usize {
-        if buf.is_empty() {
-            return 0;
-        }
-        let fut = unsafe { TxFuture::new(&mut self.tx, buf) };
-        fut.await
+    pub fn write<'buf>(&mut self, buf: &'buf [u8]) -> TxFuture<'_, 'buf> {
+        TxFuture::new(&mut self.tx, buf)
     }
 
     /// Release the underlying blocking TX driver.

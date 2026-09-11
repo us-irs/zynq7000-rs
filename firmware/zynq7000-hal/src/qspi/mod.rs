@@ -8,7 +8,7 @@ use zynq7000::{
         BaudRateDivisor, Config, InstructionCode, InterruptStatus, LoopbackMasterClockDelay,
         SpiEnable,
     },
-    slcr::{clocks::SingleCommonPeriphIoClockControl, mio::Speed, reset::QspiResetControl},
+    slcr::{clocks::SingleCommonPeriphIoClockControl, mio::Speed, reset::ResetControlQspiSmc},
 };
 
 pub use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, Mode};
@@ -212,7 +212,7 @@ impl ClockConfig {
             SrcSelIo::ArmPll => clocks.arm_clocks().ref_clk(),
             SrcSelIo::DdrPll => clocks.ddr_clocks().ref_clk(),
         };
-        let ref_clk_div = ref_clk.raw().div_ceil(target_ref_clock.raw());
+        let ref_clk_div = ref_clk.to_raw().div_ceil(target_ref_clock.to_raw());
         if ref_clk_div > u6::MAX.as_u32() {
             return Err(ClockCalculationError::RefDivOutOfRange);
         }
@@ -239,24 +239,24 @@ impl ClockConfig {
                 clocks
                     .io_clocks()
                     .ref_clk()
-                    .raw()
-                    .div_ceil(target_qspi_ref_clock.raw()),
+                    .to_raw()
+                    .div_ceil(target_qspi_ref_clock.to_raw()),
                 clocks.io_clocks().ref_clk(),
             ),
             SrcSelIo::ArmPll => (
                 clocks
                     .arm_clocks()
                     .ref_clk()
-                    .raw()
-                    .div_ceil(target_qspi_ref_clock.raw()),
+                    .to_raw()
+                    .div_ceil(target_qspi_ref_clock.to_raw()),
                 clocks.arm_clocks().ref_clk(),
             ),
             SrcSelIo::DdrPll => (
                 clocks
                     .ddr_clocks()
                     .ref_clk()
-                    .raw()
-                    .div_ceil(target_qspi_ref_clock.raw()),
+                    .to_raw()
+                    .div_ceil(target_qspi_ref_clock.to_raw()),
                 clocks.ddr_clocks().ref_clk(),
             ),
         };
@@ -268,8 +268,8 @@ impl ClockConfig {
             return Err(ClockCalculationError::RefClockSmallerThanCpu1xClock);
         }
         let qspi_baud_rate_div = qspi_ref_clk
-            .raw()
-            .div_ceil(target_qspi_interface_clock.raw());
+            .to_raw()
+            .div_ceil(target_qspi_interface_clock.to_raw());
         let baud_rate_div = match qspi_baud_rate_div {
             0..=2 => BaudRateDivisor::_2,
             3..=4 => BaudRateDivisor::_4,
@@ -417,7 +417,7 @@ impl Qspi {
                 .with_disable_hstl_rcvr(false)
                 .with_pullup(true)
                 .with_io_type(voltage)
-                .with_speed(Speed::SlowCmosEdge)
+                .with_speed(Speed::FastCmosEdge)
                 .with_l3_sel(QSPI_MUX_CONFIG.l3_sel())
                 .with_l2_sel(QSPI_MUX_CONFIG.l2_sel())
                 .with_l1_sel(QSPI_MUX_CONFIG.l1_sel())
@@ -429,7 +429,7 @@ impl Qspi {
             .with_disable_hstl_rcvr(false)
             .with_pullup(false)
             .with_io_type(voltage)
-            .with_speed(Speed::SlowCmosEdge)
+            .with_speed(Speed::FastCmosEdge)
             .with_l3_sel(QSPI_MUX_CONFIG.l3_sel())
             .with_l2_sel(QSPI_MUX_CONFIG.l2_sel())
             .with_l1_sel(QSPI_MUX_CONFIG.l1_sel())
@@ -471,7 +471,7 @@ impl Qspi {
                 .with_disable_hstl_rcvr(false)
                 .with_pullup(false)
                 .with_io_type(voltage)
-                .with_speed(Speed::SlowCmosEdge)
+                .with_speed(Speed::FastCmosEdge)
                 .with_l3_sel(QSPI_MUX_CONFIG.l3_sel())
                 .with_l2_sel(QSPI_MUX_CONFIG.l2_sel())
                 .with_l1_sel(QSPI_MUX_CONFIG.l1_sel())
@@ -675,16 +675,16 @@ pub fn reset() {
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_lqspi(
-                QspiResetControl::builder()
-                    .with_qspi_ref_reset(true)
+                ResetControlQspiSmc::builder()
+                    .with_ref_reset(true)
                     .with_cpu_1x_reset(true)
                     .build(),
             );
             // Keep it in reset for some cycles.
-            for _ in 0..3 {
+            for _ in 0..10 {
                 aarch32_cpu::asm::nop();
             }
-            regs.reset_ctrl().write_lqspi(QspiResetControl::DEFAULT);
+            regs.reset_ctrl().write_lqspi(ResetControlQspiSmc::DEFAULT);
         });
     }
 }

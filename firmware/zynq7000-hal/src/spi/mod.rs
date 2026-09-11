@@ -17,11 +17,12 @@ use crate::{enable_amba_peripheral_clock, spi_mode_const_to_cpol_cpha};
 use crate::{clocks::IoClocks, slcr::Slcr, time::Hertz};
 use arbitrary_int::{prelude::*, u3, u4, u6};
 use embedded_hal::delay::DelayNs;
-pub use embedded_hal::spi::Mode;
-use zynq7000::slcr::reset::DualRefAndClockReset;
+pub use embedded_hal::spi::{MODE_0, MODE_1, MODE_2, MODE_3, Mode};
+use zynq7000::slcr::reset::DualRefAndClockResetSpiUart;
+pub use zynq7000::spi::DelayControl;
 use zynq7000::spi::{
-    BaudDivSel, DelayControl, FifoWrite, InterruptControl, InterruptMask, InterruptStatus,
-    MmioRegisters, SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
+    BaudDivSel, FifoWrite, InterruptControl, InterruptEnabled, InterruptStatus, MmioRegisters,
+    SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
 pub const FIFO_DEPTH: usize = 128;
@@ -30,10 +31,38 @@ pub const MODULE_ID: u32 = 0x90106;
 pub mod asynch;
 pub use asynch::*;
 
+pub mod slave;
+pub use slave::*;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpiId {
     Spi0 = 0,
     Spi1 = 1,
+}
+
+impl SpiId {
+    #[inline]
+    pub const fn interrupt_id(&self) -> crate::Interrupt {
+        match self {
+            SpiId::Spi0 => crate::Interrupt::Spi(crate::SpiInterrupt::Spi0),
+            SpiId::Spi1 => crate::Interrupt::Spi(crate::SpiInterrupt::Spi1),
+        }
+    }
+
+    /// Unsafely steal the register block.
+    ///
+    /// # Safety
+    ///
+    /// This API can be used to potentially create a driver to the same peripheral structure
+    /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
+    /// interfere with each other.
+    #[inline]
+    pub unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
+        match self {
+            SpiId::Spi0 => unsafe { zynq7000::spi::Registers::new_mmio_fixed_0() },
+            SpiId::Spi1 => unsafe { zynq7000::spi::Registers::new_mmio_fixed_1() },
+        }
+    }
 }
 
 pub trait PsSpi {
@@ -348,17 +377,56 @@ impl ChipSelect {
     }
 }
 
+/// This abstraction which can be used to map a hardware chip select pin
+/// to [embedded_hal::digital::OutputPin]. This is useful for creating physical chip select
+/// pins required by the [embedded_hal_bus](https://docs.rs/embedded-hal-bus/latest/embedded_hal_bus/)
+/// API.
+pub struct ChipSelectPin {
+    spi_id: SpiId,
+    cs: ChipSelect,
+}
+
+impl ChipSelectPin {
+    /// Chip select pin constructor.
+    pub const fn new(spi_id: SpiId, cs: ChipSelect) -> Self {
+        Self { spi_id, cs }
+    }
+}
+
+impl embedded_hal::digital::ErrorType for ChipSelectPin {
+    type Error = Infallible;
+}
+
+impl embedded_hal::digital::OutputPin for ChipSelectPin {
+    fn set_low(&mut self) -> Result<(), Self::Error> {
+        // Safety: We only touch the CS register bits of the specified peripheral.
+        let mut spi_regs = unsafe { SpiLowLevel::steal(self.spi_id).regs };
+        spi_regs.modify_config(|val| val.with_cs_raw(self.cs.raw_reg()));
+        Ok(())
+    }
+
+    fn set_high(&mut self) -> Result<(), Self::Error> {
+        // Safety: We only touch the CS register bits of the specified peripheral.
+        let mut spi_regs = unsafe { SpiLowLevel::steal(self.spi_id).regs };
+        spi_regs.modify_config(|val| val.with_cs_raw(u4::MAX));
+        Ok(())
+    }
+}
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 /// Slave select configuration.
 pub enum SlaveSelectConfig {
     /// User must take care of controlling slave select lines as well as issuing a start command.
-    ManualWithManualStart = 0b11,
-    ManualAutoStart = 0b10,
+    ManualCsManualStart = 0b11,
+    /// Software controls the slave select, but the controller hardware automatically starts to
+    /// serialize data when there is data in the TxFIFO.
+    ManualCsAutoStart = 0b10,
     /// Hardware slave select, but start needs to be issued manually.
-    AutoWithManualStart = 0b01,
-    /// Hardware slave select, auto serialiation if there is data in the TX FIFO.
+    AutoCsManualStart = 0b01,
+    /// Hardware slave select, auto serialiation if there is data in the TX FIFO. Might be
+    /// problematic for higher SPI speeds, where the processor can not fill the TX FIFO fast enough.
     #[default]
-    AutoWithAutoStart = 0b00,
+    AutoCsAutoStart = 0b00,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -373,6 +441,31 @@ impl Config {
     pub fn new(baud_div: BaudDivSel, init_mode: Mode, ss_config: SlaveSelectConfig) -> Self {
         Self {
             baud_div,
+            init_mode,
+            ss_config,
+            with_ext_decoding: false,
+        }
+    }
+
+    pub fn calculate_for_io_clock(
+        target_clock: Hertz,
+        io_clock: &IoClocks,
+        init_mode: Mode,
+        ss_config: SlaveSelectConfig,
+    ) -> Self {
+        let divisor_raw = io_clock.spi_clk().to_raw().div_ceil(target_clock.to_raw());
+        let baud_div_sel = match divisor_raw {
+            0..=4 => BaudDivSel::By4,
+            5..=8 => BaudDivSel::By8,
+            9..=16 => BaudDivSel::By16,
+            17..=32 => BaudDivSel::By32,
+            33..=64 => BaudDivSel::By64,
+            65..=128 => BaudDivSel::By128,
+            129..=256 => BaudDivSel::By256,
+            _ => BaudDivSel::By256,
+        };
+        Self {
+            baud_div: baud_div_sel,
             init_mode,
             ss_config,
             with_ext_decoding: false,
@@ -422,6 +515,18 @@ impl SpiLowLevel {
         }
     }
 
+    pub fn enable_ref_clock(&mut self) {
+        // Safety: We only touch register bits of the specified peripheral to enable the clock.
+        unsafe {
+            Slcr::with(|slcr| {
+                slcr.clk_ctrl().modify_spi_clk_ctrl(|val| match self.id {
+                    SpiId::Spi0 => val.with_clk_0_act(true),
+                    SpiId::Spi1 => val.with_clk_1_act(true),
+                });
+            });
+        }
+    }
+
     pub fn id(&self) -> SpiId {
         self.id
     }
@@ -447,7 +552,7 @@ impl SpiLowLevel {
     /// the external decoding was enabled via the [Config::enable_external_decoding] option.
     #[inline]
     pub fn select_hw_cs(&mut self, chip_select: ChipSelect) {
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_config(|mut val| {
             val.set_cs_raw(chip_select.raw_reg());
             val
         });
@@ -457,7 +562,7 @@ impl SpiLowLevel {
     #[inline]
     pub fn configure_mode(&mut self, mode: Mode) {
         let (cpol, cpha) = spi_mode_const_to_cpol_cpha(mode);
-        self.regs.modify_cr(|mut val| {
+        self.regs.modify_config(|mut val| {
             val.set_cpha(cpha);
             val.set_cpol(cpol);
             val
@@ -474,14 +579,14 @@ impl SpiLowLevel {
     pub fn reconfigure(&mut self, config: Config) {
         self.regs.write_enable(0);
         let (man_ss, man_start) = match config.ss_config {
-            SlaveSelectConfig::ManualWithManualStart => (true, true),
-            SlaveSelectConfig::ManualAutoStart => (true, false),
-            SlaveSelectConfig::AutoWithManualStart => (false, true),
-            SlaveSelectConfig::AutoWithAutoStart => (false, false),
+            SlaveSelectConfig::ManualCsManualStart => (true, true),
+            SlaveSelectConfig::ManualCsAutoStart => (true, false),
+            SlaveSelectConfig::AutoCsManualStart => (false, true),
+            SlaveSelectConfig::AutoCsAutoStart => (false, false),
         };
         let (cpol, cpha) = spi_mode_const_to_cpol_cpha(config.init_mode);
 
-        self.regs.write_cr(
+        self.regs.write_config(
             zynq7000::spi::Config::builder()
                 .with_modefail_gen_en(false)
                 .with_manual_start(false)
@@ -492,7 +597,7 @@ impl SpiLowLevel {
                 .with_baud_rate_div(config.baud_div)
                 .with_cpha(cpha)
                 .with_cpol(cpol)
-                .with_master_ern(true)
+                .with_mode(zynq7000::spi::Mode::Master)
                 .build(),
         );
         // Configures for polling mode by default: TX trigger by one will lead to the
@@ -520,30 +625,27 @@ impl SpiLowLevel {
 
     #[inline(always)]
     pub fn write_fifo_unchecked(&mut self, data: u8) {
-        self.regs.write_txd(FifoWrite::new(data));
+        self.regs.write_tx_data(FifoWrite::new(data));
     }
 
     #[inline(always)]
     pub fn read_fifo_unchecked(&mut self) -> u8 {
-        self.regs.read_rxd().value()
+        self.regs.read_rx_data().value()
     }
 
     #[inline]
     pub fn issue_manual_start(&mut self) {
-        self.regs.modify_cr(|mut val| {
-            val.set_manual_start(true);
-            val
-        });
+        self.regs.modify_config(|val| val.with_manual_start(true));
     }
 
     #[inline]
-    pub fn read_isr(&self) -> InterruptStatus {
-        self.regs.read_isr()
+    pub fn read_interrupt_status(&self) -> InterruptStatus {
+        self.regs.read_interrupt_status()
     }
 
     #[inline]
-    pub fn read_imr(&self) -> InterruptMask {
-        self.regs.read_imr()
+    pub fn read_enabled_interrupts(&self) -> InterruptEnabled {
+        self.regs.read_enabled_interrupts()
     }
 
     #[inline]
@@ -569,17 +671,22 @@ impl SpiLowLevel {
         Ok(())
     }
 
+    #[inline]
+    pub fn write_delay_control(&mut self, delay_control: DelayControl) {
+        self.regs.write_delay_control(delay_control);
+    }
+
     /// This disables all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn disable_interrupts(&mut self) {
-        self.regs.write_idr(
+    pub fn disable_interrupts_master_mode(&mut self) {
+        self.regs.write_interupt_disable(
             InterruptControl::builder()
                 .with_tx_underflow(true)
                 .with_rx_full(true)
                 .with_rx_not_empty(true)
                 .with_tx_full(false)
-                .with_tx_trig(true)
+                .with_tx_below_threshold(true)
                 .with_mode_fault(false)
                 .with_rx_ovr(true)
                 .build(),
@@ -589,15 +696,32 @@ impl SpiLowLevel {
     /// This enables all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn enable_interrupts(&mut self) {
-        self.regs.write_ier(
+    pub fn enable_interrupts_master_mode(&mut self, tx_below_threshold: bool) {
+        self.regs.write_interrupt_enable(
             InterruptControl::builder()
                 .with_tx_underflow(true)
                 .with_rx_full(true)
                 .with_rx_not_empty(true)
                 .with_tx_full(false)
-                .with_tx_trig(true)
+                .with_tx_below_threshold(tx_below_threshold)
                 .with_mode_fault(false)
+                .with_rx_ovr(true)
+                .build(),
+        );
+    }
+
+    /// This enables all interrupts relevant for non-blocking interrupt driven SPI operation
+    /// in SPI slave mode.
+    #[inline]
+    pub fn enable_interrupts_slave_mode(&mut self, mode_fault: bool) {
+        self.regs.write_interrupt_enable(
+            InterruptControl::builder()
+                .with_tx_underflow(true)
+                .with_rx_full(true)
+                .with_rx_not_empty(true)
+                .with_tx_full(false)
+                .with_tx_below_threshold(true)
+                .with_mode_fault(mode_fault)
                 .with_rx_ovr(true)
                 .build(),
         );
@@ -606,27 +730,39 @@ impl SpiLowLevel {
     /// This clears all interrupts relevant for non-blocking interrupt driven SPI operation
     /// in SPI master mode.
     #[inline]
-    pub fn clear_interrupts(&mut self) {
-        self.regs.write_isr(
+    pub fn clear_interrupts_master_mode(&mut self) {
+        self.regs.write_interrupt_status(
             InterruptStatus::builder()
                 .with_tx_underflow(true)
                 .with_rx_full(true)
                 .with_rx_not_empty(true)
                 .with_tx_full(false)
-                .with_tx_not_full(true)
+                .with_tx_below_threshold(true)
                 .with_mode_fault(false)
-                .with_rx_ovr(true)
+                .with_rx_overrun(true)
                 .build(),
         );
+    }
+}
+
+impl core::ops::Deref for SpiLowLevel {
+    type Target = MmioRegisters<'static>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.regs
+    }
+}
+
+impl core::ops::DerefMut for SpiLowLevel {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.regs
     }
 }
 
 /// Blocking Driver for the PS SPI peripheral in master mode.
 pub struct Spi {
     inner: SpiLowLevel,
-    sclk: Hertz,
     config: Config,
-    outstanding_rx: bool,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -655,7 +791,6 @@ pub enum SpiConstructionError {
 impl Spi {
     pub fn new_no_hw_ss<Sck: SckPin, Mosi: MosiPin, Miso: MisoPin>(
         spi: impl PsSpi,
-        clocks: &IoClocks,
         config: Config,
         spi_pins: (Sck, Mosi, Miso),
     ) -> Result<Self, SpiConstructionError> {
@@ -673,17 +808,11 @@ impl Spi {
         IoPeriphPin::new(spi_pins.0, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(spi_pins.1, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(spi_pins.2, SPI_MUX_CONF, Some(false));
-        Ok(Self::new_generic_unchecked(
-            spi_id,
-            spi.reg_block(),
-            clocks,
-            config,
-        ))
+        Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
     }
 
     pub fn new_one_hw_cs<Sck: SckPin, Mosi: MosiPin, Miso: MisoPin, Ss: SsPin>(
         spi: impl PsSpi,
-        clocks: &IoClocks,
         config: Config,
         spi_pins: (Sck, Mosi, Miso),
         ss_pin: Ss,
@@ -703,17 +832,11 @@ impl Spi {
         IoPeriphPin::new(spi_pins.1, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(spi_pins.2, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(ss_pin, SPI_MUX_CONF, Some(false));
-        Ok(Self::new_generic_unchecked(
-            spi_id,
-            spi.reg_block(),
-            clocks,
-            config,
-        ))
+        Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
     }
 
     pub fn new_with_two_hw_cs<Sck: SckPin, Mosi: MosiPin, Miso: MisoPin, Ss0: SsPin, Ss1: SsPin>(
         spi: impl PsSpi,
-        clocks: &IoClocks,
         config: Config,
         spi_pins: (Sck, Mosi, Miso),
         ss_pins: (Ss0, Ss1),
@@ -743,12 +866,7 @@ impl Spi {
         IoPeriphPin::new(spi_pins.2, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(ss_pins.0, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(ss_pins.1, SPI_MUX_CONF, Some(false));
-        Ok(Self::new_generic_unchecked(
-            spi_id,
-            spi.reg_block(),
-            clocks,
-            config,
-        ))
+        Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
     }
 
     pub fn new_with_three_hw_cs<
@@ -760,7 +878,6 @@ impl Spi {
         Ss2: SsPin,
     >(
         spi: impl PsSpi,
-        clocks: &IoClocks,
         config: Config,
         spi_pins: (Sck, Mosi, Miso),
         ss_pins: (Ss0, Ss1, Ss2),
@@ -793,34 +910,48 @@ impl Spi {
         IoPeriphPin::new(ss_pins.0, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(ss_pins.1, SPI_MUX_CONF, Some(false));
         IoPeriphPin::new(ss_pins.2, SPI_MUX_CONF, Some(false));
+        Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
+    }
+
+    /// Constructor for usage with EMIO pins.
+    pub fn new_for_emio(spi: impl PsSpi, config: Config) -> Result<Self, InvalidPsSpiError> {
+        let spi_id = spi.id();
+        if spi_id.is_none() {
+            return Err(InvalidPsSpiError);
+        }
         Ok(Self::new_generic_unchecked(
-            spi_id,
+            spi_id.unwrap(),
             spi.reg_block(),
-            clocks,
             config,
         ))
     }
 
-    pub fn new_generic_unchecked(
-        id: SpiId,
-        regs: MmioRegisters<'static>,
-        clocks: &IoClocks,
-        config: Config,
-    ) -> Self {
+    pub fn new_generic_unchecked(id: SpiId, regs: MmioRegisters<'static>, config: Config) -> Self {
         let periph_sel = match id {
             SpiId::Spi0 => crate::PeriphSelect::Spi0,
             SpiId::Spi1 => crate::PeriphSelect::Spi1,
         };
+
+        let mut ll = SpiLowLevel { id, regs };
+        ll.enable_ref_clock();
         enable_amba_peripheral_clock(periph_sel);
-        let sclk = clocks.spi_clk() / config.baud_div.div_value() as u32;
-        let mut spi = Self {
-            inner: SpiLowLevel { regs, id },
-            sclk,
-            config,
-            outstanding_rx: false,
-        };
+        let mut spi = Self { inner: ll, config };
         spi.reset_and_reconfigure();
         spi
+    }
+
+    #[inline]
+    pub const fn id(&self) -> SpiId {
+        self.inner.id
+    }
+
+    #[inline]
+    pub const fn interrupt_id(&self) -> crate::Interrupt {
+        self.inner.id.interrupt_id()
+    }
+
+    pub fn write_delay_control(&mut self, delay_control: DelayControl) {
+        self.inner.write_delay_control(delay_control);
     }
 
     /// Re-configures the SPI peripheral with the initial configuration.
@@ -838,17 +969,11 @@ impl Spi {
 
     #[inline]
     pub fn issue_manual_start_for_manual_cfg(&mut self) {
-        if self.config.ss_config == SlaveSelectConfig::AutoWithManualStart
-            || self.config.ss_config == SlaveSelectConfig::ManualWithManualStart
+        if self.config.ss_config == SlaveSelectConfig::AutoCsManualStart
+            || self.config.ss_config == SlaveSelectConfig::ManualCsManualStart
         {
             self.inner.issue_manual_start();
         }
-    }
-
-    /// Retrieve SCLK clock frequency currently configured for this SPI.
-    #[inline]
-    pub const fn sclk(&self) -> Hertz {
-        self.sclk
     }
 
     /// Retrieve inner low-level helper.
@@ -862,7 +987,7 @@ impl Spi {
         &mut self.inner.regs
     }
 
-    fn initial_fifo_fill(&mut self, words: &[u8]) -> usize {
+    fn prefill_fifo(&mut self, words: &[u8]) -> usize {
         let write_len = core::cmp::min(FIFO_DEPTH, words.len());
         (0..write_len).for_each(|idx| {
             self.inner.write_fifo_unchecked(words[idx]);
@@ -878,7 +1003,7 @@ impl Spi {
         self.inner.regs.write_rx_trig(1);
 
         // Fill the FIFO with initial data.
-        let written = self.initial_fifo_fill(words);
+        let written = self.prefill_fifo(words);
 
         // We assume that the slave select configuration was already performed, but we take
         // care of issuing a start if necessary.
@@ -886,7 +1011,7 @@ impl Spi {
         written
     }
 
-    fn read(&mut self, words: &mut [u8]) {
+    pub fn read(&mut self, words: &mut [u8]) {
         if words.is_empty() {
             return;
         }
@@ -908,7 +1033,7 @@ impl Spi {
 
         let mut read_idx = 0;
         while read_idx < words.len() {
-            let status = self.regs().read_isr();
+            let status = self.regs().read_interrupt_status();
             if status.rx_not_empty() {
                 words[read_idx] = self.inner.read_fifo_unchecked();
                 read_idx += 1;
@@ -921,33 +1046,38 @@ impl Spi {
         }
     }
 
-    fn write(&mut self, words: &[u8]) {
+    pub fn write(&mut self, words: &[u8]) {
         if words.is_empty() {
             return;
         }
         let mut written = self.prepare_generic_blocking_transfer(words);
         let mut read_idx = 0;
+        if words.len() > FIFO_DEPTH {
+            self.inner.regs.write_tx_trig(FIFO_DEPTH as u32 / 2);
+        }
 
-        while written < words.len() {
-            let status = self.regs().read_isr();
+        loop {
+            let status = self.regs().read_interrupt_status();
+            let rx_pending = read_idx < words.len();
+            let tx_pending = written < words.len();
             // We empty the FIFO to prevent it filling up completely, as long as we have to write
             // bytes
-            if status.rx_not_empty() {
+            if status.rx_not_empty() && rx_pending {
                 self.inner.read_fifo_unchecked();
                 read_idx += 1;
             }
-            if !status.tx_full() {
+            if !status.tx_full() && tx_pending {
                 self.inner.write_fifo_unchecked(words[written]);
                 written += 1;
             }
+            if !rx_pending && !tx_pending {
+                break;
+            }
         }
-        // We exit once all bytes have been written, so some bytes to read might be outstanding.
-        // We use the FIFO trigger mechanism to determine when we can read all the remaining bytes.
-        self.regs().write_rx_trig((words.len() - read_idx) as u32);
-        self.outstanding_rx = true;
+        self.inner.regs.write_tx_trig(1);
     }
 
-    fn transfer(&mut self, read: &mut [u8], write: &[u8]) {
+    pub fn transfer(&mut self, read: &mut [u8], write: &[u8]) {
         if read.is_empty() {
             return;
         }
@@ -958,7 +1088,7 @@ impl Spi {
         let mut writes_finished = write_idx == max_idx;
         let mut reads_finished = false;
         while !writes_finished || !reads_finished {
-            let status = self.regs().read_isr();
+            let status = self.regs().read_interrupt_status();
             if status.rx_not_empty() && !reads_finished {
                 if read_idx < read.len() {
                     read[read_idx] = self.inner.read_fifo_unchecked();
@@ -983,7 +1113,7 @@ impl Spi {
         }
     }
 
-    fn transfer_in_place(&mut self, words: &mut [u8]) {
+    pub fn transfer_in_place(&mut self, words: &mut [u8]) {
         if words.is_empty() {
             return;
         }
@@ -993,7 +1123,7 @@ impl Spi {
         let mut writes_finished = write_idx == words.len();
         let mut reads_finished = false;
         while !writes_finished || !reads_finished {
-            let status = self.inner.read_isr();
+            let status = self.inner.read_interrupt_status();
             if status.rx_not_empty() && !reads_finished {
                 words[read_idx] = self.inner.read_fifo_unchecked();
                 read_idx += 1;
@@ -1010,16 +1140,16 @@ impl Spi {
 
     /// Blocking flush implementation.
     fn flush(&mut self) {
-        if !self.outstanding_rx {
-            return;
-        }
-        let rx_trig = self.inner.read_rx_not_empty_threshold();
-        while !self.inner.read_isr().rx_not_empty() {}
-        (0..rx_trig).for_each(|_| {
+        self.inner.write_tx_trig(1);
+        let status = self.inner.read_interrupt_status();
+        while self.inner.read_interrupt_status().rx_not_empty() {
             self.inner.read_fifo_unchecked();
-        });
-        self.inner.set_rx_fifo_trigger(1).unwrap();
-        self.outstanding_rx = false;
+        }
+        while status.tx_full() {
+            while self.inner.read_interrupt_status().rx_not_empty() {
+                self.inner.read_fifo_unchecked();
+            }
+        }
     }
 }
 
@@ -1113,13 +1243,13 @@ impl<Delay: DelayNs> embedded_hal::spi::SpiDevice for SpiWithHwCs<Delay> {
 #[inline]
 pub fn reset(id: SpiId) {
     let assert_reset = match id {
-        SpiId::Spi0 => DualRefAndClockReset::builder()
+        SpiId::Spi0 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(false)
             .with_periph0_ref_rst(true)
             .with_periph1_cpu1x_rst(false)
             .with_periph0_cpu1x_rst(true)
             .build(),
-        SpiId::Spi1 => DualRefAndClockReset::builder()
+        SpiId::Spi1 => DualRefAndClockResetSpiUart::builder()
             .with_periph1_ref_rst(true)
             .with_periph0_ref_rst(false)
             .with_periph1_cpu1x_rst(true)
@@ -1131,10 +1261,11 @@ pub fn reset(id: SpiId) {
             regs.reset_ctrl().write_spi(assert_reset);
             // Keep it in reset for some cycles.. The TMR just mentions some small delay,
             // no idea what is meant with that.
-            for _ in 0..3 {
+            for _ in 0..10 {
                 aarch32_cpu::asm::nop();
             }
-            regs.reset_ctrl().write_spi(DualRefAndClockReset::DEFAULT);
+            regs.reset_ctrl()
+                .write_spi(DualRefAndClockResetSpiUart::ZERO);
         });
     }
 }
@@ -1144,23 +1275,23 @@ pub fn reset(id: SpiId) {
 /// The Zynq7000 SPI peripheral has the following requirement for the SPI reference clock:
 /// It must be larger than the CPU 1X clock. Therefore, the divisor used to calculate the reference
 /// clock has a maximum value, which can be calculated with this function.
+/// [configure_spi_ref_clock_with_divisor] can be used to configure the SPI reference clock with a
+/// divisor.
 ///
-/// [configure_spi_ref_clk] can be used to configure the SPI reference clock with the calculated
-/// value.
+/// *NOTE* - It is recommended to avoid the largest theoretical value which was proven to be
+/// problematic for driving certain sensors and instead take a smaller value! Reduce the divisor
+/// calculated by this function subtracting a small value to get a functioning SPI clock.
 pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6> {
     let slcr = unsafe { Slcr::steal() };
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
-    let div = match spi_clk_ctrl.srcsel() {
+    let ref_clock = match spi_clk_ctrl.srcsel() {
         zynq7000::slcr::clocks::SrcSelIo::IoPll | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
-            clks.io_clocks().ref_clk() / clks.arm_clocks().cpu_1x_clk()
+            clks.io_clocks().ref_clk().to_raw()
         }
-        zynq7000::slcr::clocks::SrcSelIo::ArmPll => {
-            clks.arm_clocks().ref_clk() / clks.arm_clocks().cpu_1x_clk()
-        }
-        zynq7000::slcr::clocks::SrcSelIo::DdrPll => {
-            clks.ddr_clocks().ref_clk() / clks.arm_clocks().cpu_1x_clk()
-        }
+        zynq7000::slcr::clocks::SrcSelIo::ArmPll => clks.arm_clocks().ref_clk().to_raw(),
+        zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks.ddr_clocks().ref_clk().to_raw(),
     };
+    let div = ref_clock.div_ceil(clks.arm_clocks().cpu_1x_clk().to_raw());
     if div > u6::MAX.value() as u32 {
         return None;
     }
@@ -1168,7 +1299,28 @@ pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6
     Some(u6::new(div as u8))
 }
 
-pub fn configure_spi_ref_clk(clks: &mut Clocks, divisor: u6) {
+/// Configures the SPI reference clock.
+///
+/// It is strongly advised to take a clock value which is substantially higher than the CPU 1x
+/// clock. It was proven that taking values which are only slightly larger than the CPU 1x
+/// clock are problematic for driving ceratin devices.
+pub fn configure_spi_ref_clock(clks: &mut Clocks, target_clock: Hertz) {
+    let slcr = unsafe { Slcr::steal() };
+    let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
+    let ref_clk = match spi_clk_ctrl.srcsel() {
+        zynq7000::slcr::clocks::SrcSelIo::IoPll | zynq7000::slcr::clocks::SrcSelIo::IoPllAlt => {
+            clks.io_clocks().ref_clk().to_raw()
+        }
+        zynq7000::slcr::clocks::SrcSelIo::ArmPll => clks.arm_clocks().ref_clk().to_raw(),
+        zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks.ddr_clocks().ref_clk().to_raw(),
+    };
+    let div = ref_clk.div_ceil(target_clock.to_raw());
+    if div > u6::MAX.value() as u32 {
+        configure_spi_ref_clock_with_divisor(clks, u6::new(div as u8));
+    }
+}
+
+pub fn configure_spi_ref_clock_with_divisor(clks: &mut Clocks, divisor: u6) {
     let mut slcr = unsafe { Slcr::steal() };
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     slcr.modify(|regs| {
@@ -1189,4 +1341,15 @@ pub fn configure_spi_ref_clk(clks: &mut Clocks, divisor: u6) {
         }
     };
     clks.io_clocks_mut().update_spi_clk(new_clk);
+}
+
+/// Connects SPI0 output signals to SPI1 input signals and vice-versa.
+#[inline]
+pub fn enable_spi0_to_spi1_loopback() {
+    // Safety: We only modify the SPI bit.
+    unsafe {
+        Slcr::with(|slcr| {
+            slcr.modify_mio_loopback(|val| val.with_spi0_loop_spi1(true));
+        });
+    }
 }

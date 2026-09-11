@@ -12,10 +12,9 @@ static LOG_SEL: AtomicU8 = AtomicU8::new(0);
 /// Blocking UART loggers.
 pub mod uart_blocking {
     use super::*;
-    use core::cell::{Cell, RefCell, UnsafeCell};
+    use core::cell::{RefCell, UnsafeCell};
     use embedded_io::Write as _;
 
-    use aarch32_cpu::register::Cpsr;
     use critical_section::Mutex;
     use log::{LevelFilter, Log, set_logger, set_max_level};
 
@@ -78,28 +77,64 @@ pub mod uart_blocking {
         }
     }
 
-    pub struct UartLoggerUnsafeSingleThread {
-        skip_in_isr: Cell<bool>,
+    pub struct UartLoggerWithBusyFlag {
+        busy: AtomicBool,
+        skip_in_isr: AtomicBool,
         uart: UnsafeCell<Option<Uart>>,
     }
 
-    unsafe impl Send for UartLoggerUnsafeSingleThread {}
-    unsafe impl Sync for UartLoggerUnsafeSingleThread {}
+    unsafe impl Send for UartLoggerWithBusyFlag {}
+    unsafe impl Sync for UartLoggerWithBusyFlag {}
 
-    static UART_LOGGER_UNSAFE_SINGLE_THREAD: UartLoggerUnsafeSingleThread =
-        UartLoggerUnsafeSingleThread {
-            skip_in_isr: Cell::new(false),
-            uart: UnsafeCell::new(None),
-        };
+    static UART_LOGGER_UNSAFE_SINGLE_THREAD: UartLoggerWithBusyFlag = UartLoggerWithBusyFlag {
+        busy: AtomicBool::new(false),
+        skip_in_isr: AtomicBool::new(false),
+        uart: UnsafeCell::new(None),
+    };
 
-    /// Initialize the logger with a blocking UART instance which does not use locks.
+    struct UartGuard<'lock>(&'lock AtomicBool);
+
+    impl<'lock> UartGuard<'lock> {
+        pub fn new(flag: &'lock AtomicBool) -> Option<Self> {
+            let proc_mode = aarch32_cpu::register::Cpsr::read().mode().ok()?;
+
+            let is_irq = proc_mode == aarch32_cpu::register::cpsr::ProcessorMode::Fiq
+                || proc_mode == aarch32_cpu::register::cpsr::ProcessorMode::Irq;
+
+            // For IRQs, only try once.
+            if is_irq {
+                if UART_LOGGER_UNSAFE_SINGLE_THREAD
+                    .skip_in_isr
+                    .load(core::sync::atomic::Ordering::Relaxed)
+                {
+                    return None;
+                }
+                if flag.swap(true, core::sync::atomic::Ordering::AcqRel) {
+                    return None;
+                }
+                return Some(Self(flag));
+            }
+
+            // For threaded code, spinning is allowed.
+            while flag.swap(true, core::sync::atomic::Ordering::AcqRel) {}
+            Some(Self(flag))
+        }
+    }
+
+    impl Drop for UartGuard<'_> {
+        fn drop(&mut self) {
+            self.0.store(false, core::sync::atomic::Ordering::Release);
+        }
+    }
+
+    /// Initialize the logger with a blocking UART instance which spins on a busy flag in threaded
+    /// mode, and does not log in interrupt contexts if the main task was busy with logging.
     ///
-    /// # Safety
+    /// It should be noted that this is still a blocking logger, and using it in an ISR might
+    /// invalidate application logic and introduce problematic delays in the system.
     ///
-    /// This is a blocking logger which performs a write WITHOUT a critical section. This logger is
-    /// NOT thread-safe, which might lead to garbled output. Log output in ISRs can optionally be
-    /// surpressed.
-    pub unsafe fn init_unsafe_single_core(uart: Uart, level: LevelFilter, skip_in_isr: bool) {
+    /// Therefore, the initialization also allows skipping logging in ISRs completely.
+    pub fn init_with_busy_flag(uart: Uart, level: LevelFilter, skip_in_isr: bool) {
         if LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
             return;
         }
@@ -109,34 +144,31 @@ pub mod uart_blocking {
         );
         let opt_uart = unsafe { &mut *UART_LOGGER_UNSAFE_SINGLE_THREAD.uart.get() };
         opt_uart.replace(uart);
+
         UART_LOGGER_UNSAFE_SINGLE_THREAD
             .skip_in_isr
-            .set(skip_in_isr);
+            .store(skip_in_isr, core::sync::atomic::Ordering::Relaxed);
 
         set_logger(&UART_LOGGER_UNSAFE_SINGLE_THREAD).unwrap();
         set_max_level(level); // Adjust as needed
     }
 
-    impl log::Log for UartLoggerUnsafeSingleThread {
+    impl log::Log for UartLoggerWithBusyFlag {
         fn enabled(&self, _metadata: &log::Metadata) -> bool {
             true
         }
 
         fn log(&self, record: &log::Record) {
-            if self.skip_in_isr.get() {
-                match Cpsr::read().mode().unwrap() {
-                    aarch32_cpu::register::cpsr::ProcessorMode::Fiq
-                    | aarch32_cpu::register::cpsr::ProcessorMode::Irq => {
-                        return;
-                    }
-                    _ => {}
-                }
+            let guard = UartGuard::new(&self.busy);
+            if guard.is_none() {
+                return;
             }
 
             let uart_mut = unsafe { &mut *self.uart.get() }.as_mut();
             if uart_mut.is_none() {
                 return;
             }
+
             writeln!(
                 uart_mut.unwrap(),
                 "{} - {}\r",
@@ -147,6 +179,11 @@ pub mod uart_blocking {
         }
 
         fn flush(&self) {
+            let guard = UartGuard::new(&self.busy);
+            if guard.is_none() {
+                return;
+            }
+
             let uart_mut = unsafe { &mut *self.uart.get() }.as_mut();
             if uart_mut.is_none() {
                 return;
@@ -165,37 +202,38 @@ pub mod uart_blocking {
     }
 }
 
-/// Logger module which logs into a ring buffer to allow asynchronous logging handling.
-pub mod rb {
-    use core::cell::RefCell;
+/// Logger module which logs into a pipe to allow asynchronous logging handling.
+pub mod asynch {
     use core::fmt::Write as _;
 
     use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
     use log::{LevelFilter, set_logger, set_max_level};
-    use ringbuf::{
-        StaticRb,
-        traits::{Consumer, Producer},
-    };
+
+    use crate::uart::TxAsync;
 
     /// Logger implementation which logs frames via a ring buffer and sends the frame sizes
     /// as messages.
     ///
-    /// The logger does not require allocation and reserved a generous amount of 4096 bytes for
-    /// both data buffer and ring buffer. This should be sufficient for most logging needs.
+    /// The logger does not require allocation and reserves a generous amount of 4096 bytes for
+    /// log data. This should be sufficient for most logging needs.
     pub struct Logger {
-        frame_queue: embassy_sync::channel::Channel<CriticalSectionRawMutex, usize, 32>,
-        data_buf: critical_section::Mutex<RefCell<heapless::String<4096>>>,
-        ring_buf: critical_section::Mutex<RefCell<Option<StaticRb<u8, 4096>>>>,
+        pipe: core::cell::RefCell<
+            Option<embassy_sync::pipe::Writer<'static, CriticalSectionRawMutex, 4096>>,
+        >,
+        buf: critical_section::Mutex<core::cell::RefCell<heapless::String<4096>>>,
     }
 
     unsafe impl Send for Logger {}
     unsafe impl Sync for Logger {}
 
-    static LOGGER_RB: Logger = Logger {
-        frame_queue: embassy_sync::channel::Channel::new(),
-        data_buf: critical_section::Mutex::new(RefCell::new(heapless::String::new())),
-        ring_buf: critical_section::Mutex::new(RefCell::new(None)),
+    static LOGGER: Logger = Logger {
+        pipe: core::cell::RefCell::new(None),
+        buf: critical_section::Mutex::new(core::cell::RefCell::new(heapless::String::new())),
     };
+
+    static PIPE: static_cell::ConstStaticCell<
+        embassy_sync::pipe::Pipe<CriticalSectionRawMutex, 4096>,
+    > = static_cell::ConstStaticCell::new(embassy_sync::pipe::Pipe::new());
 
     impl log::Log for Logger {
         fn enabled(&self, _metadata: &log::Metadata) -> bool {
@@ -203,58 +241,64 @@ pub mod rb {
         }
 
         fn log(&self, record: &log::Record) {
+            if self.pipe.borrow().is_none() {
+                return;
+            }
             critical_section::with(|cs| {
-                let ref_buf = self.data_buf.borrow(cs);
-                let mut buf = ref_buf.borrow_mut();
+                let mut buf = self.buf.borrow(cs).borrow_mut();
                 buf.clear();
                 let _ = writeln!(buf, "{} - {}\r", record.level(), record.args());
-                let rb_ref = self.ring_buf.borrow(cs);
-                let mut rb_opt = rb_ref.borrow_mut();
-                if rb_opt.is_none() {
-                    panic!("log call on uninitialized logger");
+
+                let mut written = 0;
+
+                let pipe_writer_ref = self.pipe.borrow();
+                let pipe_writer = pipe_writer_ref.as_ref().unwrap();
+                while let Ok(written_in_this_call) =
+                    pipe_writer.try_write(&buf.as_bytes()[written..])
+                {
+                    written += written_in_this_call;
+                    if written >= buf.len() {
+                        break;
+                    }
                 }
-                rb_opt.as_mut().unwrap().push_slice(buf.as_bytes());
-                let _ = self.frame_queue.try_send(buf.len());
             });
         }
 
-        fn flush(&self) {
-            while !self.frame_queue().is_empty() {}
-        }
+        fn flush(&self) {}
     }
 
-    impl Logger {
-        pub fn frame_queue(
-            &self,
-        ) -> &embassy_sync::channel::Channel<CriticalSectionRawMutex, usize, 32> {
-            &self.frame_queue
-        }
-    }
-
-    pub fn init(level: LevelFilter) {
+    pub fn init_generic(
+        level: LevelFilter,
+    ) -> Option<embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>> {
         if super::LOGGER_INIT_DONE.swap(true, core::sync::atomic::Ordering::Relaxed) {
-            return;
+            return None;
         }
-        critical_section::with(|cs| {
-            let rb = StaticRb::<u8, 4096>::default();
-            let rb_ref = LOGGER_RB.ring_buf.borrow(cs);
-            rb_ref.borrow_mut().replace(rb);
-        });
-        set_logger(&LOGGER_RB).unwrap();
+        let (reader, writer) = PIPE.take().split();
+        LOGGER.pipe.borrow_mut().replace(writer);
+        set_logger(&LOGGER).unwrap();
         set_max_level(level); // Adjust as needed
+        Some(reader)
     }
 
-    pub fn read_next_frame(frame_len: usize, buf: &mut [u8]) {
-        let read_len = core::cmp::min(frame_len, buf.len());
-        critical_section::with(|cs| {
-            let rb_ref = LOGGER_RB.ring_buf.borrow(cs);
-            let mut rb = rb_ref.borrow_mut();
-            rb.as_mut().unwrap().pop_slice(&mut buf[0..read_len]);
-        })
+    pub fn init_with_uart_tx(level: LevelFilter, tx: TxAsync) -> Option<UartLoggerRunner> {
+        init_generic(level).map(|reader| UartLoggerRunner { reader, tx })
     }
 
-    pub fn get_frame_queue()
-    -> &'static embassy_sync::channel::Channel<CriticalSectionRawMutex, usize, 32> {
-        LOGGER_RB.frame_queue()
+    pub struct UartLoggerRunner {
+        reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
+        tx: TxAsync,
+    }
+
+    impl UartLoggerRunner {
+        pub async fn run(&mut self) -> ! {
+            let mut log_buf = [0u8; 1024];
+
+            loop {
+                let read_bytes = self.reader.read(&mut log_buf).await;
+                if read_bytes > 0 {
+                    self.tx.write(&log_buf[..read_bytes]).await;
+                }
+            }
+        }
     }
 }

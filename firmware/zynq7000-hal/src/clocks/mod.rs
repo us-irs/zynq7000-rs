@@ -3,11 +3,12 @@ use arbitrary_int::{prelude::*, u6};
 
 pub mod pll;
 
+pub use zynq7000::slcr::clocks::CpuClockRatio;
 use zynq7000::slcr::{
     ClockControlRegisters,
     clocks::{
-        ClockkRatioSelect, DualCommonPeriphIoClockControl, FpgaClockControl, GigEthClockControl,
-        SingleCommonPeriphIoClockControl,
+        ArmClockControl, ClockRatioSelectReg, DualCommonPeriphIoClockControl, FpgaClockControl,
+        GigEthClockControl, SingleCommonPeriphIoClockControl,
     },
 };
 
@@ -17,6 +18,7 @@ use super::time::Hertz;
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ArmClocks {
     ref_clk: Hertz,
+    ratio: CpuClockRatio,
     cpu_1x_clk: Hertz,
     cpu_2x_clk: Hertz,
     cpu_3x2x_clk: Hertz,
@@ -24,23 +26,82 @@ pub struct ArmClocks {
 }
 
 impl ArmClocks {
+    /// Configure the ARM clocks based on the ARM PLL input clock.
+    ///
+    /// # Safety
+    ///
+    /// This changes the CPU clock frequency. You must pass the ARM PLL clock frequency and
+    /// you must ensure that this is only run once during system initialization, for example
+    /// in the first-stage bootloader.
+    pub unsafe fn new_with_cpu_clock_init(
+        arm_pll_clk: Hertz,
+        clock_ratio: CpuClockRatio,
+        divisor: u6,
+    ) -> Self {
+        unsafe {
+            crate::slcr::Slcr::with(|slcr| {
+                slcr.clk_ctrl().write_clk_ratio_select(
+                    ClockRatioSelectReg::builder().with_sel(clock_ratio).build(),
+                );
+                slcr.clk_ctrl().write_arm_clk_ctrl(
+                    ArmClockControl::builder()
+                        .with_cpu_peri_clk_act(true)
+                        .with_cpu_1x_clk_act(true)
+                        .with_cpu_2x_clk_act(true)
+                        .with_cpu_3or2x_clk_act(true)
+                        .with_cpu_6or4x_clk_act(true)
+                        .with_divisor(divisor)
+                        .with_srcsel(zynq7000::slcr::clocks::SrcSelArm::ArmPll)
+                        .build(),
+                );
+            });
+        }
+        let cpu_6x4x_clk = arm_pll_clk / divisor.as_u32();
+        let cpu_1x_clk = match clock_ratio {
+            CpuClockRatio::FourToTwoToOne => cpu_6x4x_clk / 4,
+            CpuClockRatio::SixToTwoToOne => cpu_6x4x_clk / 6,
+        };
+
+        Self {
+            ref_clk: arm_pll_clk,
+            ratio: clock_ratio,
+            cpu_1x_clk,
+            cpu_2x_clk: cpu_1x_clk * 2,
+            cpu_3x2x_clk: match clock_ratio {
+                CpuClockRatio::SixToTwoToOne => cpu_1x_clk * 3,
+                CpuClockRatio::FourToTwoToOne => cpu_1x_clk * 2,
+            },
+            cpu_6x4x_clk,
+        }
+    }
+
+    #[inline]
+    pub const fn ratio(&self) -> CpuClockRatio {
+        self.ratio
+    }
+
     /// Reference clock provided by ARM PLL which is used to calculate all other clock frequencies.
+    #[inline]
     pub const fn ref_clk(&self) -> Hertz {
         self.ref_clk
     }
 
+    #[inline]
     pub const fn cpu_1x_clk(&self) -> Hertz {
         self.cpu_1x_clk
     }
 
+    #[inline]
     pub const fn cpu_2x_clk(&self) -> Hertz {
         self.cpu_2x_clk
     }
 
+    #[inline]
     pub const fn cpu_3x2x_clk(&self) -> Hertz {
         self.cpu_3x2x_clk
     }
 
+    #[inline]
     pub const fn cpu_6x4x_clk(&self) -> Hertz {
         self.cpu_6x4x_clk
     }
@@ -278,25 +339,27 @@ impl Clocks {
             zynq7000::slcr::clocks::SrcSelArm::DdrPll => ddr_pll_out,
             zynq7000::slcr::clocks::SrcSelArm::IoPll => io_pll_out,
         };
-        let clk_sel = clk_regs.read_clk_621_true();
+        let clk_sel = clk_regs.read_clk_ratio_select();
         if arm_clk_ctrl.divisor().as_u32() == 0 {
             return Err(ClockReadError::DivisorZero(DivisorZero(ClockModuleId::Arm)));
         }
         let arm_clk_divided = arm_base_clk / arm_clk_ctrl.divisor().as_u32();
         let arm_clks = match clk_sel.sel() {
-            ClockkRatioSelect::FourToTwoToOne => ArmClocks {
+            CpuClockRatio::FourToTwoToOne => ArmClocks {
                 ref_clk: arm_pll_out,
                 cpu_1x_clk: arm_clk_divided / 4,
                 cpu_2x_clk: arm_clk_divided / 2,
                 cpu_3x2x_clk: arm_clk_divided / 2,
                 cpu_6x4x_clk: arm_clk_divided,
+                ratio: clk_sel.sel(),
             },
-            ClockkRatioSelect::SixToTwoToOne => ArmClocks {
+            CpuClockRatio::SixToTwoToOne => ArmClocks {
                 ref_clk: arm_pll_out,
                 cpu_1x_clk: arm_clk_divided / 6,
                 cpu_2x_clk: arm_clk_divided / 3,
                 cpu_3x2x_clk: arm_clk_divided / 2,
                 cpu_6x4x_clk: arm_clk_divided,
+                ratio: clk_sel.sel(),
             },
         };
 

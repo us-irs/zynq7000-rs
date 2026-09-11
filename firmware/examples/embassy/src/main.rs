@@ -7,7 +7,7 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use embedded_hal::digital::StatefulOutputPin;
 use log::error;
-use zynq7000_hal::{InteruptConfig, clocks, gic, gpio, gtc, time::Hertz};
+use zynq7000_hal::{InteruptConfig, clocks, generic_interrupt_handler, gpio, gtc, time::Hertz};
 
 // Define the clock frequency as a constant
 const PS_CLOCK_FREQUENCY: Hertz = Hertz::from_raw(33_333_300);
@@ -30,7 +30,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
     let mio_pins = gpio::mio::Pins::new(periphs.gpio);
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
@@ -42,22 +42,11 @@ async fn main(_spawner: Spawner) -> ! {
 
 #[zynq7000_rt::irq]
 pub fn irq_handler() {
-    let mut gic_helper = gic::GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        gic::Interrupt::Sgi(_) => (),
-        gic::Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        gic::Interrupt::Spi(_spi_interrupt) => (),
-        gic::Interrupt::Invalid(_) => (),
-        gic::Interrupt::Spurious => (),
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]

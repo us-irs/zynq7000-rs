@@ -24,7 +24,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: "armv7a-none-eabihf"
-      - run: just build-dir firmware
+      - run: just build-zynq
       - run: just build-dir host
 
   fmt:

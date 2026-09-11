@@ -37,19 +37,20 @@ use embedded_alloc::LlffHeap as Heap;
 use embedded_hal::digital::StatefulOutputPin;
 use embedded_io::Write as _;
 use heapless::spsc::Queue;
-use log::{error, info, warn};
+use log::{info, warn};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    configure_level_shifter,
-    gic::{GicConfigurator, GicInterruptHelper, Interrupt},
+    configure_level_shifter, generic_interrupt_handler,
+    gic::{Configurator, Interrupt},
     gpio::{GpioPins, Output, PinState},
     gtc::GlobalTimerCounter,
     l2_cache,
     time::Hertz,
-    uart::{ClockConfig, Config, Uart},
+    uart::{self, ClockConfig, Config, Uart},
 };
 
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub enum UartMode {
     Uart0ToUartlite,
     Uart0ToUart16550,
@@ -74,6 +75,14 @@ const AXI_UAR16550_BASE_ADDR: u32 = 0x43C0_0000;
 pub const UARTLITE_PL_INT_ID: usize = 0;
 pub const UART16550_PL_INT_ID: usize = 1;
 
+pub const UART_SPEED: u32 = 115_200;
+
+// Other common baud rates to test with:
+
+// pub const UART_SPEED: u32 = 9600;
+// pub const UART_SPEED: u32 = 230_400;
+// pub const UART_SPEED: u32 = 912_600;
+
 const RB_SIZE: usize = 512;
 
 // These queues are used to send all data received in the UART interrupt handlers to the main
@@ -88,11 +97,11 @@ static QUEUE_UART16550: static_cell::ConstStaticCell<heapless::spsc::Queue<u8, R
 // Those are all used by the interrupt handler, so we have to do the Mutex dance.
 static RX_UART_0: Mutex<RefCell<Option<zynq7000_hal::uart::Rx>>> = Mutex::new(RefCell::new(None));
 
-static UART_0_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
+static UART_0_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
     Mutex::new(RefCell::new(None));
-static UARTLITE_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
+static UARTLITE_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
     Mutex::new(RefCell::new(None));
-static UART16550_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8, RB_SIZE>>>> =
+static UART16550_PROD: Mutex<RefCell<Option<heapless::spsc::Producer<'static, u8>>>> =
     Mutex::new(RefCell::new(None));
 
 /// Entry point which calls the embassy main method.
@@ -171,7 +180,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Set up the global interrupt controller.
-    let mut gic = GicConfigurator::new_with_init(dp.gicc, dp.gicd);
+    let mut gic = Configurator::new_with_init(dp.gicc, dp.gicd);
     gic.enable_all_interrupts();
     gic.set_all_spi_interrupt_targets_cpu0();
     // AXI UARTLite documentation mentions that a rising-edge sensitive interrupt is generated,
@@ -187,7 +196,7 @@ async fn main(spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(dp.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -210,14 +219,21 @@ async fn main(spawner: Spawner) -> ! {
         unsafe { HEAP.init(&raw mut HEAP_MEM as usize, HEAP_SIZE) }
     }
 
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            log_uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    // Register the interrupts for the PL.
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Pl0),
+        on_interrupt_axi_uartlite,
+    );
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Pl1),
+        on_interrupt_axi_16550,
+    );
+    zynq7000_hal::register_interrupt(
+        Interrupt::Spi(zynq7000_hal::gic::SpiInterrupt::Uart0),
+        on_interrupt_uart_0,
+    );
+
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(log_uart, log::LevelFilter::Trace, false);
 
     // Set up UART multiplexing before creating and configuring the UARTs.
     let mut uart_mux = UartMultiplexer::new([
@@ -225,24 +241,42 @@ async fn main(spawner: Spawner) -> ! {
         Output::new_for_emio(gpio_pins.emio.take(9).unwrap(), PinState::Low),
         Output::new_for_emio(gpio_pins.emio.take(10).unwrap(), PinState::Low),
     ]);
+    let mut uart_speed = UART_SPEED;
     match UART_MODE {
         UartMode::Uart0ToUartlite => uart_mux.select(UartSel::Uart0ToUartlite),
         UartMode::Uart0ToUart16550 => uart_mux.select(UartSel::Uart0ToUart16550),
         UartMode::UartliteToUart16550 => uart_mux.select(UartSel::UartliteToUart16550),
     }
+    if (UART_MODE == UartMode::Uart0ToUartlite || UART_MODE == UartMode::UartliteToUart16550)
+        && uart_speed != 115200
+    {
+        log::warn!("UARTLITE speed is not configurable. Hardcoding UART speed to 115200");
+        uart_speed = 115200;
+    }
 
+    let uart0_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), uart_speed)
+        .unwrap()
+        .0;
     // UART0 routed through EMIO to PL pins.
     let uart_0 =
-        Uart::new_with_emio(dp.uart_0, Config::new_with_clk_config(uart_clk_config)).unwrap();
+        Uart::new_with_emio(dp.uart_0, Config::new_with_clk_config(uart0_clk_config)).unwrap();
     // Safety: Valid address of AXI UARTLITE.
     let mut uartlite = unsafe { AxiUartlite::new(AXI_UARTLITE_BASE_ADDR) };
     // We need to call this before splitting the structure, because the interrupt signal is
     // used for both TX and RX, so the API is only exposed for this structure.
     uartlite.enable_interrupt();
 
-    let (clk_config, error) =
-        axi_uart16550::ClockConfig::new_autocalc_with_error(clocks.pl_clocks()[0], 115200).unwrap();
-    assert!(error < 0.02);
+    let (clk_config, error) = axi_uart16550::ClockConfig::new_autocalc_with_error(
+        fugit_03::HertzU32::from_raw(clocks.pl_clocks()[0].to_raw()),
+        uart_speed,
+    )
+    .unwrap();
+    if error > 0.02 {
+        log::warn!(
+            "Calculated clock config for AXI UART16550 has error of {} %, which is higher than 2%. This may lead to incorrect baud rate. Consider changing the input clock or the target baud rate.",
+            (error * 100.0)
+        );
+    }
     let _uart_16550 = unsafe {
         AxiUart16550::new(
             AXI_UAR16550_BASE_ADDR,
@@ -272,7 +306,7 @@ async fn main(spawner: Spawner) -> ! {
     let (uartlite_prod, mut uartlite_cons) = QUEUE_UARTLITE.take().split();
     let (uart16550_prod, mut uart16550_cons) = QUEUE_UART16550.take().split();
     // Use our helper function to start RX handling.
-    uart_0_rx.start_interrupt_driven_reception();
+    uart_0_rx.start_interrupt_driven_reception(0xFF);
     // Use our helper function to start RX handling.
     uart_16550_rx.start_interrupt_driven_reception();
     critical_section::with(|cs| {
@@ -387,7 +421,9 @@ async fn uartlite_task(uartlite: axi_uartlite::Tx) {
 #[embassy_executor::task]
 async fn uart_0_task(uart_tx: zynq7000_hal::uart::Tx) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    let mut tx_async = zynq7000_hal::uart::TxAsync::new(uart_tx);
+    // Safety: We are not forgetting any futures.
+    let mut tx_async = unsafe { zynq7000_hal::uart::TxAsync::new(uart_tx, false) };
+
     let str0 = build_print_string("UART0:", "Hello World");
     let str1 = build_print_string(
         "UART0:",
@@ -429,36 +465,12 @@ async fn uart_16550_task(uart_tx: axi_uart16550::Tx) {
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-
-    match irq_info.interrupt() {
-        Interrupt::Sgi(_) => (),
-        Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == zynq7000_hal::gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        Interrupt::Spi(spi_interrupt) => match spi_interrupt {
-            zynq7000_hal::gic::SpiInterrupt::Pl0 => {
-                on_interrupt_axi_uartlite();
-            }
-            zynq7000_hal::gic::SpiInterrupt::Pl1 => {
-                on_interrupt_axi_16550();
-            }
-            zynq7000_hal::gic::SpiInterrupt::Uart0 => {
-                on_interrupt_uart_0();
-            }
-
-            _ => (),
-        },
-        Interrupt::Invalid(_) => (),
-        Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 fn on_interrupt_axi_uartlite() {
@@ -527,8 +539,9 @@ fn on_interrupt_uart_0() {
             .on_interrupt(&mut buf, true)
             .read_bytes();
     });
+    // Safety: This function is only called once inside the interrupt handler.
     // Handle TX next: Handle pending asynchronous TX operations.
-    zynq7000_hal::uart::on_interrupt_tx(zynq7000_hal::uart::UartId::Uart0);
+    unsafe { zynq7000_hal::uart::on_interrupt_tx(zynq7000_hal::uart::UartId::Uart0) };
     // Send received RX data to main task.
     if read_bytes > 0 {
         critical_section::with(|cs| {
@@ -565,6 +578,7 @@ fn prefetch_handler(_faulting_addr: usize) -> ! {
 /// Panic handler
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    error!("Panic: {info:?}");
+    let mut uart = unsafe { uart::Uart::steal(uart::UartId::Uart1) };
+    writeln!(uart, "panic: {}\r", info).ok();
     loop {}
 }

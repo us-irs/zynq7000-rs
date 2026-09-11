@@ -11,7 +11,9 @@ use embedded_io::Write;
 use log::{error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zedboard_bsp::qspi_spansion;
-use zynq7000_hal::{BootMode, clocks, gic, gpio, gtc, prelude::*, qspi, uart};
+use zynq7000_hal::{
+    BootMode, clocks, generic_interrupt_handler, gpio, gtc, prelude::*, qspi, uart,
+};
 
 use zynq7000_rt as _;
 
@@ -47,7 +49,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
-    zynq7000_embassy::init(clocks.arm_clocks(), gtc);
+    zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -60,14 +62,7 @@ async fn main(_spawner: Spawner) -> ! {
     )
     .unwrap();
     uart.write_all(INIT_STRING.as_bytes()).unwrap();
-    // Safety: We are not multi-threaded yet.
-    unsafe {
-        zynq7000_hal::log::uart_blocking::init_unsafe_single_core(
-            uart,
-            log::LevelFilter::Trace,
-            false,
-        )
-    };
+    zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
@@ -193,23 +188,12 @@ async fn main(_spawner: Spawner) -> ! {
 }
 
 #[zynq7000_rt::irq]
-fn irq_handler() {
-    let mut gic_helper = gic::GicInterruptHelper::new();
-    let irq_info = gic_helper.acknowledge_interrupt();
-    match irq_info.interrupt() {
-        gic::Interrupt::Sgi(_) => (),
-        gic::Interrupt::Ppi(ppi_interrupt) => {
-            if ppi_interrupt == gic::PpiInterrupt::GlobalTimer {
-                unsafe {
-                    zynq7000_embassy::on_interrupt();
-                }
-            }
-        }
-        gic::Interrupt::Spi(_spi_interrupt) => (),
-        gic::Interrupt::Invalid(_) => (),
-        gic::Interrupt::Spurious => (),
+pub fn irq_handler() {
+    // Safety: Called here once.
+    let result = unsafe { generic_interrupt_handler() };
+    if let Err(e) = result {
+        panic!("Generic interrupt handler failed handling {:?}", e);
     }
-    gic_helper.end_of_interrupt(irq_info);
 }
 
 #[zynq7000_rt::exception(DataAbort)]
