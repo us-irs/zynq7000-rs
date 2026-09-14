@@ -9,7 +9,6 @@ use std::{
 use anyhow::Context;
 use clap_num::si_number;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
-use serde::Deserialize;
 use probe_rs::{
     Core, MemoryInterface, Permissions,
     architecture::arm::dp::DpAddress,
@@ -19,6 +18,7 @@ use probe_rs::{
     },
     probe::{DebugProbeSelector, Probe, WireProtocol, list::Lister},
 };
+use serde::Deserialize;
 use tracing_subscriber::EnvFilter;
 use x7dap::{Bitstream, X7, auto_tap_idx, fixup_zynq_ir_lengths};
 use z7_ps7init::{PsInitOps, RegOp, RegOpKind};
@@ -178,7 +178,9 @@ where
     D: serde::Deserializer<'de>,
 {
     match Option::<String>::deserialize(deserializer)? {
-        Some(s) => si_number::<u32>(&s).map(Some).map_err(serde::de::Error::custom),
+        Some(s) => si_number::<u32>(&s)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
         None => Ok(None),
     }
 }
