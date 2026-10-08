@@ -250,8 +250,15 @@ pub mod types {
         timeout: u8,
     }
 
-    /// Transfer size register, holds the number of bytes to transfer or the FIFO threshold
-    /// depending on mode.
+    /// Transfer size register.
+    ///
+    /// This register's meaning varies according to the operating mode as follows:
+    ///
+    /// - Master transmitter mode: number of data bytes still not transmitted minus one
+    /// - Master receiver mode: number of data bytes that are still expected to be received
+    /// - Slave transmitter mode: number of bytes remaining in the FIFO after the master terminates
+    ///   the transfer
+    /// - Slave receiver mode: number of valid data bytes in the FIFO
     #[bitbybit::bitfield(
         u32,
         default = 0x0,
@@ -284,6 +291,14 @@ pub struct Registers {
     #[mmio(PureRead, Write, Modify)]
     interrupt_status: InterruptStatus,
     /// Transfer size register.
+    ///
+    /// This register's meaning varies according to the operating mode as follows:
+    ///
+    /// - Master transmitter mode: number of data bytes still not transmitted minus one
+    /// - Master receiver mode: number of data bytes that are still expected to be received
+    /// - Slave transmitter mode: number of bytes remaining in the FIFO after the master terminates
+    ///   the transfer
+    /// - Slave receiver mode: number of valid data bytes in the FIFO
     transfer_size: TransferSize,
     /// Slave monitor mode pause interval between successive address polls.
     slave_pause: u32,

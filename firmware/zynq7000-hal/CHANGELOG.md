@@ -13,12 +13,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `Configurator::set_sgi_interrupt_priority`/`read_sgi_interrupt_priority` now take/return the new
   `gic::Priority` enum (`P0`..`P31`) instead of a raw `u5`.
 - Dropped the `z7-clock-calc` dependency. The clock calculators are part of the HAL again.
+- Removed `I2c` prefix at various spots in the I2C API.
+- New I2C `Error` enum replaces `I2cTxError`, `I2cRxError` and `I2cError`.
+- I2C API now exposes transaction, write_read, read and write directly.
 
 ## Added
 
 - Added `Configurator::set_ppi_interrupt_priority`/`read_ppi_interrupt_priority` and
   `set_spi_interrupt_priority`/`read_spi_interrupt_priority`, mirroring the existing SGI priority
   API for the other interrupt classes.
+- New I2C error variant: WriteAfterRead is not supported.
 
 # [v0.2.0] 2026-08-20
 

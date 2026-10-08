@@ -4,4 +4,5 @@
 //! because this crate cannot be built for the host. `just sync-clock-calc` copies them over.
 
 pub mod fpga;
+pub mod i2c;
 pub mod uart;
