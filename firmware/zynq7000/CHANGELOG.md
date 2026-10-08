@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 # [unreleased]
 
+- I2C `Status::rx_rw` is renamed to `slave_rw` and is now the new `ReadWrite` enum instead of a
+  `bool`.
+
 # [v0.6.0] 2026-08-25
 
 - Added CAN controller (`can`) register definitions.

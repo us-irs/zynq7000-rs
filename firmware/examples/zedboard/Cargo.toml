@@ -23,6 +23,7 @@ critical-section = "1"
 static_cell = "2"
 embedded-alloc = "0.7"
 embedded-hal = "1"
+ds323x = "0.7"
 embedded-hal-bus = { version = "0.3", features = ["async"] }
 embedded-hal-async = "1"
 dummy-pin = "1"

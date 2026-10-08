@@ -9,7 +9,7 @@ build: build-zynq (build-dir "host")
 fmt: (fmt-dir "firmware") (fmt-dir "host")
 check-fmt: (check-fmt-dir "firmware") (check-fmt-dir "host")
 clippy: (clippy-dir "firmware") (clippy-dir "host")
-test: test-clock-calc test-run-data
+test: test-clock-calc test-ps7init
 
 prepare-repo: download-zed-gateware
   cd {{justfile_directory()}}/host/z7-run && cargo install --path .
@@ -92,10 +92,10 @@ test-clock-calc:
 
 # Copy the HAL clock calculators into z7-clock-calc.
 sync-clock-calc:
-  cd {{justfile_directory()}}/firmware/zynq7000-hal/src/clock_calc && cp fpga.rs uart.rs {{justfile_directory()}}/host/z7-clock-calc/src/
+  cd {{justfile_directory()}}/firmware/zynq7000-hal/src/clock_calc && cp fpga.rs i2c.rs uart.rs {{justfile_directory()}}/host/z7-clock-calc/src/
 
-test-run-data:
-  cd {{justfile_directory()}}/host/z7-run-data && cargo test
+test-ps7init:
+  cd {{justfile_directory()}}/host/z7-ps7init && cargo test
 
 [working-directory: 'firmware']
 docs-zynq: docs-pac docs-hal

@@ -11,6 +11,7 @@ categories = ["algorithms", "no-std", "embedded"]
 [dependencies]
 fugit = "0.5"
 libm = "0.2"
+thiserror = { version = "2", default-features = false }
 
 [features]
 alloc = []

@@ -13,5 +13,8 @@ zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal" }
 embedded-io = "0.7"
 embedded-hal = "1"
+arbitrary-int = "2"
+critical-section = "1"
+embassy-sync = "0.8"
 fugit = "0.5"
 log = "0.4"

@@ -9,9 +9,12 @@
 extern crate alloc;
 
 pub mod fpga;
+pub mod i2c;
 pub mod uart;
 
 #[cfg(test)]
 mod fpga_tests;
+#[cfg(test)]
+mod i2c_tests;
 #[cfg(test)]
 mod uart_tests;

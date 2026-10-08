@@ -22,6 +22,17 @@ pub mod types {
         Transmitter = 0b0,
     }
 
+    /// R/W bit of an address received in slave mode.
+    #[bitbybit::bitenum(u1, exhaustive = true)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum ReadWrite {
+        /// The master writes, the slave receives.
+        Write = 0b0,
+        /// The master reads, the slave transmits.
+        Read = 0b1,
+    }
+
     /// Selects master or slave mode.
     #[bitbybit::bitenum(u1, exhaustive = true)]
     #[derive(Debug, PartialEq, Eq)]
@@ -55,20 +66,28 @@ pub mod types {
         #[bit(5, rw)]
         slv_mon: bool,
         /// 0: Allow transfer to terminate as soon as all data has been transmitted or received.
-        /// 1: When no more data is avilable for transmit or no more data can be received, hold
-        ///    the SCK line low until services by the host.
+        /// 1: When no more data is available for transmit or no more data can be received, hold
+        ///    the SCK line low until serviced by the host.
+        ///
+        /// TRM name: `HOLD`.
         #[bit(4, rw)]
         hold_bus: bool,
         /// Should be set to 1. 0: Disabled, NACK transmitted. 1: Enabled, ACK transmitted.
         #[bit(3, rw)]
         acken: bool,
         /// Only used in master mode. 0: Reserved. 1: Normal 7-bit address.
+        ///
+        /// TRM name: `NEA`.
         #[bit(2, rw)]
         addressing: bool,
         /// Selects master or slave mode.
+        ///
+        /// TRM name: `MS`.
         #[bit(1, rw)]
         mode: Mode,
         /// Selects the transfer direction.
+        ///
+        /// TRM name: `RD_WR`.
         #[bit(0, rw)]
         dir: Direction,
     }
@@ -83,6 +102,8 @@ pub mod types {
     )]
     pub struct Status {
         /// I2C bus is currently active, a start condition has been observed but no stop yet.
+        ///
+        /// TRM name: `BA`.
         #[bit(8, r)]
         bus_active: bool,
         /// FIFO is full and new byte was received. The new byte is not acknowledged and the contents
@@ -90,14 +111,20 @@ pub mod types {
         #[bit(7, r)]
         rx_overflow: bool,
         /// 1: There is still a byte of data to be transmitted by the interface.
+        ///
+        /// TRM name: `TXDV`.
         #[bit(6, r)]
         tx_busy: bool,
-        /// Receiver data valid, ca be read from the interface.
+        /// Receiver data valid, can be read from the interface.
+        ///
+        /// TRM name: `RXDV`.
         #[bit(5, r)]
         rx_valid: bool,
         /// R/W bit of the address received in slave mode.
+        ///
+        /// TRM name: `RXRW`.
         #[bit(3, r)]
-        rx_rw: bool,
+        slave_rw: ReadWrite,
     }
 
     /// I2C slave address register.
@@ -250,8 +277,15 @@ pub mod types {
         timeout: u8,
     }
 
-    /// Transfer size register, holds the number of bytes to transfer or the FIFO threshold
-    /// depending on mode.
+    /// Transfer size register.
+    ///
+    /// This register's meaning varies according to the operating mode as follows:
+    ///
+    /// - Master transmitter mode: number of data bytes still not transmitted minus one
+    /// - Master receiver mode: number of data bytes that are still expected to be received
+    /// - Slave transmitter mode: number of bytes remaining in the FIFO after the master terminates
+    ///   the transfer
+    /// - Slave receiver mode: number of valid data bytes in the FIFO
     #[bitbybit::bitfield(
         u32,
         default = 0x0,
@@ -284,6 +318,14 @@ pub struct Registers {
     #[mmio(PureRead, Write, Modify)]
     interrupt_status: InterruptStatus,
     /// Transfer size register.
+    ///
+    /// This register's meaning varies according to the operating mode as follows:
+    ///
+    /// - Master transmitter mode: number of data bytes still not transmitted minus one
+    /// - Master receiver mode: number of data bytes that are still expected to be received
+    /// - Slave transmitter mode: number of bytes remaining in the FIFO after the master terminates
+    ///   the transfer
+    /// - Slave receiver mode: number of valid data bytes in the FIFO
     transfer_size: TransferSize,
     /// Slave monitor mode pause interval between successive address polls.
     slave_pause: u32,
