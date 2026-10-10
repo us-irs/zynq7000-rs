@@ -86,12 +86,13 @@ fmt-dir target:
 clippy-dir target:
   cd {{target}} && cargo clippy -- -D warnings
 
-# Run the z7-clock-calc test suite (the pure clock/divisor calculators used by
-# zynq7000-hal). zynq7000-hal itself cannot build for the host target - see
-# host/z7-clock-calc/src/lib.rs - which is why these calculators were split out into
-# their own crate in the first place.
+# Unit tests for the HAL clock calculators. The HAL itself cannot be built for the host.
 test-clock-calc:
   cd {{justfile_directory()}}/host/z7-clock-calc && cargo test --features alloc
+
+# Copy the HAL clock calculators into z7-clock-calc.
+sync-clock-calc:
+  cd {{justfile_directory()}}/firmware/zynq7000-hal/src/clock_calc && cp fpga.rs uart.rs {{justfile_directory()}}/host/z7-clock-calc/src/
 
 test-run-data:
   cd {{justfile_directory()}}/host/z7-run-data && cargo test
