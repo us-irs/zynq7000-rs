@@ -222,7 +222,7 @@ pub const MAX_BAUD_RATE: u32 = 6240000;
 pub const MIN_BAUD_RATE: u32 = 110;
 
 /// Maximum acceptable baud rate error, as a fraction (0.5 %).
-pub use z7_clock_calc::uart::MAX_BAUDERROR_RATE;
+pub use crate::clock_calc::uart::MAX_BAUDERROR_RATE;
 
 /// Parity configuration.
 #[derive(Debug, Default, Clone, Copy)]
@@ -277,7 +277,7 @@ pub fn calculate_viable_configs(
     if clk_sel == ClockSelect::UartRefClkDiv8 {
         uart_clk /= 8;
     }
-    z7_clock_calc::uart::viable_baud_divisors(uart_clk, target_baud)
+    crate::clock_calc::uart::viable_baud_divisors(uart_clk, target_baud)
         .into_iter()
         .map(|d| (ClockConfig::new(d.cd, d.bdiv).unwrap(), d.error))
         .collect()
@@ -298,7 +298,7 @@ pub fn calculate_raw_baud_cfg_smallest_error(
     if clk_sel == ClockSelect::UartRefClkDiv8 {
         uart_clk /= 8;
     }
-    let result = z7_clock_calc::uart::best_baud_divisors(uart_clk, target_baud);
+    let result = crate::clock_calc::uart::best_baud_divisors(uart_clk, target_baud);
     Ok((ClockConfig::new(result.cd, result.bdiv)?, result.error))
 }
 

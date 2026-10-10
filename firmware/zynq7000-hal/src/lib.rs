@@ -36,6 +36,7 @@ use zynq7000::{
 };
 
 pub mod cache;
+mod clock_calc;
 pub mod clocks;
 pub mod ddr;
 pub mod eth;

@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - `Configurator::set_sgi_interrupt_priority`/`read_sgi_interrupt_priority` now take/return the new
   `gic::Priority` enum (`P0`..`P31`) instead of a raw `u5`.
+- Dropped the `z7-clock-calc` dependency. The clock calculators are part of the HAL again.
 
 ## Added
 

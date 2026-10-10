@@ -55,14 +55,14 @@ impl FpgaClockConfig {
         }
         let mut clock_config: [FpgaClockControl; 4] =
             [FpgaClockControl::default().with_srcsel(src_sel); 4];
-        let mut divisors = [z7_clock_calc::fpga::DivisorPair { div0: 1, div1: 1 }; 4];
+        let mut divisors = [crate::clock_calc::fpga::DivisorPair { div0: 1, div1: 1 }; 4];
         for (index, clk) in clks.iter().enumerate() {
             // All 4 outputs currently share the same `ref_in` (single `src_sel` for the
             // whole config), so an identical target frequency always yields an identical
             // divisor pair - reuse an already-computed result instead of redoing the search.
             let pair = match clks[..index].iter().position(|prev| prev == clk) {
                 Some(prev_index) => divisors[prev_index],
-                None => z7_clock_calc::fpga::find_two_stage_divisors(
+                None => crate::clock_calc::fpga::find_two_stage_divisors(
                     ref_in,
                     *clk,
                     u6::MAX.value() as u32,
