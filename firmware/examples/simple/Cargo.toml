@@ -3,8 +3,7 @@ name = "simple"
 version = "0.1.0"
 edition = "2024"
 description = "Simple examples for the Zynq7000 SoC"
-homepage = "https://github.com/us-irs/zynq7000-rs"
-repository = "https://github.com/us-irs/zynq7000-rs"
+repository = "https://github.com/ustgt-irs/zynq7000-rs"
 license = "MIT OR Apache-2.0"
 
 [dependencies]

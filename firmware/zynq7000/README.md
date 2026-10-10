@@ -1,6 +1,6 @@
 [![Crates.io](https://img.shields.io/crates/v/zynq7000)](https://crates.io/crates/zynq7000)
 [![docs.rs](https://img.shields.io/docsrs/zynq7000)](https://docs.rs/zynq7000)
-[![ci](https://github.com/us-irs/zynq7000-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/us-irs/zynq7000-rs/actions/workflows/ci.yml)
+[![ci](https://github.com/ustgt-irs/zynq7000-rs/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/ustgt-irs/zynq7000-rs/actions/workflows/ci.yml)
 
 # PAC for the AMD Zynq 7000 SoC family
 
