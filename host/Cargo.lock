@@ -2049,7 +2049,7 @@ dependencies = [
 [[package]]
 name = "x7dap"
 version = "0.1.0"
-source = "git+https://github.com/us-irs/x7dap.git?branch=use-probe-rs-jtag-abstraction#5eaa88b2dcae7444759313c74fcc54ab608c85c6"
+source = "git+https://github.com/ustgt-irs/x7dap.git?branch=use-probe-rs-jtag-abstraction#5eaa88b2dcae7444759313c74fcc54ab608c85c6"
 dependencies = [
  "anyhow",
  "bitvec",

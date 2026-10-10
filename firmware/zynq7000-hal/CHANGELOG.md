@@ -125,7 +125,7 @@ Documentation fixes.
 
 Initial release
 
-[unreleased]: https://github.com/us-irs/zynq7000-rs/compare/zynq7000-hal-v0.2.0...HEAD
-[v0.2.0]: https://github.com/us-irs/zynq7000-rs/tags/zynq7000-hal-v0.2.0
+[unreleased]: https://github.com/ustgt-irs/zynq7000-rs/compare/zynq7000-hal-v0.2.0...HEAD
+[v0.2.0]: https://github.com/ustgt-irs/zynq7000-rs/tags/zynq7000-hal-v0.2.0
 [v0.1.1]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/compare/zynq7000-hal-v0.1.0...zynq7000-hal-v0.1.1
 [v0.1.0]: https://egit.irs.uni-stuttgart.de/rust/zynq7000-rs/tag/zynq7000-hal-v0.1.0

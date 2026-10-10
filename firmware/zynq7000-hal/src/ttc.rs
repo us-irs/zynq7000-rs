@@ -4,7 +4,7 @@
 //!
 //! ## Examples
 //!
-//! - [PWM](https://github.com/us-irs/zynq7000-rs/blob/main/zynq/examples/embassy/src/bin/pwm.rs)
+//! - [PWM](https://github.com/ustgt-irs/zynq7000-rs/blob/main/zynq/examples/embassy/src/bin/pwm.rs)
 #![deny(missing_docs)]
 use core::convert::Infallible;
 

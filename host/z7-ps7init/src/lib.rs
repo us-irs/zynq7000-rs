@@ -2,10 +2,10 @@
 //! Vivado tooling emits as a `ps7_init.tcl` script.
 //!
 //! [`parse_ps7_init_tcl`] turns that script into a [`PsInitOps`] directly.
-//! [`z7-ps7init-extract`](https://github.com/us-irs/zynq7000-rs/tree/main/host/z7-ps7init-extract)
+//! [`z7-ps7init-extract`](https://github.com/ustgt-irs/zynq7000-rs/tree/main/host/z7-ps7init-extract)
 //! uses the same parsing primitives to also emit RON/JSON/Rust versions of it, plus DDRC/DDRIOB
 //! Rust config structs for on-target firmware.
-//! [`z7-run`](https://github.com/us-irs/zynq7000-rs/tree/main/host/z7-run) executes a
+//! [`z7-run`](https://github.com/ustgt-irs/zynq7000-rs/tree/main/host/z7-run) executes a
 //! [`PsInitOps`] over JTAG via probe-rs, built either way. Sharing this crate keeps the two in
 //! sync instead of duplicating the parser or the types.
 
