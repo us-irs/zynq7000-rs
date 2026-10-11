@@ -123,6 +123,11 @@ bootgen:
 run binary:
   z7-run --config {{justfile_directory()}}/scripts/z7_run.toml --regs {{justfile_directory()}}/scripts/zedboard_init_regs.ron {{binary}}
 
+# Experimental: like `run`, but builds z7-run from this checkout and decodes defmt logs over RTT.
+[no-cd]
+run-defmt binary:
+  cargo run --release --manifest-path {{justfile_directory()}}/host/z7-run/Cargo.toml -- --defmt --config {{justfile_directory()}}/scripts/z7_run.toml --regs {{justfile_directory()}}/scripts/ps7_init.tcl {{binary}}
+
 # Runner which uses TCL scripting but relies on an external hw_server running.
 # Set HW_SERVER_IP (same env var zynq7000-init.py already uses for -i/--ip) to the host running
 # hw_server/the gdbserver bridge when debugging a board that isn't attached to this machine.

@@ -10,13 +10,14 @@ use anyhow::Context;
 use clap_num::si_number;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use probe_rs::{
-    Core, MemoryInterface, Permissions,
+    Core, MemoryInterface, Permissions, Session,
     architecture::arm::dp::DpAddress,
     flashing::{
         self, DownloadOptions, ElfLoader, ElfOptions, FlashProgress, ProgressEvent,
         ProgressOperation,
     },
     probe::{DebugProbeSelector, Probe, WireProtocol, list::Lister},
+    rtt::{self, Rtt, RttTarget},
 };
 use serde::Deserialize;
 use tracing_subscriber::EnvFilter;
@@ -145,6 +146,10 @@ struct Cli {
     /// Off by default, since verification takes roughly as long as the write itself.
     #[arg(long)]
     verify: bool,
+
+    /// Experimental: read defmt logs over RTT and print them decoded.
+    #[arg(long)]
+    defmt: bool,
 }
 
 /// Config for things that don't belong on the command line, split by what they actually
@@ -365,8 +370,8 @@ fn flash_bitstream(probe: &mut Probe, data: &[u8], no_progress: bool) -> anyhow:
     };
 
     probe.attach_to_unspecified()?;
-    let jtag = probe
-        .try_as_jtag_probe()
+    let mut jtag = probe
+        .try_as_jtag_chain()
         .with_context(|| "selected probe does not support JTAG")?;
 
     let chain = jtag.scan_chain()?.to_vec();
@@ -382,10 +387,10 @@ fn flash_bitstream(probe: &mut Probe, data: &[u8], no_progress: bool) -> anyhow:
     if idcode.is_zynq7000()
         && let Some(fixed) = fixup_zynq_ir_lengths(&chain)
     {
-        jtag.set_scan_chain(&fixed)?;
+        jtag.set_chain(&fixed);
     }
 
-    jtag.select_target(tap_idx)?;
+    jtag.select(tap_idx)?;
 
     let mut x7 = X7::new(jtag, idcode);
     x7.program_with_callback(data, |n| bar.set_position(n as u64))?;
@@ -486,6 +491,82 @@ fn run_serial_console((rx, handle): SerialReader) -> anyhow::Result<()> {
         stdout.flush()?;
     }
     if handle.join().is_err() {
+        anyhow::bail!("serial console reader thread panicked");
+    }
+    Ok(())
+}
+
+/// RTT up channel the defmt logger writes to. defmt-rtt only ever uses channel 0.
+const DEFMT_RTT_CHANNEL: usize = 0;
+
+/// Delay between two RTT polls when the last poll returned no data.
+const RTT_POLL_INTERVAL: Duration = Duration::from_millis(10);
+
+/// Attaches to the RTT control block of an already flashed ELF. Must be called before the core
+/// runs: the control block is part of the loaded image, and the firmware may start logging right
+/// away.
+fn attach_rtt(session: &mut Session, elf: &[u8]) -> anyhow::Result<Rtt> {
+    let rtt_addr = rtt::find_rtt_control_block_in_raw_file(elf)?
+        .with_context(|| "no RTT control block (_SEGGER_RTT) found in ELF")?;
+    let rtt_target = RttTarget {
+        is_64_bit: false,
+        memory_regions: session.target().memory_map.clone(),
+    };
+    let mut memory = session.memory_access_port(0)?;
+    Ok(Rtt::attach_at(&mut memory, &rtt_target, rtt_addr)?)
+}
+
+/// Polls the defmt RTT channel and prints decoded frames to stdout until `Ctrl+C`. Serial console
+/// output, if configured, is printed in between.
+///
+/// RTT is read through the memory access port instead of the core, because a Cortex-A9 core can
+/// only access memory over the debug interface while halted.
+fn run_defmt_console(
+    session: &mut Session,
+    mut rtt: Rtt,
+    table: &defmt_decoder::Table,
+    serial_reader: Option<SerialReader>,
+) -> anyhow::Result<()> {
+    let mut decoder = table.new_stream_decoder();
+    let mut stdout = std::io::stdout();
+    let mut buf = [0u8; 1024];
+    let channel = rtt
+        .up_channel(DEFMT_RTT_CHANNEL)
+        .with_context(|| "firmware has no RTT up channel for defmt")?;
+
+    while !SHUTDOWN_REQUESTED.load(Ordering::Relaxed) {
+        if let Some((rx, _)) = &serial_reader {
+            for chunk in rx.try_iter() {
+                stdout.write_all(&chunk)?;
+            }
+            stdout.flush()?;
+        }
+
+        let mut memory = session.memory_access_port(0)?;
+        let count = channel.read(&mut memory, &mut buf)?;
+        if count == 0 {
+            std::thread::sleep(RTT_POLL_INTERVAL);
+            continue;
+        }
+        decoder.received(&buf[..count]);
+        loop {
+            match decoder.decode() {
+                Ok(frame) => println!("{}", frame.display(true)),
+                Err(defmt_decoder::DecodeError::UnexpectedEof) => break,
+                Err(defmt_decoder::DecodeError::Malformed) => {
+                    // The raw encoding has no frame boundaries, so the stream can not be resynced.
+                    if !table.encoding().can_recover() {
+                        anyhow::bail!("malformed defmt frame, can not recover with raw encoding");
+                    }
+                    tracing::warn!("malformed defmt frame");
+                }
+            }
+        }
+    }
+
+    if let Some((_, handle)) = serial_reader
+        && handle.join().is_err()
+    {
         anyhow::bail!("serial console reader thread panicked");
     }
     Ok(())
@@ -773,6 +854,17 @@ fn main() -> anyhow::Result<()> {
         flash_timer.elapsed().as_secs_f32()
     );
 
+    let defmt = if cli.defmt {
+        let elf = std::fs::read(&cli.elf)
+            .with_context(|| format!("failed to read ELF file {}", cli.elf.display()))?;
+        let table =
+            defmt_decoder::Table::parse(&elf)?.with_context(|| "ELF contains no defmt data")?;
+        let rtt = attach_rtt(&mut session, &elf).with_context(|| "attaching RTT")?;
+        Some((rtt, table))
+    } else {
+        None
+    };
+
     session.prepare_running_on_ram(vector_table_addr, 0)?;
     let mut core = session.core(0)?;
 
@@ -796,9 +888,14 @@ fn main() -> anyhow::Result<()> {
     // CPU1 is sitting halted at the debug level, so make sure it's running too.
     let mut core1 = session.core(1)?;
     core1.run()?;
+    drop(core1);
 
-    if let Some(serial_reader) = serial_reader {
-        run_serial_console(serial_reader)?;
+    match (defmt, serial_reader) {
+        (Some((rtt, table)), serial_reader) => {
+            run_defmt_console(&mut session, rtt, &table, serial_reader)?
+        }
+        (None, Some(serial_reader)) => run_serial_console(serial_reader)?,
+        (None, None) => {}
     }
 
     Ok(())

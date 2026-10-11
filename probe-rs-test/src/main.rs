@@ -3,9 +3,9 @@ use std::{path::Path, time::Duration};
 use probe_rs::{
     Permissions,
     architecture::arm::dp::DpAddress,
-    flashing::{self, DownloadOptions, ElfOptions, Format},
+    flashing::{self, DownloadOptions, ElfLoader, ElfOptions},
     probe::{WireProtocol, list::Lister},
-    rtt,
+    rtt::{self, RttTarget},
 };
 use tracing_subscriber::EnvFilter;
 
@@ -31,13 +31,16 @@ fn main() -> anyhow::Result<()> {
     let arm_if = session.get_arm_interface()?;
     arm_if.select_debug_port(DpAddress::Default)?;
     let elf_path = Path::new("../firmware/target/armv7a-none-eabihf/release/defmt");
-    let format = Format::Elf(ElfOptions::default());
     let mut download_opts = DownloadOptions::default();
     download_opts.verify = true;
-    download_opts.skip_reset = true;
 
     println!("flashing ELF file");
-    let loader = flashing::build_loader(&mut session, elf_path, format.clone(), None)?;
+    let loader = flashing::build_loader(
+        &mut session,
+        elf_path,
+        ElfLoader(ElfOptions::default()),
+        None,
+    )?;
 
     let elf_file = std::fs::read(elf_path).unwrap();
     let rtt_addr = rtt::find_rtt_control_block_in_raw_file(&elf_file)?.unwrap();
@@ -47,8 +50,13 @@ fn main() -> anyhow::Result<()> {
 
     println!("attaching RTT");
 
+    let memory_map = session.target().memory_map.clone();
     let mut memory = session.memory_access_port(0)?;
-    let mut rtt = rtt::Rtt::attach_at(&mut memory, rtt_addr)?;
+    let rtt_target = RttTarget {
+        is_64_bit: false,
+        memory_regions: memory_map,
+    };
+    let mut rtt = rtt::Rtt::attach_at(&mut memory, &rtt_target, rtt_addr)?;
     drop(memory);
     session.prepare_running_on_ram(vector_table_addr, 0)?;
     let mut core = session.core(0)?;

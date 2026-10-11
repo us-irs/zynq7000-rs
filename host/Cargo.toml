@@ -9,3 +9,11 @@ members = [
   "z7-run",
   "z7-ps7init",
 ]
+
+# Local checkouts for development. A patch applies to the whole dependency graph, so x7dap's own
+# probe-rs dependency uses the same local probe-rs as z7-run.
+[patch."https://github.com/robamu/probe-rs.git"]
+probe-rs = { path = "../../probe-rs/probe-rs" }
+
+[patch."https://github.com/ustgt-irs/x7dap.git"]
+x7dap = { path = "../../x7dap" }
