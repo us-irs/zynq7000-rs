@@ -4,7 +4,7 @@
 
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
-use defmt_rtt as _;
+use z7_defmt_rtt as _;
 use zynq7000_hal::{
     clocks::Clocks,
     gpio::{Output, PinState, mio},
