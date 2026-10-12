@@ -19,8 +19,8 @@ use embedded_hal::i2c::{NoAcknowledgeSource, Operation};
 use log::{error, info};
 use zynq7000::i2c::{InterruptControl, ReadWrite};
 use zynq7000_hal::{
-    BootMode, clocks::Clocks, generic_interrupt_handler, gpio::GpioPins, i2c,
-    priv_tim::CpuPrivateTimer, time::Hertz, uart,
+    BootMode, clocks::Clocks, generic_interrupt_handler, gpio, i2c, priv_tim::CpuPrivateTimer,
+    time::Hertz, uart,
 };
 
 use zynq7000_rt as _;
@@ -52,7 +52,7 @@ fn main() -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let gpio_pins = GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)

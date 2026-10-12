@@ -17,8 +17,7 @@ use log::{error, info};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    generic_interrupt_handler,
-    gpio::{Output, PinState, mio},
+    generic_interrupt_handler, gpio,
     gtc::GlobalTimerCounter,
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
@@ -41,7 +40,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
-    let mio_pins = mio::Pins::new(periphs.gpio);
+    let mio_pins = gpio::mio::Pins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -72,7 +71,7 @@ async fn main(_spawner: Spawner) -> ! {
     info!("Boot mode: {:?}", boot_mode);
 
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
+    let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     let mut current_duty = 0;
     loop {
         led.toggle();

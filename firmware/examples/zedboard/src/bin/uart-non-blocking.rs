@@ -42,7 +42,7 @@ use zynq7000_hal::{
     clocks::Clocks,
     generic_interrupt_handler,
     gic::{Configurator, Interrupt},
-    gpio::{GpioPins, Output, PinState},
+    gpio,
     gtc::GlobalTimerCounter,
     time::Hertz,
     uart::{self, ClockConfig, Config, Uart},
@@ -113,11 +113,11 @@ pub enum UartSel {
 }
 
 pub struct UartMultiplexer {
-    sel_pins: [Output; 3],
+    sel_pins: [gpio::Output; 3],
 }
 
 impl UartMultiplexer {
-    pub fn new(mut sel_pins: [Output; 3]) -> Self {
+    pub fn new(mut sel_pins: [gpio::Output; 3]) -> Self {
         for pin in sel_pins.iter_mut() {
             pin.set_low();
         }
@@ -184,7 +184,7 @@ async fn main(spawner: Spawner) -> ! {
     unsafe {
         gic.enable_interrupts();
     }
-    let mut gpio_pins = GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -229,9 +229,9 @@ async fn main(spawner: Spawner) -> ! {
 
     // Set up UART multiplexing before creating and configuring the UARTs.
     let mut uart_mux = UartMultiplexer::new([
-        Output::new_for_emio(gpio_pins.emio.take(8).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(9).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(10).unwrap(), PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(8).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(9).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(10).unwrap(), gpio::PinState::Low),
     ]);
     let mut uart_speed = UART_SPEED;
     match UART_MODE {
@@ -282,13 +282,13 @@ async fn main(spawner: Spawner) -> ! {
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
-    let mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
+    let mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
     // Just LD0-LD2 here as a simple "this example is running" indicator. See main.rs for an
     // example that exercises all 8 LEDs, including LD6/LD7 which are AXI GPIO, not EMIO driven.
-    let emio_leds: [Output; 3] = [
-        Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), PinState::Low),
+    let emio_leds: [gpio::Output; 3] = [
+        gpio::Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), gpio::PinState::Low),
     ];
 
     let (uart_0_tx, mut uart_0_rx) = uart_0.split();
@@ -353,7 +353,7 @@ fn build_print_string(prefix: &str, base_str: &str) -> alloc::string::String {
 }
 
 #[embassy_executor::task]
-async fn led_task(mut mio_led: Output, mut emio_leds: [Output; 3]) {
+async fn led_task(mut mio_led: gpio::Output, mut emio_leds: [gpio::Output; 3]) {
     let mut ticker = Ticker::every(Duration::from_millis(1000));
     let mut led_idx = 0;
     loop {

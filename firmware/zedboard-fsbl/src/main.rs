@@ -94,7 +94,7 @@ fn main() -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLK).unwrap();
 
-    let gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
     let mio_pins = gpio_pins.mio;
     // Set up the UART, we are logging with it.
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)

@@ -52,7 +52,7 @@ async fn main(spawner: Spawner) -> ! {
         "SPI reference clock must be larger than CPU 1x clock"
     );
 
-    let mut gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());

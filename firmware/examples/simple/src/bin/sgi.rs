@@ -9,8 +9,7 @@ use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
     gic::{self, Configurator, Interrupt, SgiInterrupt},
-    gpio::{Output, PinState, mio},
-    l2_cache,
+    gpio, l2_cache,
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
 };
@@ -40,7 +39,7 @@ fn main() -> ! {
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
         .unwrap()
         .0;
-    let mio_pins = mio::Pins::new(dp.gpio);
+    let mio_pins = gpio::mio::Pins::new(dp.gpio);
 
     let mut uart = Uart::new_with_mio_for_uart_1(
         dp.uart_1,
@@ -54,7 +53,7 @@ fn main() -> ! {
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {boot_mode:?}");
 
-    let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
+    let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     loop {
         let gtc = SGI_COUNTER.load(core::sync::atomic::Ordering::Relaxed);
         info!("Hello, world!");

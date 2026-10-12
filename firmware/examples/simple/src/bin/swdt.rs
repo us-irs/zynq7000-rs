@@ -9,14 +9,7 @@ use core::{
 };
 use embedded_io::Write;
 use log::info;
-use zynq7000_hal::{
-    clocks::Clocks,
-    gpio::{Output, PinState, mio},
-    priv_tim::CpuPrivateTimer,
-    swdt,
-    time::Hertz,
-    uart,
-};
+use zynq7000_hal::{clocks::Clocks, gpio, priv_tim::CpuPrivateTimer, swdt, time::Hertz, uart};
 
 /// False by default, because we want to show how the watchdog priodically elapsed.
 const RESET_ON_EXPIRY: bool = false;
@@ -43,8 +36,8 @@ fn main() -> ! {
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     // Unwrap okay, we only call this once on core 0 here.
     let mut cpu_tim = CpuPrivateTimer::take(clocks.arm_clocks()).unwrap();
-    let mio_pins = mio::Pins::new(periphs.gpio);
-    let mut led = Output::new_for_mio(mio_pins.mio7, PinState::High);
+    let mio_pins = gpio::mio::Pins::new(periphs.gpio);
+    let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::High);
 
     // Set up the UART and a blocking logger. The ISR itself only sets `EXPIRED`; the actual
     // logging happens down in the main loop, outside of interrupt context.

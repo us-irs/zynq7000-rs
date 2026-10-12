@@ -21,8 +21,7 @@ use embedded_hal::i2c::{NoAcknowledgeSource, Operation};
 use log::{debug, error, info};
 use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
-    BootMode, clocks::Clocks, generic_interrupt_handler, gpio::GpioPins, gtc::GlobalTimerCounter,
-    i2c, uart,
+    BootMode, clocks::Clocks, generic_interrupt_handler, gpio, gtc::GlobalTimerCounter, i2c, uart,
 };
 
 use zynq7000_rt as _;
@@ -56,7 +55,7 @@ async fn main(_spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let gpio_pins = GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());

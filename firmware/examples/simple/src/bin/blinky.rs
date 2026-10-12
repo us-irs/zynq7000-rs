@@ -7,12 +7,7 @@ use core::panic::PanicInfo;
 use embedded_io::Write;
 use zynq7000::Peripherals;
 use zynq7000_hal::{
-    clocks::Clocks,
-    gpio::{Output, PinState, mio},
-    l2_cache, mmu,
-    priv_tim::CpuPrivateTimer,
-    time::Hertz,
-    uart,
+    clocks::Clocks, gpio, l2_cache, mmu, priv_tim::CpuPrivateTimer, time::Hertz, uart,
 };
 
 pub const LIB: Lib = Lib::Hal;
@@ -54,8 +49,8 @@ fn main() -> ! {
             let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
             // Unwrap okay, we only call this once on core 0 here.
             let mut cpu_tim = CpuPrivateTimer::take(clocks.arm_clocks()).unwrap();
-            let mio_pins = mio::Pins::new(dp.gpio);
-            let mut led = Output::new_for_mio(mio_pins.mio7, PinState::High);
+            let mio_pins = gpio::mio::Pins::new(dp.gpio);
+            let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::High);
             loop {
                 led.toggle();
                 cpu_tim.delay_ms(1000);

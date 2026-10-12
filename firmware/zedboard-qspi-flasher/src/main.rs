@@ -43,7 +43,7 @@ fn main() -> ! {
     // Unwrap okay, we only call this once on core 0 here.
     let mut timer = priv_tim::CpuPrivateTimer::take(clocks.arm_clocks()).unwrap();
 
-    let gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = uart::ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)

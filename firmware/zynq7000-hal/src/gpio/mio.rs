@@ -6,6 +6,7 @@
 use arbitrary_int::{u2, u3};
 use zynq7000::gpio::MmioRegisters;
 
+/// MIO pin multiplexer configuration.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct MuxConfig {
     l3: u3,
@@ -26,58 +27,70 @@ impl From<zynq7000::slcr::mio::Config> for MuxConfig {
 }
 
 impl MuxConfig {
+    /// Create a configuration from the level 0 to level 3 mux selects.
     #[inline]
     pub const fn new(l0: bool, l1: bool, l2: u2, l3: u3) -> Self {
         Self { l3, l2, l1, l0 }
     }
 
+    /// Select a level 0 peripheral.
     #[inline]
     pub const fn new_with_l0() -> Self {
         Self::new(true, false, u2::new(0b00), u3::new(0b000))
     }
 
+    /// Select a level 1 peripheral.
     #[inline]
     pub const fn new_with_l1() -> Self {
         Self::new(false, true, u2::new(0b00), u3::new(0b000))
     }
 
+    /// Select a level 2 peripheral.
     #[inline]
     pub const fn new_with_l2(l2: u2) -> Self {
         Self::new(false, false, l2, u3::new(0b000))
     }
 
+    /// Select a level 3 peripheral.
     #[inline]
     pub const fn new_with_l3(l3: u3) -> Self {
         Self::new(false, false, u2::new(0b00), l3)
     }
 
+    /// GPIO configuration. All mux selects are zero.
     #[inline]
     pub const fn new_for_gpio() -> Self {
         Self::new(false, false, u2::new(0), u3::new(0))
     }
 
+    /// Level 0 mux select.
     #[inline]
     pub const fn l0_sel(&self) -> bool {
         self.l0
     }
 
+    /// Level 1 mux select.
     #[inline]
     pub const fn l1_sel(&self) -> bool {
         self.l1
     }
 
+    /// Level 2 mux select.
     #[inline]
     pub const fn l2_sel(&self) -> u2 {
         self.l2
     }
 
+    /// Level 3 mux select.
     #[inline]
     pub const fn l3_sel(&self) -> u3 {
         self.l3
     }
 }
 
+/// Type-level MIO pin ID.
 pub trait PinId {
+    /// MIO pin offset.
     const OFFSET: usize;
 }
 
@@ -174,10 +187,13 @@ pin_id!(Mio51, 51);
 pin_id!(Mio52, 52);
 pin_id!(Mio53, 53);
 
+/// MIO pin with a runtime offset.
 pub trait MioPin: crate::sealed::Sealed {
+    /// MIO pin offset.
     fn offset(&self) -> usize;
 }
 
+/// Typed MIO pin.
 pub struct Pin<I: PinId> {
     phantom: core::marker::PhantomData<I>,
 }
@@ -205,10 +221,13 @@ impl<I: PinId> Pin<I> {
     /// data races on concurrent access.
     #[inline]
     pub const unsafe fn steal() -> Self {
+        // SAFETY: Upheld by the caller.
         unsafe { Self::new() }
     }
 }
 
+/// MIO pin singleton for resource management.
+#[allow(missing_docs)]
 pub struct Pins {
     pub mio0: Pin<Mio0>,
     pub mio1: Pin<Mio1>,
@@ -291,85 +310,89 @@ pub struct Pins {
 }
 
 impl Pins {
+    /// Create the MIO pin singleton. This does not configure the pins.
     pub const fn new(_mmio: MmioRegisters) -> Self {
-        Self {
-            mio0: unsafe { Pin::new() },
-            mio1: unsafe { Pin::new() },
-            mio2: unsafe { Pin::new() },
-            mio3: unsafe { Pin::new() },
-            mio4: unsafe { Pin::new() },
-            mio5: unsafe { Pin::new() },
-            mio6: unsafe { Pin::new() },
-            mio7: unsafe { Pin::new() },
-            mio8: unsafe { Pin::new() },
-            mio9: unsafe { Pin::new() },
-            mio10: unsafe { Pin::new() },
-            mio11: unsafe { Pin::new() },
-            mio12: unsafe { Pin::new() },
-            mio13: unsafe { Pin::new() },
-            mio14: unsafe { Pin::new() },
-            mio15: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio16: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio17: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio18: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio19: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio20: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio21: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio22: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio23: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio24: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio25: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio26: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio27: unsafe { Pin::new() },
-            mio28: unsafe { Pin::new() },
-            mio29: unsafe { Pin::new() },
-            mio30: unsafe { Pin::new() },
-            mio31: unsafe { Pin::new() },
+        // SAFETY: Owning the GPIO register block ensures that this singleton is only created once.
+        unsafe {
+            Self {
+                mio0: Pin::new(),
+                mio1: Pin::new(),
+                mio2: Pin::new(),
+                mio3: Pin::new(),
+                mio4: Pin::new(),
+                mio5: Pin::new(),
+                mio6: Pin::new(),
+                mio7: Pin::new(),
+                mio8: Pin::new(),
+                mio9: Pin::new(),
+                mio10: Pin::new(),
+                mio11: Pin::new(),
+                mio12: Pin::new(),
+                mio13: Pin::new(),
+                mio14: Pin::new(),
+                mio15: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio16: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio17: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio18: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio19: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio20: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio21: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio22: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio23: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio24: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio25: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio26: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio27: Pin::new(),
+                mio28: Pin::new(),
+                mio29: Pin::new(),
+                mio30: Pin::new(),
+                mio31: Pin::new(),
 
-            mio32: unsafe { Pin::new() },
-            mio33: unsafe { Pin::new() },
-            mio34: unsafe { Pin::new() },
-            mio35: unsafe { Pin::new() },
-            mio36: unsafe { Pin::new() },
-            mio37: unsafe { Pin::new() },
-            mio38: unsafe { Pin::new() },
-            mio39: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio40: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio41: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio42: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio43: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio44: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio45: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio46: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio47: unsafe { Pin::new() },
-            mio48: unsafe { Pin::new() },
-            mio49: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio50: unsafe { Pin::new() },
-            #[cfg(not(feature = "7z010-7z007s-clg225"))]
-            mio51: unsafe { Pin::new() },
-            mio52: unsafe { Pin::new() },
-            mio53: unsafe { Pin::new() },
+                mio32: Pin::new(),
+                mio33: Pin::new(),
+                mio34: Pin::new(),
+                mio35: Pin::new(),
+                mio36: Pin::new(),
+                mio37: Pin::new(),
+                mio38: Pin::new(),
+                mio39: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio40: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio41: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio42: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio43: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio44: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio45: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio46: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio47: Pin::new(),
+                mio48: Pin::new(),
+                mio49: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio50: Pin::new(),
+                #[cfg(not(feature = "7z010-7z007s-clg225"))]
+                mio51: Pin::new(),
+                mio52: Pin::new(),
+                mio53: Pin::new(),
+            }
         }
     }
 }

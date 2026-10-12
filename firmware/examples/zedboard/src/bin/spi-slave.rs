@@ -49,7 +49,7 @@ async fn main(spawner: Spawner) -> ! {
     // the CPU 1x clock which is around 110 MHz.
     spi::configure_spi_ref_clock(&mut clocks, target_spi_ref_clock);
 
-    let mut gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());

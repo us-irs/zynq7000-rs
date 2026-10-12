@@ -11,8 +11,7 @@ use log::info;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    generic_interrupt_handler,
-    gpio::{Output, PinState, mio},
+    generic_interrupt_handler, gpio,
     gtc::GlobalTimerCounter,
     time::Hertz,
     uart::{self, ClockConfig, Config, TxAsync, Uart},
@@ -39,7 +38,7 @@ async fn main(spawner: Spawner) -> ! {
     let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
     zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
-    let mio_pins = mio::Pins::new(periphs.gpio);
+    let mio_pins = gpio::mio::Pins::new(periphs.gpio);
 
     // Set up the UART, we are logging with it.
     let uart_clk_config = ClockConfig::new_autocalc_with_error(clocks.io_clocks(), 115200)
@@ -63,7 +62,7 @@ async fn main(spawner: Spawner) -> ! {
     let boot_mode = BootMode::new_from_regs();
     info!("Boot mode: {:?}", boot_mode);
 
-    let led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
+    let led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     spawner.spawn(led_task(led).unwrap());
     spawner.spawn(hello_task().unwrap());
 
@@ -71,7 +70,7 @@ async fn main(spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn led_task(mut mio_led: Output) {
+async fn led_task(mut mio_led: gpio::Output) {
     static ATOMIC_COUNTER: core::sync::atomic::AtomicUsize =
         core::sync::atomic::AtomicUsize::new(0);
 
