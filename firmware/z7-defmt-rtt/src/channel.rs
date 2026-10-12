@@ -91,7 +91,7 @@ impl Channel {
             Ordering::Release,
         );
         let addr = (&raw const crate::_SEGGER_RTT) as u32 + 32;
-        zynq7000_hal::cache::clean_data_cache_range(addr, 32).expect("cache clean failed");
+        zynq7000_hal::cache::clean_data_cache_range_inner(addr, 32).expect("cache clean failed");
 
         // return the number of bytes written
         len

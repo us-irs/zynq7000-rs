@@ -108,6 +108,8 @@ static _SEGGER_RTT: Header = Header {
     },
 };
 
+const _: () = assert!(BUF_SIZE % 32 == 0, "buffer size not multiple of 32");
+
 /// Report whether the SEGGER RTT up channel is in blocking mode.
 ///
 /// Returns true if the mode bitfield within the flags value has been set to
