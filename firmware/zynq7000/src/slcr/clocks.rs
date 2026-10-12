@@ -533,6 +533,8 @@ pub struct FpgaClockControlRegisters {
 static_assertions::const_assert_eq!(core::mem::size_of::<FpgaClockControlRegisters>(), 0x10);
 
 /// SLCR clock generation register block.
+///
+/// You need to unlock the SLCR lock before updating any of the registers here.
 #[derive(derive_mmio::Mmio)]
 #[repr(C)]
 pub struct ClockControlRegisters {
