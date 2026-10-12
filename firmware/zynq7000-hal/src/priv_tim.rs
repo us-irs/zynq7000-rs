@@ -10,11 +10,11 @@ static CORE_1_TIM_TAKEN: AtomicBool = AtomicBool::new(false);
 
 /// Thin, ownership-tracked wrapper around the raw CPU private timer register block, sharing
 /// its per-core exclusivity tracking with [`CpuPrivateTimer`].
-pub struct CpuPrivateTimerRegs(pub zynq7000::priv_tim::MmioRegisters<'static>);
-
-// TODO: Probably should remove this.
-// SAFETY: Not sure.
-unsafe impl Send for CpuPrivateTimerRegs {}
+pub struct CpuPrivateTimerRegs {
+    regs: zynq7000::priv_tim::MmioRegisters<'static>,
+    // The registers are banked per core, so they must not be sent to another core.
+    _not_send: PhantomData<*const ()>,
+}
 
 impl CpuPrivateTimerRegs {
     /// Take the CPU private timer for a given core.
@@ -32,7 +32,8 @@ impl CpuPrivateTimerRegs {
             return None;
         }
 
-        Some(Self::steal())
+        // SAFETY: The timer of this core was not taken before.
+        Some(unsafe { Self::steal() })
     }
 
     /// Create a new CPU private timer driver.
@@ -41,9 +42,18 @@ impl CpuPrivateTimerRegs {
     ///
     /// This function allows to potentially create an arbitrary amount of timers for both cores.
     /// It also does not check the current core ID.
-    pub const fn steal() -> Self {
-        // SAFETY: Upheld by the caller.
-        Self(unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() })
+    pub const unsafe fn steal() -> Self {
+        Self {
+            // SAFETY: Upheld by the caller.
+            regs: unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() },
+            _not_send: PhantomData,
+        }
+    }
+
+    /// Raw register access.
+    #[inline]
+    pub fn regs(&mut self) -> &mut zynq7000::priv_tim::MmioRegisters<'static> {
+        &mut self.regs
     }
 }
 
@@ -63,7 +73,8 @@ impl CpuPrivateTimer {
     /// This function can only be called once for each given core.
     pub fn take(clocks: &ArmClocks) -> Option<Self> {
         let _ = CpuPrivateTimerRegs::take()?;
-        Some(Self::steal(clocks))
+        // SAFETY: The timer of this core was not taken before.
+        Some(unsafe { Self::steal(clocks) })
     }
 
     /// Create a new CPU private timer driver.
@@ -72,7 +83,7 @@ impl CpuPrivateTimer {
     ///
     /// This function allows to potentially create an arbitrary amount of timers for both cores.
     /// It also does not check the current core ID.
-    pub fn steal(clocks: &ArmClocks) -> Self {
+    pub unsafe fn steal(clocks: &ArmClocks) -> Self {
         Self {
             // SAFETY: Upheld by the caller.
             regs: unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() },

@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - I2C API now exposes transaction, write_read, read and write directly.
 - `gpio::GpioPins` is renamed to `gpio::Pins`. `Pins::new` takes the new `gpio::Config`, which
   registers the GPIO interrupt handler by default.
+- `CpuPrivateTimerRegs` is not `Send` anymore because the registers are banked per core. The
+  register block is accessed with `CpuPrivateTimerRegs::regs` instead of the public field.
+- `CpuPrivateTimerRegs::steal` and `CpuPrivateTimer::steal` are now `unsafe`.
 
 ## Added
 
