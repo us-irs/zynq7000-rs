@@ -5,12 +5,7 @@
 use aarch32_cpu::asm::nop;
 use core::panic::PanicInfo;
 use defmt_rtt as _;
-use zynq7000_hal::{
-    clocks::Clocks,
-    gpio::{Output, PinState, mio},
-    priv_tim::CpuPrivateTimer,
-    time::Hertz,
-};
+use zynq7000_hal::{clocks::Clocks, gpio, priv_tim::CpuPrivateTimer, time::Hertz};
 
 pub const LIB: Lib = Lib::Hal;
 
@@ -35,8 +30,8 @@ fn main() -> ! {
     defmt::info!("clocks {:?}", clocks);
     // Unwrap okay, we only call this once on core 0 here.
     let mut cpu_tim = CpuPrivateTimer::take(clocks.arm_clocks()).unwrap();
-    let mio_pins = mio::Pins::new(dp.gpio);
-    let mut led = Output::new_for_mio(mio_pins.mio7, PinState::High);
+    let mio_pins = gpio::mio::Pins::new(dp.gpio);
+    let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::High);
     loop {
         defmt::info!("toggling LED!");
         // A more granular solution would be nice.

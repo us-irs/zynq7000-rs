@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Removed `I2c` prefix at various spots in the I2C API.
 - New I2C `Error` enum replaces `I2cTxError`, `I2cRxError` and `I2cError`.
 - I2C API now exposes transaction, write_read, read and write directly.
+- `gpio::GpioPins` is renamed to `gpio::Pins`. `Pins::new` takes the new `gpio::Config`, which
+  registers the GPIO interrupt handler by default.
 
 ## Added
 
@@ -25,12 +27,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - New I2C error variant: WriteAfterRead is not supported.
 - Basic I2C slave module which was also used for internal tests.
 - `i2c::enable_i2c0_to_i2c1_loopback`, `I2cId::interrupt_id` and `I2cId::steal_regs`.
+- Asynchronous GPIO support: `gpio::asynch::Input` implements the `embedded-hal-async` `Wait`
+  trait. Created with `Input::into_async`.
+- `LowLevelGpio::enable_interrupt` and `LowLevelGpio::disable_interrupt`.
 
 ## Fixed
 
 - I2C TX FIFO overflow when several write operations were merged into one transfer.
 - I2C transfers now return after the STOP condition is on the bus.
 - `I2c::new_with_mio` now checks that the pins belong to the given I2C peripheral.
+- GPIO pin configuration is now protected by a critical section. Configuring two pins of the same
+  bank concurrently could overwrite each other's direction and output enable bits.
 
 # [v0.2.0] 2026-08-20
 

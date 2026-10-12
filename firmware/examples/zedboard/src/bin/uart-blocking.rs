@@ -13,8 +13,7 @@ use zedboard::PS_CLOCK_FREQUENCY;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    generic_interrupt_handler,
-    gpio::{GpioPins, Output, PinState},
+    generic_interrupt_handler, gpio,
     gtc::GlobalTimerCounter,
     uart::{ClockConfig, Config, Uart},
 };
@@ -43,11 +42,11 @@ pub enum UartSel {
 }
 
 pub struct UartMultiplexer {
-    sel_pins: [Output; 3],
+    sel_pins: [gpio::Output; 3],
 }
 
 impl UartMultiplexer {
-    pub fn new(mut sel_pins: [Output; 3]) -> Self {
+    pub fn new(mut sel_pins: [gpio::Output; 3]) -> Self {
         for pin in sel_pins.iter_mut() {
             pin.set_low();
         }
@@ -96,7 +95,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
-    let mut gpio_pins = GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -140,19 +139,19 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut ticker = Ticker::every(Duration::from_millis(1000));
 
-    let mut mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
+    let mut mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
     // Just LD0-LD2 here as a simple "this example is running" indicator. See main.rs for an
     // example that exercises all 8 LEDs, including LD6/LD7 which are AXI GPIO, not EMIO driven.
-    let mut emio_leds: [Output; 3] = [
-        Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), PinState::Low),
+    let mut emio_leds: [gpio::Output; 3] = [
+        gpio::Output::new_for_emio(gpio_pins.emio.take(0).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(1).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(2).unwrap(), gpio::PinState::Low),
     ];
 
     let mut uart_mux = UartMultiplexer::new([
-        Output::new_for_emio(gpio_pins.emio.take(8).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(9).unwrap(), PinState::Low),
-        Output::new_for_emio(gpio_pins.emio.take(10).unwrap(), PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(8).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(9).unwrap(), gpio::PinState::Low),
+        gpio::Output::new_for_emio(gpio_pins.emio.take(10).unwrap(), gpio::PinState::Low),
     ]);
     let mut current_sel = UartSel::Uart0;
     uart_mux.select(current_sel);

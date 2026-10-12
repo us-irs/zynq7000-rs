@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 - I2C `Status::rx_rw` is renamed to `slave_rw` and is now the new `ReadWrite` enum instead of a
   `bool`.
+- GPIO `BankControlRegisters` interrupt fields are renamed, for example `int_en` to
+  `enable_interrupt` and `int_sts` to `interrupt_status`. The interrupt type and polarity
+  registers now use the new `InterruptTypeRegister` and `PolarityRegister` types.
 
 # [v0.6.0] 2026-08-25
 

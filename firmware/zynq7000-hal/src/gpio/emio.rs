@@ -3,6 +3,7 @@ use zynq7000::gpio::MmioRegisters;
 
 pub use crate::gpio::PinState;
 
+/// EMIO pin.
 pub struct EmioPin {
     offset: usize,
 }
@@ -27,6 +28,7 @@ impl EmioPin {
     }
 }
 
+/// EMIO pin singleton for resource management.
 pub struct Pins {
     emios: [Option<EmioPin>; 64],
 }
@@ -49,10 +51,12 @@ impl Pins {
         Self { emios }
     }
 
+    /// Take the pin with the given offset. Returns [None] if it was already taken.
     pub fn take(&mut self, offset: usize) -> Option<EmioPin> {
         self.emios[offset].take()
     }
 
+    /// Give back a taken pin.
     pub fn give(&mut self, emio: EmioPin) {
         self.emios[emio.offset].replace(emio);
     }

@@ -6,15 +6,15 @@
 #![no_main]
 
 // Import for shared panic handler and exception handlers.
-use zedboard_smp as _;
 use core::cell::RefCell;
 use core::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use critical_section::Mutex;
 use log::{error, info, warn};
+use zedboard_smp as _;
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    gpio::{GpioPins, Output, PinState},
+    gpio,
     priv_tim::CpuPrivateTimer,
     uart::{ClockConfig, Config, Uart},
 };
@@ -55,7 +55,7 @@ const CS_MUTEX_LOOPS: u32 = 1000;
 /// CPU1's status LEDs (EMIO pins 0-7), constructed on CPU0 and handed off to CPU1 through this
 /// static before CPU1 is released via `start_core1`. Needs `Output`/`LowLevelGpio` to be `Send`
 /// to move across cores like this.
-static EMIO_LEDS: Handoff<[Output; 8]> = Handoff::new();
+static EMIO_LEDS: Handoff<[gpio::Output; 8]> = Handoff::new();
 
 /// Runs the atomic fetch-add and critical-section increment loops that both cores perform on
 /// the shared statics above, to check that both mechanisms work correctly across cores.
@@ -87,15 +87,15 @@ fn main() -> ! {
 
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let mut gpio_pins = GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // CPU0's own status LED.
-    let mut mio_led = Output::new_for_mio(gpio_pins.mio.mio7, PinState::Low);
+    let mut mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
 
     // Construct CPU1's status LEDs here and hand them off through the shared `EMIO_LEDS`
     // static.
-    let emio_leds: [Output; 8] = core::array::from_fn(|i| {
-        Output::new_for_emio(gpio_pins.emio.take(i).unwrap(), PinState::Low)
+    let emio_leds: [gpio::Output; 8] = core::array::from_fn(|i| {
+        gpio::Output::new_for_emio(gpio_pins.emio.take(i).unwrap(), gpio::PinState::Low)
     });
     EMIO_LEDS.put(emio_leds);
 
@@ -169,7 +169,7 @@ pub extern "C" fn kmain_secondary() {
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
     let mut priv_tim = CpuPrivateTimer::take(clocks.arm_clocks()).unwrap();
 
-    let mut emio_leds: [Output; 8] = EMIO_LEDS.take();
+    let mut emio_leds: [gpio::Output; 8] = EMIO_LEDS.take();
 
     let mut led_idx = 0;
     loop {

@@ -4,14 +4,65 @@ pub use types::*;
 
 /// Register helper types.
 pub mod types {
-    /// Maskable output data, only bits with the corresponding mask bit cleared are updated.
+
+    /// Interrupt type.
+    #[bitbybit::bitenum(u1, exhaustive = true)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum InterruptType {
+        /// Level sensitivity.
+        Level = 0,
+        /// Edge sensitivity.
+        Edge = 1,
+    }
+
+    /// Interrupt type register.
     #[bitbybit::bitfield(
         u32,
+        debug,
         default = 0x0,
         defmt_bitfields(feature = "defmt"),
         forbid_overlaps
     )]
-    #[derive(Debug)]
+    pub struct InterruptTypeRegister {
+        /// Individual bits.
+        #[bit(0, rw)]
+        pub bit: [InterruptType; 32],
+    }
+
+    /// Interrupt polarity bit.
+    #[bitbybit::bitenum(u1, exhaustive = true)]
+    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(feature = "defmt", derive(defmt::Format))]
+    pub enum Polarity {
+        /// Active low / falling edge.
+        ActiveLowOrFallingEdge = 0,
+        /// Active high / rising edge.
+        ActiveHighOrRisingEdge = 1,
+    }
+
+    /// Interrupt polarity register.
+    #[bitbybit::bitfield(
+        u32,
+        debug,
+        default = 0x0,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
+    pub struct PolarityRegister {
+        /// Individual bits.
+        #[bit(0, rw)]
+        pub bit: [Polarity; 32],
+    }
+
+    /// Maskable output data, only bits with the corresponding mask bit cleared are updated.
+    #[bitbybit::bitfield(
+        u32,
+        debug,
+        default = 0x0,
+        defmt_bitfields(feature = "defmt"),
+        forbid_overlaps
+    )]
     pub struct MaskedOutput {
         /// Write mask, a set bit prevents the corresponding output bit from being updated.
         #[bits(16..=31, w)]
@@ -30,23 +81,40 @@ pub mod types {
         /// Output enable
         out_en: u32,
         /// Interrupt mask status
+        ///
+        /// TRM name: `INT_MASK`.
         #[mmio(PureRead)]
-        int_mask: u32,
+        interrupt_mask: u32,
         /// Interrupt enable/unmask
+        ///
+        /// TRM name: `INT_EN`.
         #[mmio(Write)]
-        int_en: u32,
+        enable_interrupt: u32,
         /// Interrupt disable/mask
+        ///
+        /// TRM name: `INT_DIS`.
         #[mmio(Write)]
-        int_dis: u32,
+        disable_interrupt: u32,
         /// Interrupt status
+        ///
+        /// On reading: 1 means an interrupt has occurred, 0 is that no interrupt occurred.
+        /// On write: 1 clears the interrupt status bit, 0 is no action.
+        ///
+        /// TRM name: `INT_STAT`.
         #[mmio(PureRead, Write)]
-        int_sts: u32,
+        interrupt_status: u32,
         /// Interrupt type
-        int_type: u32,
+        ///
+        /// TRM name: `INT_TYPE`.
+        interrupt_type: InterruptTypeRegister,
         /// Interrupt polarity
-        int_pol: u32,
+        ///
+        /// TRM name: `INT_POLARITY`.
+        interrupt_polarity: PolarityRegister,
         /// Interrupt any edge sensitivity
-        int_any: u32,
+        ///
+        /// TRM name: `INT_ANY`.
+        interrupt_any_sensitivity: u32,
     }
 }
 

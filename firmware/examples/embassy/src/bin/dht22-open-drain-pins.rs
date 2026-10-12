@@ -11,8 +11,7 @@ use log::{error, info, warn};
 use zynq7000_hal::{
     BootMode,
     clocks::Clocks,
-    generic_interrupt_handler,
-    gpio::{Flex, Output, PinState, mio},
+    generic_interrupt_handler, gpio,
     gtc::GlobalTimerCounter,
     time::Hertz,
     uart::{ClockConfig, Config, Uart},
@@ -39,7 +38,7 @@ async fn main(_spawner: Spawner) -> ! {
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
-    let mio_pins = mio::Pins::new(periphs.gpio);
+    let mio_pins = gpio::mio::Pins::new(periphs.gpio);
 
     // Set up global timer counter and embassy time driver.
     let gtc = GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -62,13 +61,13 @@ async fn main(_spawner: Spawner) -> ! {
 
     let mut delay = Delay;
 
-    let mut one_wire_pin = Flex::new_for_mio(mio_pins.mio0);
-    one_wire_pin.configure_as_output_open_drain(PinState::High, true);
+    let mut one_wire_pin = gpio::Flex::new_for_mio(mio_pins.mio0);
+    one_wire_pin.configure_as_output_open_drain(gpio::PinState::High, true);
 
     if OPEN_DRAIN_PINS_MIO9_TO_MIO14 {
-        let mut flex_pin_0 = Flex::new_for_mio(mio_pins.mio9);
-        flex_pin_0.configure_as_output_open_drain(PinState::High, true);
-        let mut flex_pin_1 = Flex::new_for_mio(mio_pins.mio14);
+        let mut flex_pin_0 = gpio::Flex::new_for_mio(mio_pins.mio9);
+        flex_pin_0.configure_as_output_open_drain(gpio::PinState::High, true);
+        let mut flex_pin_1 = gpio::Flex::new_for_mio(mio_pins.mio14);
         flex_pin_1.configure_as_input_floating().unwrap();
         // Should be high because of pull up.
         info!(
@@ -93,7 +92,7 @@ async fn main(_spawner: Spawner) -> ! {
             flex_pin_0.is_high()
         );
 
-        flex_pin_1.configure_as_output_open_drain(PinState::Low, true);
+        flex_pin_1.configure_as_output_open_drain(gpio::PinState::Low, true);
         info!("Flex Pin 1 state (should be low): {}", flex_pin_1.is_high());
         info!("Flex Pin 0 state (should be low): {}", flex_pin_0.is_high());
 
@@ -117,7 +116,7 @@ async fn main(_spawner: Spawner) -> ! {
     info!("Boot mode: {:?}", boot_mode);
 
     let mut ticker = Ticker::every(Duration::from_millis(1000));
-    let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
+    let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     loop {
         if DHT22_AT_MIO0 {
             let result = dht_sensor::dht22::r#async::read(&mut delay, &mut one_wire_pin).await;

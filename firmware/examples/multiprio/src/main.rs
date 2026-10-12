@@ -10,8 +10,7 @@ use log::error;
 use zynq7000_hal::{
     clocks, generic_interrupt_handler,
     gic::{Priority, SgiInterrupt},
-    gpio::{self, Output},
-    gtc,
+    gpio, gtc,
     time::Hertz,
     uart,
 };
@@ -83,7 +82,7 @@ async fn main(_spawner: Spawner) -> ! {
 }
 
 #[embassy_executor::task]
-async fn led_task(mut mio_led: Output) {
+async fn led_task(mut mio_led: gpio::Output) {
     static ATOMIC_COUNTER: core::sync::atomic::AtomicUsize =
         core::sync::atomic::AtomicUsize::new(0);
 

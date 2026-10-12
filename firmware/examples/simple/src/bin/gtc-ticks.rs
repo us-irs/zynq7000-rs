@@ -8,8 +8,7 @@ use log::{error, info};
 use zynq7000_hal::{
     Interrupt,
     clocks::Clocks,
-    gic,
-    gpio::{Output, PinState, mio},
+    gic, gpio,
     gtc::GlobalTimerCounter,
     l2_cache, mmu,
     prelude::*,
@@ -52,7 +51,7 @@ fn main() -> ! {
     gtc.enable();
 
     // This structure holds all MIO pins.
-    let mio_pins = mio::Pins::new(dp.gpio);
+    let mio_pins = gpio::mio::Pins::new(dp.gpio);
     let mut uart = Uart::new_with_mio_for_uart_1(
         dp.uart_1,
         Config::new_with_clk_config(uart_clk_config),
@@ -62,7 +61,7 @@ fn main() -> ! {
     uart.write_all(b"-- Zynq 7000 GTC Ticks example --\n\r");
     zynq7000_hal::log::uart_blocking::init_with_busy_flag(uart, log::LevelFilter::Trace, false);
 
-    let mut led = Output::new_for_mio(mio_pins.mio7, PinState::Low);
+    let mut led = gpio::Output::new_for_mio(mio_pins.mio7, gpio::PinState::Low);
     loop {
         info!(
             "MS_TICKS: {}",

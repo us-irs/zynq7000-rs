@@ -48,7 +48,7 @@ async fn main(spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let mut gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());

@@ -7,7 +7,6 @@ use embassy_executor::Spawner;
 use embassy_time::{Duration, Ticker};
 use log::error;
 use zedboard::PS_CLOCK_FREQUENCY;
-use zynq7000_hal::gpio::Input;
 use zynq7000_hal::sd::SdClockConfig;
 use zynq7000_hal::{BootMode, clocks, gpio, gtc, sd::SdCardUninit, uart};
 use zynq7000_hal::{generic_interrupt_handler, prelude::*};
@@ -42,7 +41,7 @@ async fn main(_spawner: Spawner) -> ! {
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
     let clocks = clocks::Clocks::new_from_regs(PS_CLOCK_FREQUENCY).unwrap();
 
-    let gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
 
     // Set up global timer counter and embassy time driver.
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
@@ -81,8 +80,8 @@ async fn main(_spawner: Spawner) -> ! {
         ),
     )
     .unwrap();
-    let card_detect = Input::new_for_mio(gpio_pins.mio.mio47).unwrap();
-    let write_protect = Input::new_for_mio(gpio_pins.mio.mio46).unwrap();
+    let card_detect = gpio::Input::new_for_mio(gpio_pins.mio.mio47).unwrap();
+    let write_protect = gpio::Input::new_for_mio(gpio_pins.mio.mio46).unwrap();
     // The card detect being active low makes sense according to the Zedboard docs. Not sure
     // about write-protect though.. It seems that write protect on means that the
     // the pin is pulled high.

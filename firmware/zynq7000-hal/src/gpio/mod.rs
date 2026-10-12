@@ -2,6 +2,9 @@
 //!
 //! This module contains a MIO and EMIO pin resource managements singleton as well as abstractions
 //! to use these pins as GPIOs.
+#![deny(missing_docs)]
+#![warn(clippy::undocumented_unsafe_blocks)]
+pub mod asynch;
 pub mod emio;
 pub mod ll;
 pub mod mio;
@@ -17,18 +20,46 @@ use zynq7000::{gpio::MmioRegisters, slcr::reset::GpioClockReset};
 
 #[derive(Debug, thiserror::Error)]
 #[error("MIO pins 7 and 8 can only be output pins")]
+/// MIO 7 and MIO 8 can not be configured as inputs.
 pub struct PinIsOutputOnly;
 
 /// GPIO pin singleton to allow resource management of both MIO and EMIO pins.
-pub struct GpioPins {
+pub struct Pins {
+    /// MIO pins.
     pub mio: mio::Pins,
+    /// EMIO pins.
     pub emio: emio::Pins,
 }
 
-impl GpioPins {
-    pub fn new(gpio: MmioRegisters) -> Self {
-        enable_amba_peripheral_clock(crate::PeriphSelect::Gpio);
+/// GPIO configuration.
+#[derive(Debug)]
+#[non_exhaustive]
+pub struct Config {
+    /// Register [asynch::on_interrupt] as the handler for the GPIO interrupt. Required for
+    /// asynchronous pin events, unless the handler is registered manually.
+    pub register_interrupt_handler: bool,
+}
+
+impl Default for Config {
+    fn default() -> Self {
         Self {
+            register_interrupt_handler: true,
+        }
+    }
+}
+
+impl Pins {
+    /// Constructor for the GPIO pins singleton.
+    pub fn new(gpio: MmioRegisters, config: Config) -> Self {
+        enable_amba_peripheral_clock(crate::PeriphSelect::Gpio);
+        if config.register_interrupt_handler {
+            crate::register_interrupt(
+                crate::Interrupt::Spi(crate::SpiInterrupt::Gpio),
+                asynch::on_interrupt,
+            );
+        }
+        Self {
+            // SAFETY: The MIO and EMIO singletons only access the banks of their own pins.
             mio: mio::Pins::new(unsafe { gpio.clone() }),
             emio: emio::Pins::new(gpio),
         }
@@ -38,6 +69,7 @@ impl GpioPins {
 /// Reset the GPIO peripheral using the SLCR reset register for GPIO.
 #[inline]
 pub fn reset() {
+    // SAFETY: Only the GPIO reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl()
@@ -53,11 +85,14 @@ pub fn reset() {
 /// Enumeration of all pin modes. Some of the modes are only valid for MIO pins.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum PinMode {
+    /// Push-pull output.
     OutputPushPull,
     /// See [super::gpio] documentation for more information on running an output pin in
     /// open-drain configuration.
     OutputOpenDrain,
+    /// Floating input.
     InputFloating,
+    /// Input with pull-up.
     InputPullUp,
     /// MIO-only peripheral pin configuration
     MioIoPeriph(MuxConfig),
@@ -65,6 +100,7 @@ pub enum PinMode {
 
 #[derive(Debug, thiserror::Error)]
 #[error("invalid pin mode for MIO pin: {0:?}")]
+/// Pin mode is not valid for the MIO pin.
 pub struct InvalidPinMode(pub PinMode);
 
 impl embedded_hal::digital::Error for InvalidPinMode {
@@ -73,15 +109,21 @@ impl embedded_hal::digital::Error for InvalidPinMode {
     }
 }
 
+/// Common interface for pins with a mode and an offset.
 pub trait IoPinProvider {
+    /// Current pin mode.
     fn mode(&self) -> PinMode;
 
+    /// Pin offset.
     fn offset(&self) -> PinOffset;
 
+    /// Pin is configured as an input.
     #[inline]
     fn is_input(&self) -> bool {
         matches!(self.mode(), PinMode::InputFloating | PinMode::InputPullUp)
     }
+
+    /// Pin is configured as an output.
     #[inline]
     fn is_output(&self) -> bool {
         matches!(
@@ -90,6 +132,7 @@ pub trait IoPinProvider {
         )
     }
 
+    /// Pin is configured for a MIO peripheral.
     #[inline]
     fn is_io_periph(&self) -> bool {
         matches!(self.mode(), PinMode::MioIoPeriph(_))
@@ -127,6 +170,7 @@ pub struct Flex {
 }
 
 impl Flex {
+    /// Create a flex pin from a MIO pin.
     pub fn new_for_mio<I: mio::PinId>(_pin: mio::Pin<I>) -> Self {
         let mut ll = LowLevelGpio::new(PinOffset::Mio(I::OFFSET));
         if I::OFFSET == 7 || I::OFFSET == 8 {
@@ -140,6 +184,7 @@ impl Flex {
         }
     }
 
+    /// Create a flex pin from an EMIO pin.
     pub fn new_for_emio(pin: emio::EmioPin) -> Self {
         let mut ll = LowLevelGpio::new(PinOffset::new_for_emio(pin.offset()).unwrap());
         ll.configure_as_input_floating().unwrap();
@@ -149,21 +194,25 @@ impl Flex {
         }
     }
 
+    /// Configure the pin as a floating input.
     pub fn configure_as_input_floating(&mut self) -> Result<(), PinIsOutputOnly> {
         self.mode = PinMode::InputFloating;
         self.ll.configure_as_input_floating()
     }
 
+    /// Configure the pin as an input with pull-up.
     pub fn configure_as_input_with_pull_up(&mut self) -> Result<(), PinIsOutputOnly> {
         self.mode = PinMode::InputPullUp;
         self.ll.configure_as_input_with_pull_up()
     }
 
+    /// Configure the pin as a push-pull output.
     pub fn configure_as_output_push_pull(&mut self, level: PinState) {
         self.mode = PinMode::OutputPushPull;
         self.ll.configure_as_output_push_pull(level);
     }
 
+    /// Configure the pin as an open-drain output.
     pub fn configure_as_output_open_drain(&mut self, level: PinState, with_internal_pullup: bool) {
         self.mode = PinMode::OutputOpenDrain;
         self.ll
@@ -284,38 +333,45 @@ impl embedded_hal::digital::StatefulOutputPin for Flex {
 pub struct Output(LowLevelGpio);
 
 impl Output {
+    /// Create a push-pull output from a MIO pin.
     pub fn new_for_mio<I: mio::PinId>(_pin: mio::Pin<I>, init_level: PinState) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(I::OFFSET));
         low_level.configure_as_output_push_pull(init_level);
         Self(low_level)
     }
 
+    /// Create a push-pull output from an EMIO pin.
     pub fn new_for_emio(pin: emio::EmioPin, init_level: PinState) -> Self {
         let mut low_level = LowLevelGpio::new(PinOffset::new_for_emio(pin.offset()).unwrap());
         low_level.configure_as_output_push_pull(init_level);
         Self(low_level)
     }
 
+    /// Toggle the output level.
     #[inline]
     pub fn toggle(&mut self) {
         <Self as embedded_hal::digital::StatefulOutputPin>::toggle(self).unwrap();
     }
 
+    /// Drive the pin low.
     #[inline]
     pub fn set_low(&mut self) {
         self.0.set_low();
     }
 
+    /// Drive the pin high.
     #[inline]
     pub fn set_high(&mut self) {
         self.0.set_high();
     }
 
+    /// Pin is driven low.
     #[inline]
     pub fn is_set_low(&self) -> bool {
         self.0.is_set_low()
     }
 
+    /// Pin is driven high.
     #[inline]
     pub fn is_set_high(&self) -> bool {
         self.0.is_set_high()
@@ -348,27 +404,38 @@ impl embedded_hal::digital::StatefulOutputPin for Output {
 }
 
 /// Input pin.
+#[derive(Debug)]
 pub struct Input(LowLevelGpio);
 
 impl Input {
+    /// Create a floating input from a MIO pin.
     pub fn new_for_mio<I: mio::PinId>(_pin: mio::Pin<I>) -> Result<Self, PinIsOutputOnly> {
         let mut low_level = LowLevelGpio::new(PinOffset::Mio(I::OFFSET));
         low_level.configure_as_input_floating()?;
         Ok(Self(low_level))
     }
 
+    /// Create a floating input from an EMIO pin.
     pub fn new_for_emio(pin: emio::EmioPin) -> Result<Self, PinIsOutputOnly> {
         let mut low_level = LowLevelGpio::new(PinOffset::new_for_emio(pin.offset()).unwrap());
         low_level.configure_as_input_floating()?;
         Ok(Self(low_level))
     }
 
+    /// Input level is high.
     pub fn is_high(&self) -> bool {
         self.0.is_high()
     }
 
+    /// Input level is low.
     pub fn is_low(&self) -> bool {
         self.0.is_low()
+    }
+
+    /// Converts the input pin into an asynchronous input pin.
+    #[inline]
+    pub fn into_async(self) -> asynch::Input {
+        self.into()
     }
 }
 

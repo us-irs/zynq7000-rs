@@ -47,7 +47,7 @@ fn main() -> ! {
     let gtc = gtc::GlobalTimerCounter::new(periphs.gtc, clocks.arm_clocks());
     zynq7000_hal::time_driver_gtc::init(clocks.arm_clocks(), gtc);
 
-    let mut gpio_pins = gpio::GpioPins::new(periphs.gpio);
+    let mut gpio_pins = gpio::Pins::new(periphs.gpio, gpio::Config::default());
     let mio_led = gpio::Output::new_for_mio(gpio_pins.mio.mio7, gpio::PinState::Low);
 
     // Construct CPU1's LED here and hand it off through EMIO_LED. This has to happen before
