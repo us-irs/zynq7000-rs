@@ -38,6 +38,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `I2c::new_with_mio` now checks that the pins belong to the given I2C peripheral.
 - GPIO pin configuration is now protected by a critical section. Configuring two pins of the same
   bank concurrently could overwrite each other's direction and output enable bits.
+- `ddr::ll::calculate_dci_divisors_with_ddr_clk` always returned 63 for both divisors. The DCI
+  clock is now close to 10 MHz.
 
 # [v0.2.0] 2026-08-20
 

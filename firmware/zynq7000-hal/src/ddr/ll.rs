@@ -39,9 +39,9 @@ pub fn calculate_dci_divisors_with_ddr_clk(ddr_clk: Hertz) -> DciClkConfig {
         div1: u6::new(u6::MAX.value()),
     };
 
-    let mut best_error = 0;
-    for divisor0 in 1..63 {
-        for divisor1 in 1..63 {
+    let mut best_error = u32::MAX;
+    for divisor0 in 1..=63 {
+        for divisor1 in 1..=63 {
             let current_div = (divisor0 as u32) * (divisor1 as u32);
             let error = current_div.abs_diff(target_div);
             if error < best_error {
