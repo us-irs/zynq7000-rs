@@ -98,18 +98,18 @@ test-ps7init:
   cd {{justfile_directory()}}/host/z7-ps7init && cargo test
 
 [working-directory: 'firmware']
-docs-zynq: docs-pac docs-hal
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt
+docs-zynq *args: docs-pac docs-hal
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-rt {{args}}
 
 [working-directory: 'firmware']
-docs-pac:
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000
+docs-pac *args:
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 {{args}}
 [working-directory: 'firmware']
 docs-pac-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000 --open
 [working-directory: 'firmware']
-docs-hal:
-  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features "alloc,time-driver-gtc,defmt" --no-deps
+docs-hal *args:
+  RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features "alloc,time-driver-gtc,defmt" --no-deps {{args}}
 [working-directory: 'firmware']
 docs-hal-html:
   RUSTDOCFLAGS="--cfg docsrs --generate-link-to-definition -Z unstable-options" cargo +nightly doc -p zynq7000-hal --features alloc --open
