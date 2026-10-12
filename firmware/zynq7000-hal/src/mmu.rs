@@ -112,7 +112,8 @@ impl L1TableRaw {
 #[repr(transparent)]
 pub struct L1Table(pub UnsafeCell<L1TableRaw>);
 
-// SAFETY: The table is only accessed through [mmu_l1_table_mut].
+// SAFETY: The global table is only accessed inside critical sections, see [update_l1_table]
+// and [l1_section].
 unsafe impl Sync for L1Table {}
 
 impl L1Table {
@@ -120,27 +121,6 @@ impl L1Table {
     #[inline]
     pub const fn new(l1_table: [L1Section; NUM_L1_PAGE_TABLE_ENTRIES]) -> L1Table {
         L1Table(UnsafeCell::new(L1TableRaw(l1_table)))
-    }
-}
-
-/// Wrapper structure to modify the L1 table given a mutable reference to the table.
-pub struct L1TableWrapper<'a>(pub &'a mut L1TableRaw);
-
-impl<'a> L1TableWrapper<'a> {
-    /// Create a wrapper for the given table.
-    pub fn new(l1_table: &'a mut L1TableRaw) -> L1TableWrapper<'a> {
-        L1TableWrapper(l1_table)
-    }
-}
-
-impl L1TableWrapper<'_> {
-    /// See [L1TableRaw::update].
-    pub fn update(
-        &mut self,
-        addr: u32,
-        section_attrs: SectionAttributes,
-    ) -> Result<(), AddrNotAlignedToOneMb> {
-        self.0.update(addr, section_attrs)
     }
 }
 
@@ -197,11 +177,27 @@ pub unsafe fn enable_mmu_and_cache() {
     aarch32_cpu::asm::isb();
 }
 
-/// Retrieves a mutable reference to the MMU L1 page table.
-pub fn mmu_l1_table_mut() -> L1TableWrapper<'static> {
-    let mmu_table = super::mmu_table::MMU_L1_PAGE_TABLE.0.get();
-    // Safety: We retrieve a reference to the MMU page table singleton.
-    L1TableWrapper::new(unsafe { &mut *mmu_table })
+/// Update the attributes of the section starting at `addr` in the global L1 table.
+///
+/// See [L1TableRaw::update].
+pub fn update_l1_table(
+    addr: u32,
+    section_attrs: SectionAttributes,
+) -> Result<(), AddrNotAlignedToOneMb> {
+    critical_section::with(|_| {
+        // SAFETY: The reference does not leave the critical section and no user code runs here.
+        let table = unsafe { &mut *super::mmu_table::MMU_L1_PAGE_TABLE.0.get() };
+        table.update(addr, section_attrs)
+    })
+}
+
+/// Copy of the global L1 table section which contains `addr`.
+pub fn l1_section(addr: u32) -> L1Section {
+    critical_section::with(|_| {
+        // SAFETY: The reference does not leave the critical section and no user code runs here.
+        let table = unsafe { &*super::mmu_table::MMU_L1_PAGE_TABLE.0.get() };
+        table.0[addr as usize / ONE_MB]
+    })
 }
 
 /// Maximum DDR size of 1 GB.

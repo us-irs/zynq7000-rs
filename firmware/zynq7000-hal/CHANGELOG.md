@@ -18,9 +18,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - I2C API now exposes transaction, write_read, read and write directly.
 - `gpio::GpioPins` is renamed to `gpio::Pins`. `Pins::new` takes the new `gpio::Config`, which
   registers the GPIO interrupt handler by default.
+- `mmu::mmu_l1_table_mut` and `L1TableWrapper` are replaced by `mmu::update_l1_table`. Two calls of
+  `mmu_l1_table_mut` returned aliasing mutable references to the global L1 table.
 
 ## Added
 
+- `mmu::l1_section` to read a section of the global L1 table.
 - Added `Configurator::set_ppi_interrupt_priority`/`read_ppi_interrupt_priority` and
   `set_spi_interrupt_priority`/`read_spi_interrupt_priority`, mirroring the existing SGI priority
   API for the other interrupt classes.

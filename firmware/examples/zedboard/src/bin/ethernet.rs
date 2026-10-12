@@ -44,7 +44,7 @@ use zynq7000_hal::{
     gic::Interrupt,
     gpio,
     gtc::GlobalTimerCounter,
-    mmu::{mmu_l1_table_mut, section_attrs::SHAREABLE_DEVICE},
+    mmu::{section_attrs::SHAREABLE_DEVICE, update_l1_table},
     uart,
 };
 
@@ -203,8 +203,7 @@ async fn main(spawner: Spawner) -> ! {
     let periphs = zynq7000_hal::init(zynq7000_hal::Config::default()).expect("HAL init failed");
 
     // Configure the uncached memory region using the MMU.
-    mmu_l1_table_mut()
-        .update(UNCACHED_ADDR, SHAREABLE_DEVICE)
+    update_l1_table(UNCACHED_ADDR, SHAREABLE_DEVICE)
         .expect("configuring uncached memory section failed");
 
     // Clock was already initialized by PS7 Init TCL script or FSBL, we just read it.
