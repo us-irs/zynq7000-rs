@@ -12,8 +12,10 @@ categories = ["embedded", "no-std", "hardware-support"]
 aarch32-cpu = { version = "0.4", features = ["critical-section-single-core"] }
 zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
-zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc"] }
+zynq7000-hal = { path = "../../zynq7000-hal", features = ["time-driver-gtc", "defmt"] }
 zedboard-bsp = { path = "../../zedboard-bsp" }
+z7-defmt-rtt = { path = "../../z7-defmt-rtt" }
+defmt = "1"
 num_enum = { version = "0.7", default-features = false }
 embedded-io = "0.7"
 bitbybit = "2"

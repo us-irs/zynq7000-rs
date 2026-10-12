@@ -8,6 +8,7 @@ use std::{
 
 use anyhow::Context;
 use clap_num::si_number;
+use defmt_decoder::log::format::{Formatter, FormatterConfig, FormatterFormat};
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use probe_rs::{
     Core, MemoryInterface, Permissions, Session,
@@ -502,18 +503,44 @@ const DEFMT_RTT_CHANNEL: usize = 0;
 /// Delay between two RTT polls when the last poll returned no data.
 const RTT_POLL_INTERVAL: Duration = Duration::from_millis(10);
 
-/// Attaches to the RTT control block of an already flashed ELF. Must be called before the core
-/// runs: the control block is part of the loaded image, and the firmware may start logging right
-/// away.
-fn attach_rtt(session: &mut Session, elf: &[u8]) -> anyhow::Result<Rtt> {
-    let rtt_addr = rtt::find_rtt_control_block_in_raw_file(elf)?
-        .with_context(|| "no RTT control block (_SEGGER_RTT) found in ELF")?;
+/// How long to wait for the firmware startup code to set up the RTT control block.
+const RTT_ATTACH_TIMEOUT: Duration = Duration::from_secs(2);
+
+fn rtt_control_block_addr(elf: &[u8]) -> anyhow::Result<u64> {
+    rtt::find_rtt_control_block_in_raw_file(elf)?
+        .with_context(|| "no RTT control block (_SEGGER_RTT) found in ELF")
+}
+
+/// Clears the control block ID, so a leftover control block from a previous run is not mistaken
+/// for the current one.
+fn clear_rtt_control_block_id(session: &mut Session, rtt_addr: u64) -> anyhow::Result<()> {
+    let mut memory = session.memory_access_port(0)?;
+    memory.write_8(rtt_addr, &[0; 16])?;
+    Ok(())
+}
+
+/// Must be called after the core runs. The control block can live in a section which is only
+/// initialized by the startup code, for example in `.ocm.data`.
+fn attach_rtt(session: &mut Session, rtt_addr: u64) -> anyhow::Result<Rtt> {
     let rtt_target = RttTarget {
         is_64_bit: false,
         memory_regions: session.target().memory_map.clone(),
     };
-    let mut memory = session.memory_access_port(0)?;
-    Ok(Rtt::attach_at(&mut memory, &rtt_target, rtt_addr)?)
+    let start = Instant::now();
+    loop {
+        let mut memory = session.memory_access_port(0)?;
+        match Rtt::attach_at(&mut memory, &rtt_target, rtt_addr) {
+            Ok(rtt) => return Ok(rtt),
+            Err(e) if start.elapsed() >= RTT_ATTACH_TIMEOUT => return Err(e.into()),
+            Err(_) => std::thread::sleep(RTT_POLL_INTERVAL),
+        }
+    }
+}
+
+struct DefmtData {
+    table: defmt_decoder::Table,
+    /// Only available if the ELF contains debug info.
+    locations: Option<defmt_decoder::Locations>,
 }
 
 /// Polls the defmt RTT channel and prints decoded frames to stdout until `Ctrl+C`. Serial console
@@ -524,10 +551,18 @@ fn attach_rtt(session: &mut Session, elf: &[u8]) -> anyhow::Result<Rtt> {
 fn run_defmt_console(
     session: &mut Session,
     mut rtt: Rtt,
-    table: &defmt_decoder::Table,
+    defmt: &DefmtData,
     serial_reader: Option<SerialReader>,
 ) -> anyhow::Result<()> {
+    let DefmtData { table, locations } = defmt;
     let mut decoder = table.new_stream_decoder();
+    // Same format probe-rs uses by default.
+    let formatter = Formatter::new(FormatterConfig {
+        format: FormatterFormat::OneLine {
+            with_location: locations.is_some(),
+        },
+        is_timestamp_available: table.has_timestamp(),
+    });
     let mut stdout = std::io::stdout();
     let mut buf = [0u8; 1024];
     let channel = rtt
@@ -551,7 +586,19 @@ fn run_defmt_console(
         decoder.received(&buf[..count]);
         loop {
             match decoder.decode() {
-                Ok(frame) => println!("{}", frame.display(true)),
+                Ok(frame) => {
+                    let location = locations.as_ref().and_then(|l| l.get(&frame.index()));
+                    let file = location.map(|l| l.file.display().to_string());
+                    println!(
+                        "{}",
+                        formatter.format_frame(
+                            frame,
+                            file.as_deref(),
+                            location.and_then(|l| u32::try_from(l.line).ok()),
+                            location.map(|l| l.module.as_str()),
+                        )
+                    );
+                }
                 Err(defmt_decoder::DecodeError::UnexpectedEof) => break,
                 Err(defmt_decoder::DecodeError::Malformed) => {
                     // The raw encoding has no frame boundaries, so the stream can not be resynced.
@@ -859,8 +906,10 @@ fn main() -> anyhow::Result<()> {
             .with_context(|| format!("failed to read ELF file {}", cli.elf.display()))?;
         let table =
             defmt_decoder::Table::parse(&elf)?.with_context(|| "ELF contains no defmt data")?;
-        let rtt = attach_rtt(&mut session, &elf).with_context(|| "attaching RTT")?;
-        Some((rtt, table))
+        let locations = table.get_locations(&elf).ok().filter(|l| !l.is_empty());
+        let rtt_addr = rtt_control_block_addr(&elf)?;
+        clear_rtt_control_block_id(&mut session, rtt_addr)?;
+        Some((rtt_addr, DefmtData { table, locations }))
     } else {
         None
     };
@@ -891,8 +940,9 @@ fn main() -> anyhow::Result<()> {
     drop(core1);
 
     match (defmt, serial_reader) {
-        (Some((rtt, table)), serial_reader) => {
-            run_defmt_console(&mut session, rtt, &table, serial_reader)?
+        (Some((rtt_addr, defmt)), serial_reader) => {
+            let rtt = attach_rtt(&mut session, rtt_addr).with_context(|| "attaching RTT")?;
+            run_defmt_console(&mut session, rtt, &defmt, serial_reader)?
         }
         (None, Some(serial_reader)) => run_serial_console(serial_reader)?,
         (None, None) => {}
