@@ -12,7 +12,7 @@ zynq7000-rt = { path = "../../zynq7000-rt" }
 zynq7000 = { path = "../../zynq7000" }
 zynq7000-hal = { path = "../../zynq7000-hal", features = ["defmt"] }
 defmt = "1"
-defmt-rtt = "1"
+z7-defmt-rtt = { path = "../../z7-defmt-rtt" }
 embedded-io = "0.7"
 embedded-hal = "1"
 fugit = "0.5"

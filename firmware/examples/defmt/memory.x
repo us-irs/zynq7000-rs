@@ -1,19 +1,18 @@
 MEMORY
 {
-  /* Zedboard: 512 MB DDR3. Only use 63 MB for now, should be plenty for a bare-metal app.
-  Leave 1 MB of memory which will be configured as uncached device memory by the MMU. This is
-  recommended for something like DMA descriptors. */
-  CODE(rx) : ORIGIN = 0x00100000, LENGTH = 63M
-  /*CODE(rx) : ORIGIN = 0x00000000, LENGTH = 192K*/
-  UNCACHED(rx): ORIGIN = 0x4000000, LENGTH = 1M
-  OCM_UPPER(rx): ORIGIN = 0xFFFF0000, LENGTH = 64K
+  /* Zedboard: 512 MB DDR3. Only use 62 MB for now, should be plenty for a bare-metal app.
+  1 MB stack memory and  1 MB of memory which will be configured as uncached device memory by the
+  MMU. This is recommended for something like DMA descriptors. */
   OCM : ORIGIN = 0x00000000, LENGTH = 192K
+  DDR : ORIGIN = 0x00100000, LENGTH = 63M
+  OCM_UPPER(rx): ORIGIN = 0xFFFF0000, LENGTH = 64K
+  UNCACHED : ORIGIN = ORIGIN(DDR) + LENGTH(DDR), LENGTH = 1M
 }
 
-REGION_ALIAS("VECTORS", CODE);
-REGION_ALIAS("DATA", CODE);
-/* Use the upper OCM as the stack */
-REGION_ALIAS("STACKS", OCM_UPPER);
+REGION_ALIAS("VECTORS", OCM);
+REGION_ALIAS("CODE", OCM);
+REGION_ALIAS("DATA", OCM);
+REGION_ALIAS("STACKS", OCM);
 
 SECTIONS
 {
@@ -27,9 +26,4 @@ SECTIONS
   } > UNCACHED
 }
 
-
-PROVIDE(_und_stack_size = 2K);
-PROVIDE(_svc_stack_size = 2K);
-PROVIDE(_abt_stack_size = 2K);
-PROVIDE(_hyp_stack_size = 1K);
-PROVIDE(_sys_stack_size = 32K);
+PROVIDE(_sys_stack_size = 16K);

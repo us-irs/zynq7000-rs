@@ -12,6 +12,7 @@ members = [
 
   "zedboard-bsp",
   "zedboard-qspi-flasher",
+  "z7-defmt-rtt"
 ]
 
 exclude = [
