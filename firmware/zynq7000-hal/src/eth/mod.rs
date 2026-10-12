@@ -17,7 +17,9 @@ pub mod rx_descr;
 pub mod smoltcp;
 pub mod tx_descr;
 
+/// Size of the frame buffers in bytes.
 pub const MTU: usize = 1536;
+/// Maximum MDC clock frequency.
 pub const MAX_MDC_SPEED: Hertz = Hertz::from_raw(2_500_000);
 
 /// Ethernet buffer type used for singleton checks.
@@ -33,6 +35,7 @@ pub enum BufferId {
     Eth1Tx,
 }
 
+/// Frame buffer aligned to the cache line size.
 #[repr(C, align(32))]
 #[derive(Debug, Clone, Copy)]
 pub struct AlignedBuffer(pub [u8; MTU]);
@@ -46,10 +49,12 @@ pub struct UninitBufferList<const SLOTS: usize>(
     pub UnsafeCell<MaybeUninit<[AlignedBuffer; SLOTS]>>,
 );
 
-// This allows static placement. Safety is ensure by singleton API.
+// SAFETY: The buffers are only accessed through the reference returned by
+// [UninitBufferList::take], which can only be called once.
 unsafe impl<const SLOTS: usize> Sync for UninitBufferList<SLOTS> {}
 
 impl<const SLOTS: usize> UninitBufferList<SLOTS> {
+    /// Create an uninitialized buffer list.
     #[inline]
     pub const fn new() -> Self {
         Self(UnsafeCell::new(MaybeUninit::uninit()))
@@ -62,8 +67,10 @@ impl<const SLOTS: usize> UninitBufferList<SLOTS> {
     /// This allows creating aliasing mutable references and circumventing ownership and safety
     /// guarantees of the HAL. You MUST call this function only once per buffer list instance.
     pub unsafe fn take(&self) -> &'static mut [AlignedBuffer; SLOTS] {
+        // SAFETY: Upheld by the caller, this is only called once.
         let descr = unsafe { &mut *self.0.get() };
         descr.write([const { AlignedBuffer([0; MTU]) }; SLOTS]);
+        // SAFETY: Initialized by the write above.
         unsafe { descr.assume_init_mut() }
     }
 }
@@ -91,12 +98,17 @@ use crate::{
     time::Hertz,
 };
 
+/// MIO multiplexer configuration for the RGMII pins.
 pub const MUX_CONF_PHY: MuxConfig = MuxConfig::new_with_l0();
+/// MIO multiplexer configuration for the MDIO pins.
 pub const MUX_CONF_MDIO: MuxConfig = MuxConfig::new_with_l3(u3::new(0b100));
 
+/// Ethernet peripheral ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EthernetId {
+    /// GEM 0.
     Eth0 = 0,
+    /// GEM 1.
     Eth1 = 1,
 }
 
@@ -107,6 +119,7 @@ impl EthernetId {
     ///
     /// Circumvents ownership and safety guarantees of the HAL.
     pub const unsafe fn steal_regs(&self) -> zynq7000::eth::MmioRegisters<'static> {
+        // SAFETY: Upheld by the caller.
         unsafe {
             match self {
                 EthernetId::Eth0 => zynq7000::eth::Registers::new_mmio_fixed_0(),
@@ -115,6 +128,7 @@ impl EthernetId {
         }
     }
 
+    /// Pointers to the clock control and the RX clock control register of the peripheral.
     pub fn clk_config_regs(
         &self,
         slcr: &mut zynq7000::slcr::MmioRegisters<'static>,
@@ -135,19 +149,24 @@ impl EthernetId {
     }
 }
 
+/// Common trait for PS Ethernet peripherals.
 pub trait PsEthernet {
+    /// Ethernet register block.
     fn reg_block(&self) -> MmioRegisters<'static>;
+    /// Ethernet ID. [None] if the register block is not a PS Ethernet peripheral.
     fn id(&self) -> Option<EthernetId>;
 }
 
 impl PsEthernet for MmioRegisters<'static> {
     #[inline]
     fn reg_block(&self) -> MmioRegisters<'static> {
+        // SAFETY: The block is passed to the driver by value, so there is only one user.
         unsafe { self.clone() }
     }
 
     #[inline]
     fn id(&self) -> Option<EthernetId> {
+        // SAFETY: Only the address is used, the pointer is not dereferenced.
         let base_addr = unsafe { self.ptr() } as usize;
         if base_addr == GEM_0_BASE_ADDR {
             return Some(EthernetId::Eth0);
@@ -158,33 +177,59 @@ impl PsEthernet for MmioRegisters<'static> {
     }
 }
 
+/// MIO pin which can be used as Ethernet 0 TX clock.
 pub trait Eth0TxClockPin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 TX control.
 pub trait Eth0TxControlPin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 TX data 0.
 pub trait Eth0TxData0Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 TX data 1.
 pub trait Eth0TxData1Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 TX data 2.
 pub trait Eth0TxData2Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 TX data 3.
 pub trait Eth0TxData3Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 RX clock.
 pub trait Eth0RxClockPin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 RX control.
 pub trait Eth0RxControlPin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 RX data 0.
 pub trait Eth0RxData0Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 RX data 1.
 pub trait Eth0RxData1Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 RX data 2.
 pub trait Eth0RxData2Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 0 RX data 3.
 pub trait Eth0RxData3Pin: MioPin {}
 
+/// MIO pin which can be used as Ethernet 1 TX clock.
 pub trait Eth1TxClockPin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 TX control.
 pub trait Eth1TxControlPin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 TX data 0.
 pub trait Eth1TxData0Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 TX data 1.
 pub trait Eth1TxData1Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 TX data 2.
 pub trait Eth1TxData2Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 TX data 3.
 pub trait Eth1TxData3Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 RX clock.
 pub trait Eth1RxClockPin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 RX control.
 pub trait Eth1RxControlPin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 RX data 0.
 pub trait Eth1RxData0Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 RX data 1.
 pub trait Eth1RxData1Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 RX data 2.
 pub trait Eth1RxData2Pin: MioPin {}
+/// MIO pin which can be used as Ethernet 1 RX data 3.
 pub trait Eth1RxData3Pin: MioPin {}
 
+/// MIO pin which can be used as MDIO clock.
 pub trait MdClockPin: MioPin {}
+/// MIO pin which can be used as MDIO data.
 pub trait MdIoPin: MioPin {}
 
 impl MdClockPin for Pin<Mio52> {}
@@ -250,10 +295,14 @@ pub fn calculate_mdc_clk_div(arm_clks: &ArmClocks) -> Option<MdcClockDivisor> {
     }
 }
 
+/// Ethernet configuration.
 #[derive(Debug, Clone, Copy)]
 pub struct EthernetConfig {
+    /// Initial clock configuration, for 1000 Mbit/s.
     pub clk_config_1000_mbps: ClockConfig,
+    /// MDC clock divisor.
     pub mdc_clk_div: MdcClockDivisor,
+    /// MAC address.
     pub mac_address: [u8; 6],
 }
 
@@ -429,6 +478,7 @@ impl Ethernet {
             .with_tri_enable(true)
             //.with_tri_enable(false)
             .build();
+        // SAFETY: Only the MIO configuration of the Ethernet pins is changed.
         unsafe {
             crate::slcr::Slcr::with(|slcr_mut| {
                 IoPeriphPin::new_with_full_config_and_unlocked_slcr(
@@ -540,6 +590,7 @@ impl Ethernet {
         eth
     }
 
+    /// Create the driver and initialize the peripheral for 1000 Mbit/s full duplex.
     pub fn new(mut ll: EthernetLowLevel, config: EthernetConfig) -> Self {
         Self::common_init(&mut ll, config.mac_address);
         ll.configure_clock(config.clk_config_1000_mbps, true);
@@ -583,6 +634,7 @@ impl Ethernet {
         self.current_duplex
     }
 
+    /// Reset and initialize the peripheral again. The descriptor list base addresses are kept.
     pub fn reset(&mut self) {
         self.ll.reset(3);
         // Do not set RX and TX queue base address.
@@ -631,40 +683,48 @@ impl Ethernet {
         });
     }
 
+    /// Clear all interrupts.
     #[inline]
     pub fn clear_interrupts(&mut self) {
         self.ll.regs.write_interrupt_status(IRQ_CLEAR_ALL);
     }
 
+    /// Enable the interrupts used by the driver.
     #[inline]
     pub fn enable_interrupts(&mut self) {
         self.ll.regs.write_interrupt_enable(IRQ_CONTROL);
     }
 
+    /// Disable the interrupts used by the driver.
     #[inline]
     pub fn disable_interrupts(&mut self) {
         self.ll.regs.write_interrupt_disable(IRQ_CONTROL);
     }
 
+    /// Low-level driver.
     #[inline]
     pub fn ll(&mut self) -> &mut EthernetLowLevel {
         &mut self.ll
     }
 
+    /// Ethernet registers.
     #[inline]
     pub fn regs(&mut self) -> &MmioRegisters<'static> {
         &self.ll.regs
     }
 
+    /// MDIO interface.
     #[inline]
     pub fn mdio(&mut self) -> &mdio::Mdio {
         &self.mdio
     }
 
+    /// Mutable MDIO interface.
     pub fn mdio_mut(&mut self) -> &mut mdio::Mdio {
         &mut self.mdio
     }
 
+    /// Mutable Ethernet registers.
     #[inline]
     pub fn regs_mut(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.ll.regs
@@ -693,15 +753,19 @@ impl Ethernet {
 
     delegate::delegate! {
         to self.ll {
+            /// Ethernet ID.
             #[inline]
             pub const fn id(&self) -> EthernetId;
 
+            /// Set the RX descriptor list base address.
             #[inline]
             pub fn set_rx_buf_descriptor_base_address(&mut self, addr: u32);
 
+            /// Set the TX descriptor list base address.
             #[inline]
             pub fn set_tx_buf_descriptor_base_address(&mut self, addr: u32);
 
+            /// Enable or disable the transmitter and the receiver.
             #[inline]
             pub fn set_tx_rx_enable(&mut self, tx_enable: bool, rx_enable: bool);
         }
@@ -709,10 +773,13 @@ impl Ethernet {
 }
 
 mod shared {
+    /// Descriptor ownership.
     #[bitbybit::bitenum(u1, exhaustive = true)]
     #[derive(Debug, PartialEq, Eq)]
     pub enum Ownership {
+        /// Owned by the hardware.
         Hardware = 0,
+        /// Owned by the software.
         Software = 1,
     }
 }
@@ -743,9 +810,12 @@ pub struct EthErrors {
     pub tx_retry_limit_reached: bool,
 }
 
+/// Result of the interrupt handler.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct InterruptResult {
+    /// A frame was received.
     pub frame_received: bool,
+    /// A frame was sent.
     pub frame_sent: bool,
     /// Possibly indicator for high traffic, not enough descriptors available or not handled
     /// quick enough.
@@ -758,6 +828,7 @@ pub struct InterruptResult {
 }
 
 impl InterruptResult {
+    /// Any error is set.
     #[inline]
     pub fn has_errors(&self) -> bool {
         self.errors.rx_overrun
@@ -774,6 +845,7 @@ pub(crate) fn on_interrupt(
     wake_embassy_tx: bool,
     wake_embassy_rx: bool,
 ) -> InterruptResult {
+    // SAFETY: The interrupt handler only accesses the interrupt and status registers.
     let mut eth_regs = unsafe { eth_id.steal_regs() };
     let status = eth_regs.read_interrupt_status();
     let mut clear = InterruptStatus::new_with_raw_value(0);

@@ -1,5 +1,4 @@
 //! # Time units
-#![deny(missing_docs)]
 
 // Frequency based
 

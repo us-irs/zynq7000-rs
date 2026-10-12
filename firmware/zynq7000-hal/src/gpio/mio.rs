@@ -227,85 +227,138 @@ impl<I: PinId> Pin<I> {
 }
 
 /// MIO pin singleton for resource management.
-#[allow(missing_docs)]
 pub struct Pins {
+    /// MIO pin 0.
     pub mio0: Pin<Mio0>,
+    /// MIO pin 1.
     pub mio1: Pin<Mio1>,
+    /// MIO pin 2.
     pub mio2: Pin<Mio2>,
+    /// MIO pin 3.
     pub mio3: Pin<Mio3>,
+    /// MIO pin 4.
     pub mio4: Pin<Mio4>,
+    /// MIO pin 5.
     pub mio5: Pin<Mio5>,
+    /// MIO pin 6.
     pub mio6: Pin<Mio6>,
+    /// MIO pin 7.
     pub mio7: Pin<Mio7>,
+    /// MIO pin 8.
     pub mio8: Pin<Mio8>,
+    /// MIO pin 9.
     pub mio9: Pin<Mio9>,
+    /// MIO pin 10.
     pub mio10: Pin<Mio10>,
+    /// MIO pin 11.
     pub mio11: Pin<Mio11>,
+    /// MIO pin 12.
     pub mio12: Pin<Mio12>,
+    /// MIO pin 13.
     pub mio13: Pin<Mio13>,
+    /// MIO pin 14.
     pub mio14: Pin<Mio14>,
+    /// MIO pin 15.
     pub mio15: Pin<Mio15>,
+    /// MIO pin 16.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio16: Pin<Mio16>,
+    /// MIO pin 17.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio17: Pin<Mio17>,
+    /// MIO pin 18.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio18: Pin<Mio18>,
+    /// MIO pin 19.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio19: Pin<Mio19>,
+    /// MIO pin 20.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio20: Pin<Mio20>,
+    /// MIO pin 21.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio21: Pin<Mio21>,
+    /// MIO pin 22.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio22: Pin<Mio22>,
+    /// MIO pin 23.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio23: Pin<Mio23>,
+    /// MIO pin 24.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio24: Pin<Mio24>,
+    /// MIO pin 25.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio25: Pin<Mio25>,
+    /// MIO pin 26.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio26: Pin<Mio26>,
+    /// MIO pin 27.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio27: Pin<Mio27>,
+    /// MIO pin 28.
     pub mio28: Pin<Mio28>,
+    /// MIO pin 29.
     pub mio29: Pin<Mio29>,
+    /// MIO pin 30.
     pub mio30: Pin<Mio30>,
+    /// MIO pin 31.
     pub mio31: Pin<Mio31>,
 
+    /// MIO pin 32.
     pub mio32: Pin<Mio32>,
+    /// MIO pin 33.
     pub mio33: Pin<Mio33>,
+    /// MIO pin 34.
     pub mio34: Pin<Mio34>,
+    /// MIO pin 35.
     pub mio35: Pin<Mio35>,
+    /// MIO pin 36.
     pub mio36: Pin<Mio36>,
+    /// MIO pin 37.
     pub mio37: Pin<Mio37>,
+    /// MIO pin 38.
     pub mio38: Pin<Mio38>,
+    /// MIO pin 39.
     pub mio39: Pin<Mio39>,
+    /// MIO pin 40.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio40: Pin<Mio40>,
+    /// MIO pin 41.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio41: Pin<Mio41>,
+    /// MIO pin 42.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio42: Pin<Mio42>,
+    /// MIO pin 43.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio43: Pin<Mio43>,
+    /// MIO pin 44.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio44: Pin<Mio44>,
+    /// MIO pin 45.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio45: Pin<Mio45>,
+    /// MIO pin 46.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio46: Pin<Mio46>,
+    /// MIO pin 47.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio47: Pin<Mio47>,
+    /// MIO pin 48.
     pub mio48: Pin<Mio48>,
+    /// MIO pin 49.
     pub mio49: Pin<Mio49>,
+    /// MIO pin 50.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio50: Pin<Mio50>,
+    /// MIO pin 51.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio51: Pin<Mio51>,
+    /// MIO pin 52.
     pub mio52: Pin<Mio52>,
+    /// MIO pin 53.
     pub mio53: Pin<Mio53>,
 }
 

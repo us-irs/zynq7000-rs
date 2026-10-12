@@ -24,6 +24,8 @@
 //! All examples can be found inside the [examples folder](https://github.com/ustgt-irs/zynq7000-rs/tree/main/firmware/examples)
 //! and [firmware folder](https://github.com/ustgt-irs/zynq7000-rs/tree/main/firmware) of the project
 #![no_std]
+#![deny(missing_docs)]
+#![warn(clippy::undocumented_unsafe_blocks)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 #[cfg(feature = "alloc")]
@@ -71,7 +73,9 @@ pub use zynq7000::slcr::LevelShifterConfig;
 /// Identifies one of the two physical Cortex-A9 cores.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CoreId {
+    /// CPU 0, the primary core.
     Cpu0 = 0,
+    /// CPU 1.
     Cpu1 = 1,
 }
 
@@ -85,20 +89,26 @@ pub fn core_id() -> CoreId {
     }
 }
 
+/// Error for [init].
 #[derive(Debug, thiserror::Error)]
 pub enum InitError {
+    /// The peripheral singleton was already taken.
     #[error("peripheral singleton was already taken")]
     PeripheralsAlreadyTaken,
 }
 
+/// Error for [init_secondary_core].
 #[derive(Debug, thiserror::Error)]
 pub enum SecondaryCoreInitError {
+    /// [init_secondary_core] was already called.
     #[error("secondary core init was already performed")]
     AlreadyInitialized,
+    /// [init_secondary_core] was called from the primary core.
     #[error("secondary core init must not be called from the primary core")]
     CalledFromPrimaryCore,
 }
 
+/// GIC configuration applied by [init].
 #[derive(Debug)]
 pub enum InteruptConfig {
     /// GIC is configured to route all interrupts to CPU0. Suitable if the software handles all
@@ -108,6 +118,7 @@ pub enum InteruptConfig {
     Minimal,
 }
 
+/// Configuration for [init].
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct Config {
@@ -172,11 +183,14 @@ pub fn init(config: Config) -> Result<zynq7000::Peripherals, InitError> {
             InteruptConfig::Minimal => (),
         }
         gic.enable();
+        // SAFETY: Not called inside a critical section.
         unsafe {
             gic.enable_interrupts();
         }
     }
 
+    // SAFETY: Returns the peripherals taken above. The parts used during initialization are not
+    // used anymore.
     Ok(unsafe { zynq7000::Peripherals::steal() })
 }
 
@@ -239,6 +253,7 @@ pub fn init_secondary_core(config: SecondaryCoreConfig) -> Result<(), SecondaryC
         // This must be done per core.
         gic.set_priority_mask(0xff);
         gic.enable();
+        // SAFETY: Not called inside a critical section.
         unsafe {
             gic.enable_interrupts();
         }
@@ -249,14 +264,21 @@ pub fn init_secondary_core(config: SecondaryCoreConfig) -> Result<(), SecondaryC
 /// This enumeration encodes the various boot sources.
 #[derive(Debug, Copy, Clone)]
 pub enum BootDevice {
+    /// JTAG with the PL and PS TAPs in one chain.
     JtagCascaded,
+    /// JTAG with separate PL and PS TAPs.
     JtagIndependent,
+    /// NOR flash.
     Nor,
+    /// NAND flash.
     Nand,
+    /// Quad-SPI flash.
     Qspi,
+    /// SD card.
     SdCard,
 }
 
+/// Boot mode information from the boot mode register.
 #[derive(Debug, Copy, Clone)]
 pub struct BootMode {
     boot_mode: Option<BootDevice>,
@@ -295,10 +317,12 @@ impl BootMode {
         }
     }
 
+    /// Boot device. [None] for a reserved boot mode value.
     pub const fn boot_device(&self) -> Option<BootDevice> {
         self.boot_mode
     }
 
+    /// PLL configuration selected by the boot mode pins.
     pub const fn pll_config(&self) -> BootPllConfig {
         self.pll_config
     }
@@ -318,25 +342,45 @@ pub fn configure_level_shifter(config: LevelShifterConfig) {
     }
 }
 
+/// Peripheral selection for the AMBA peripheral clock control. The value is the bit position in
+/// the `APER_CLK_CTRL` register.
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum PeriphSelect {
+    /// Static memory controller.
     Smc = 24,
+    /// Linear Quad-SPI.
     Lqspi = 23,
+    /// GPIO.
     Gpio = 22,
+    /// UART 1.
     Uart1 = 21,
+    /// UART 0.
     Uart0 = 20,
+    /// I2C 1.
     I2c1 = 19,
+    /// I2C 0.
     I2c0 = 18,
+    /// CAN 1.
     Can1 = 17,
+    /// CAN 0.
     Can0 = 16,
+    /// SPI 1.
     Spi1 = 15,
+    /// SPI 0.
     Spi0 = 14,
+    /// SDIO 1.
     Sdio1 = 11,
+    /// SDIO 0.
     Sdio0 = 10,
+    /// Ethernet 1.
     Gem1 = 7,
+    /// Ethernet 0.
     Gem0 = 6,
+    /// USB 1.
     Usb1 = 3,
+    /// USB 0.
     Usb0 = 2,
+    /// DMA controller.
     Dma = 0,
 }
 
@@ -344,6 +388,7 @@ pub enum PeriphSelect {
 /// block.
 #[inline]
 pub fn enable_amba_peripheral_clock(select: PeriphSelect) {
+    // SAFETY: Only the clock enable bit of the selected peripheral is changed.
     unsafe {
         Slcr::with(|regs| {
             regs.clk_ctrl().modify_aper_clk_ctrl(|mut val| {
@@ -377,6 +422,7 @@ pub fn enable_amba_peripheral_clock(select: PeriphSelect) {
 /// block.
 #[inline]
 pub fn disable_amba_periph_clk(select: PeriphSelect) {
+    // SAFETY: Only the clock enable bit of the selected peripheral is changed.
     unsafe {
         Slcr::with(|regs| {
             regs.clk_ctrl().modify_aper_clk_ctrl(|mut val| {

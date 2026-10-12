@@ -1,5 +1,7 @@
+//! Interrupt handler registry.
 use crate::gic::{Interrupt, InterruptGuard};
 
+/// Maps interrupts to their registered handlers.
 pub type InterruptMap = heapless::index_map::FnvIndexMap<Interrupt, unsafe fn(), 128>;
 static INTERRUPT_MAP: critical_section::Mutex<core::cell::RefCell<InterruptMap>> =
     critical_section::Mutex::new(core::cell::RefCell::new(

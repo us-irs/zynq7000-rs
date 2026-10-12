@@ -48,8 +48,10 @@ use aarch32_cpu::{
 };
 use core::cell::UnsafeCell;
 
+/// Number of 1 MB sections in the L1 table.
 pub const NUM_L1_PAGE_TABLE_ENTRIES: usize = 4096;
 
+/// Address is not aligned to 1 MB.
 #[derive(Debug, PartialEq, Eq, thiserror::Error)]
 #[error("address is not aligned to 1MB boundary")]
 pub struct AddrNotAlignedToOneMb;
@@ -62,16 +64,21 @@ pub struct AddrNotAlignedToOneMb;
 pub struct L1TableRaw(pub [L1Section; NUM_L1_PAGE_TABLE_ENTRIES]);
 
 impl L1TableRaw {
+    /// Pointer to the first entry.
     #[inline(always)]
     pub const fn as_ptr(&self) -> *const u32 {
         self.0.as_ptr() as *const _
     }
 
+    /// Mutable pointer to the first entry.
     #[inline(always)]
     pub const fn as_mut_ptr(&mut self) -> *mut u32 {
         self.0.as_mut_ptr() as *mut _
     }
 
+    /// Update the attributes of the section starting at `addr`.
+    ///
+    /// The L1 data cache, the TLB and the branch predictor are invalidated afterwards.
     pub fn update(
         &mut self,
         addr: u32,
@@ -105,9 +112,11 @@ impl L1TableRaw {
 #[repr(transparent)]
 pub struct L1Table(pub UnsafeCell<L1TableRaw>);
 
+// SAFETY: The table is only accessed through [mmu_l1_table_mut].
 unsafe impl Sync for L1Table {}
 
 impl L1Table {
+    /// Create a table with the given entries.
     #[inline]
     pub const fn new(l1_table: [L1Section; NUM_L1_PAGE_TABLE_ENTRIES]) -> L1Table {
         L1Table(UnsafeCell::new(L1TableRaw(l1_table)))
@@ -118,12 +127,14 @@ impl L1Table {
 pub struct L1TableWrapper<'a>(pub &'a mut L1TableRaw);
 
 impl<'a> L1TableWrapper<'a> {
+    /// Create a wrapper for the given table.
     pub fn new(l1_table: &'a mut L1TableRaw) -> L1TableWrapper<'a> {
         L1TableWrapper(l1_table)
     }
 }
 
 impl L1TableWrapper<'_> {
+    /// See [L1TableRaw::update].
     pub fn update(
         &mut self,
         addr: u32,
@@ -139,6 +150,7 @@ impl L1TableWrapper<'_> {
 ///
 /// Must only be called ONCE per core during program initialization
 pub unsafe fn init() {
+    // SAFETY: Upheld by the caller.
     unsafe {
         set_mmu();
         enable_mmu_and_cache();
@@ -158,6 +170,7 @@ pub unsafe fn set_mmu() {
         .with_rgn(aarch32_cpu::register::ttbr0::Region::WriteBackWriteAllocCacheable)
         .with_s(true)
         .with_c(true);
+    // SAFETY: The address points to the global L1 table, which lives for the whole program.
     unsafe { aarch32_cpu::register::Ttbr0::write(ttbr0) }
 }
 
@@ -191,39 +204,58 @@ pub fn mmu_l1_table_mut() -> L1TableWrapper<'static> {
     L1TableWrapper::new(unsafe { &mut *mmu_table })
 }
 
+/// Maximum DDR size of 1 GB.
 pub const MAX_DDR_SIZE: usize = 0x4000_0000;
+/// One megabyte, the size of an L1 section.
 pub const ONE_MB: usize = 0x10_0000;
 
+/// Start addresses of the memory regions.
 pub mod offsets {
+    /// DDR.
     pub const OFFSET_DDR: usize = 0;
+    /// DDR above the first 1 MB.
     pub const OFFSET_DDR_ALL_ACCESSIBLE: usize = 0x10_0000;
 
+    /// PL slave 0 (`M_AXI_GP0`).
     pub const OFFSET_FPGA_SLAVE_0: usize = 0x4000_0000;
+    /// PL slave 1 (`M_AXI_GP1`).
     pub const OFFSET_FPGA_SLAVE_1_START: usize = 0x8000_0000;
+    /// End of PL slave 1.
     pub const OFFSET_FPGA_SLAVE_1_END: usize = 0xC000_0000;
 
+    /// I/O peripherals.
     pub const OFFSET_IO_PERIPHERALS_START: usize = 0xE000_0000;
+    /// End of the I/O peripherals.
     pub const OFFSET_IO_PERIPHERALS_END: usize = 0xE030_0000;
 
+    /// SMC NAND memory.
     pub const OFFSET_NAND_MEMORY: usize = 0xE100_0000;
+    /// SMC NOR memory.
     pub const OFFSET_NOR_MEMORY: usize = 0xE200_0000;
+    /// SMC SRAM memory.
     pub const OFFSET_SRAM_MEMORY: usize = 0xE400_0000;
+    /// End of the SMC memories.
     pub const OFFSET_SMC_MEMORIES_END: usize = 0xE600_0000;
 
     /// 0xf8000c00 to 0xf8000fff, 0xf8010000 to 0xf88fffff and
     /// 0xf8f03000 to 0xf8ffffff are reserved  but due to granual size of
     /// 1MB, it is not possible to define separate regions for them.
     pub const OFFSET_AMBA_APB_START: usize = 0xF800_0000;
+    /// End of the AMBA APB peripherals.
     pub const OFFSET_AMBA_APB_END: usize = 0xF900_0000;
 
+    /// Linear Quad-SPI (XIP).
     pub const OFFSET_QSPI_XIP_START: usize = 0xFC00_0000;
+    /// End of the linear Quad-SPI region.
     pub const OFFSET_QSPI_XIP_END: usize = 0xFE00_0000;
 
     /// 0xfff00000 to 0xfffb0000 is reserved but due to granual size of
     /// 1MB, it is not possible to define separate region for it
     pub const OFFSET_OCM_MAPPED_HIGH_START: usize = 0xFFF0_0000;
+    /// End of the address space.
     pub const OFFSET_OCM_MAPPED_HIGH_END: u64 = 0x1_0000_0000;
 }
+/// Number of 1 MB sections of the memory regions.
 pub mod segments {
     pub use super::offsets::*;
     use super::{MAX_DDR_SIZE, ONE_MB};
@@ -231,34 +263,50 @@ pub mod segments {
     /// First 1 MB of DDR has special treatment, access is dependant on SCU/OCM state.
     /// Refer to Zynq TRM UG585 p.106 for more details.
     pub const DDR_FULL_ACCESSIBLE: usize = (MAX_DDR_SIZE - ONE_MB) / ONE_MB;
+    /// PL slaves 0 and 1.
     pub const FPGA_SLAVE: usize = (OFFSET_FPGA_SLAVE_1_START - OFFSET_FPGA_SLAVE_0) / ONE_MB;
+    /// Unassigned, between the PL slaves and the I/O peripherals.
     pub const UNASSIGNED_0: usize =
         (OFFSET_IO_PERIPHERALS_START - OFFSET_FPGA_SLAVE_1_END) / ONE_MB;
+    /// I/O peripherals.
     pub const IO_PERIPHS: usize =
         (OFFSET_IO_PERIPHERALS_END - OFFSET_IO_PERIPHERALS_START) / ONE_MB;
+    /// Unassigned, between the I/O peripherals and the SMC memories.
     pub const UNASSIGNED_1: usize = (OFFSET_NAND_MEMORY - OFFSET_IO_PERIPHERALS_END) / ONE_MB;
+    /// SMC NAND memory.
     pub const NAND: usize = (OFFSET_NOR_MEMORY - OFFSET_NAND_MEMORY) / ONE_MB;
+    /// SMC NOR memory.
     pub const NOR: usize = (OFFSET_SRAM_MEMORY - OFFSET_NOR_MEMORY) / ONE_MB;
+    /// SMC SRAM memory.
     pub const SRAM: usize = (OFFSET_SMC_MEMORIES_END - OFFSET_SRAM_MEMORY) / ONE_MB;
+    /// Unassigned, between the SMC memories and the AMBA APB peripherals.
     pub const SEGMENTS_UNASSIGNED_2: usize =
         (OFFSET_AMBA_APB_START - OFFSET_SMC_MEMORIES_END) / ONE_MB;
+    /// AMBA APB peripherals.
     pub const AMBA_APB: usize = (OFFSET_AMBA_APB_END - OFFSET_AMBA_APB_START) / ONE_MB;
+    /// Unassigned, between the AMBA APB peripherals and the linear Quad-SPI.
     pub const UNASSIGNED_3: usize = (OFFSET_QSPI_XIP_START - OFFSET_AMBA_APB_END) / ONE_MB;
+    /// Linear Quad-SPI (XIP).
     pub const QSPI_XIP: usize = (OFFSET_QSPI_XIP_END - OFFSET_QSPI_XIP_START) / ONE_MB;
+    /// Unassigned, between the linear Quad-SPI and the high OCM.
     pub const UNASSIGNED_4: usize = (OFFSET_OCM_MAPPED_HIGH_START - OFFSET_QSPI_XIP_END) / ONE_MB;
+    /// OCM mapped to the high address range.
     pub const OCM_MAPPED_HIGH: usize = ((OFFSET_OCM_MAPPED_HIGH_END
         - OFFSET_OCM_MAPPED_HIGH_START as u64)
         / ONE_MB as u64) as usize;
 }
 
+/// Section attributes of the memory regions.
 pub mod section_attrs {
     use aarch32_cpu::mmu::{
         AccessPermissions, CachePolicy, MemoryRegionAttributes, SectionAttributes,
     };
     use arbitrary_int::u4;
 
+    /// MMU domain used for all sections.
     pub const DEFAULT_DOMAIN: u4 = u4::new(0b0000);
 
+    /// DDR: Inner and outer write-back write-allocate, shareable.
     pub const DDR: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
@@ -272,6 +320,7 @@ pub mod section_attrs {
         }
         .as_raw(),
     };
+    /// FPGA AXI slaves: Strongly ordered.
     pub const FPGA_SLAVES: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
@@ -281,6 +330,7 @@ pub mod section_attrs {
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::StronglyOrdered.as_raw(),
     };
+    /// Peripherals: Shareable device memory.
     pub const SHAREABLE_DEVICE: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
@@ -290,6 +340,7 @@ pub mod section_attrs {
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::ShareableDevice.as_raw(),
     };
+    /// SMC SRAM: Inner and outer write-back, no write-allocate.
     pub const SRAM: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
@@ -313,6 +364,7 @@ pub mod section_attrs {
         execute_never: false,
         memory_attrs: MemoryRegionAttributes::OuterAndInnerWriteThroughNoWriteAlloc.as_raw(),
     };
+    /// OCM: Inner write-back write-allocate, outer non-cacheable, shareable.
     pub const OCM: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,
@@ -328,10 +380,13 @@ pub mod section_attrs {
         }
         .as_raw(),
     };
+    /// First 1 MB section, see the `first-segment-ddr-attr` feature.
     #[cfg(feature = "first-segment-ddr-attr")]
     pub const FIRST_SEGMENT: SectionAttributes = DDR;
+    /// First 1 MB section, see the `first-segment-ddr-attr` feature.
     #[cfg(not(feature = "first-segment-ddr-attr"))]
     pub const FIRST_SEGMENT: SectionAttributes = OCM;
+    /// Unassigned and reserved regions: Every access causes a permission fault.
     pub const UNASSIGNED_RESERVED: SectionAttributes = SectionAttributes {
         non_global: false,
         p_bit: false,

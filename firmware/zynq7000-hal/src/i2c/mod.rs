@@ -29,18 +29,24 @@ use crate::{
 
 pub mod slave;
 
+/// MIO multiplexer configuration for the I2C pins.
 pub const I2C_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b010));
+/// Depth of the TX and RX FIFO in bytes.
 pub const FIFO_DEPTH: usize = 16;
 /// Maximum read size in one read operation.
 pub const MAX_READ_SIZE: usize = 255;
 
+/// I2C peripheral ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum I2cId {
+    /// I2C 0.
     I2c0 = 0,
+    /// I2C 1.
     I2c1 = 1,
 }
 
 impl I2cId {
+    /// GIC interrupt of the peripheral.
     #[inline]
     pub const fn interrupt_id(&self) -> crate::Interrupt {
         match self {
@@ -56,26 +62,34 @@ impl I2cId {
     /// Circumvents ownership and safety guarantees by the HAL.
     #[inline]
     pub const unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
-        match self {
-            I2cId::I2c0 => unsafe { zynq7000::i2c::Registers::new_mmio_fixed_0() },
-            I2cId::I2c1 => unsafe { zynq7000::i2c::Registers::new_mmio_fixed_1() },
+        // SAFETY: Upheld by the caller.
+        unsafe {
+            match self {
+                I2cId::I2c0 => zynq7000::i2c::Registers::new_mmio_fixed_0(),
+                I2cId::I2c1 => zynq7000::i2c::Registers::new_mmio_fixed_1(),
+            }
         }
     }
 }
 
+/// Common trait for PS I2C peripherals.
 pub trait PsI2c {
+    /// I2C register block.
     fn reg_block(&self) -> MmioRegisters<'static>;
+    /// I2C ID. [None] if the register block is not a PS I2C peripheral.
     fn id(&self) -> Option<I2cId>;
 }
 
 impl PsI2c for MmioRegisters<'static> {
     #[inline]
     fn reg_block(&self) -> MmioRegisters<'static> {
+        // SAFETY: The block is passed to the driver by value, so there is only one user.
         unsafe { self.clone() }
     }
 
     #[inline]
     fn id(&self) -> Option<I2cId> {
+        // SAFETY: Only the address is used, the pointer is not dereferenced.
         let base_addr = unsafe { self.ptr() } as usize;
         if base_addr == I2C_0_BASE_ADDR {
             return Some(I2cId::I2c0);
@@ -86,14 +100,19 @@ impl PsI2c for MmioRegisters<'static> {
     }
 }
 
+/// MIO pin which can be used as I2C SDA.
 pub trait SdaPin: MioPin {
+    /// I2C peripheral the pin belongs to.
     const ID: I2cId;
 }
 
+/// MIO pin which can be used as I2C SCK.
 pub trait SckPin: MioPin {
+    /// I2C peripheral the pin belongs to.
     const ID: I2cId;
 }
 
+/// Valid SCK and SDA pin pair.
 pub trait I2cPins {}
 
 macro_rules! i2c_pin_impls {
@@ -149,20 +168,28 @@ pub use crate::clock_calc::i2c::{
     ClockConfig, Speed, SpeedNotAttainable, calculate_divisors, calculate_i2c_speed,
 };
 
+/// I2C transfer error.
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// Another master won the arbitration.
     #[error("arbitration lost")]
     ArbitrationLoss,
+    /// The slave did not acknowledge.
     #[error("transfer not acknowledged: {0}")]
     Nack(NoAcknowledgeSource),
+    /// TX FIFO overflow.
     #[error("TX overflow")]
     TxOverflow,
+    /// RX FIFO underflow.
     #[error("RX underflow")]
     RxUnderflow,
+    /// RX FIFO overflow.
     #[error("RX overflow")]
     RxOverflow,
+    /// The transfer timed out.
     #[error("timeout of transfer")]
     Timeout,
+    /// More than [MAX_READ_SIZE] bytes in one read.
     #[error("read data exceeds maximum allowed 255 bytes per transfer")]
     ReadDataLenTooLarge,
     /// The Zynq-7000 I2C controller (Cadence r1p10) can not do a repeated start after a read.
@@ -173,24 +200,32 @@ pub enum Error {
     WriteAfterRead,
 }
 
+/// The register block is not a PS I2C peripheral.
 #[derive(Debug, thiserror::Error)]
 #[error("invalid I2C ID")]
 pub struct InvalidPsI2cError;
 
+/// Error for the I2C constructors.
 #[derive(Debug, thiserror::Error)]
 pub enum ConstructionError {
+    /// The register block is not a PS I2C peripheral.
     #[error("invalid I2C ID {0}")]
     InvalidPsI2c(#[from] InvalidPsI2cError),
+    /// The pins belong to another I2C peripheral.
     #[error("pin invalid for I2C ID")]
     PinInvalidForI2cId,
+    /// SCK and SDA pin belong to different I2C peripherals.
     #[error("invalid pin configuration for I2C")]
     InvalidPinConf,
 }
+
+/// I2C master driver.
 pub struct I2c {
     regs: MmioRegisters<'static>,
 }
 
 impl I2c {
+    /// Create a driver which uses MIO pins.
     pub fn new_with_mio<Sck: SckPin, Sda: SdaPin>(
         i2c: impl PsI2c,
         clk_cfg: ClockConfig,
@@ -200,6 +235,7 @@ impl I2c {
         Ok(Self::new_generic(id, i2c.reg_block(), clk_cfg))
     }
 
+    /// Create a driver which uses EMIO pins.
     pub fn new_with_emio(i2c: impl PsI2c, clk_cfg: ClockConfig) -> Result<Self, InvalidPsI2cError> {
         if i2c.id().is_none() {
             return Err(InvalidPsI2cError);
@@ -211,6 +247,7 @@ impl I2c {
         ))
     }
 
+    /// Create a driver without configuring any pins.
     pub fn new_generic(id: I2cId, mut regs: MmioRegisters<'static>, clk_cfg: ClockConfig) -> Self {
         let periph_sel = match id {
             I2cId::I2c0 => crate::PeriphSelect::I2c0,
@@ -520,6 +557,7 @@ impl I2c {
         Ok(())
     }
 
+    /// Clear the FIFO and release the bus.
     pub fn clean_up_after_transfer_or_on_error(&mut self) {
         self.regs.modify_control(|cr| {
             cr.with_acken(false)
@@ -618,6 +656,7 @@ impl I2c {
             .write_addr(Address::new_with_raw_value(address as u32));
     }
 
+    /// Keep the bus after the current transfer, for example for a repeated start.
     #[inline]
     pub fn set_hold_bit(&mut self) {
         self.regs.modify_control(|mut cr| {
@@ -626,6 +665,7 @@ impl I2c {
         });
     }
 
+    /// Release the bus after the current transfer.
     #[inline]
     pub fn clear_hold_bit(&mut self) {
         self.regs.modify_control(|mut cr| {
@@ -742,6 +782,7 @@ pub fn reset(id: I2cId) {
             .with_periph0_cpu1x_rst(false)
             .build(),
     };
+    // SAFETY: Only the I2C reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_i2c(assert_reset);

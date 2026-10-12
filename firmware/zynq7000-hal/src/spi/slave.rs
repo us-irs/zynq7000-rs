@@ -1,3 +1,4 @@
+//! Simple SPI slave driver.
 use zynq7000::spi::{Config, FifoWrite, MmioRegisters};
 
 use crate::{
@@ -6,10 +7,14 @@ use crate::{
     spi_mode_const_to_cpol_cpha,
 };
 
+/// SPI slave driver.
 pub struct SpiSlave(pub SpiLowLevel);
 
+/// SPI slave configuration.
 pub struct SlaveConfig {
+    /// SPI mode.
     pub mode: embedded_hal::spi::Mode,
+    /// Enable the mode fail generation.
     pub enable_modefail: bool,
 }
 
@@ -36,16 +41,19 @@ impl SpiSlave {
         Self(ll)
     }
 
+    /// SPI ID.
     #[inline]
     pub const fn id(&self) -> SpiId {
         self.0.id
     }
 
+    /// GIC interrupt of the peripheral.
     #[inline]
     pub const fn interrupt_id(&self) -> crate::Interrupt {
         self.id().interrupt_id()
     }
 
+    /// Enable the slave mode interrupts. `mode_error` also enables the mode fail interrupt.
     #[inline]
     pub fn enable_interrupts(&mut self, mode_error: bool) {
         self.0.enable_interrupts_slave_mode(mode_error);

@@ -25,6 +25,7 @@ impl AlarmState {
     }
 }
 
+// SAFETY: Only accessed through the critical section mutex of [TimeDriverGtc].
 unsafe impl Send for AlarmState {}
 
 /// This is the initialization method for the embassy time driver.
@@ -34,6 +35,7 @@ pub fn init(arm_clocks: &ArmClocks, gtc: GlobalTimerCounter) {
     if SCALE.get().is_some() || CPU_3X2X_CLK.get().is_some() {
         return;
     }
+    // SAFETY: The check above ensures that this is only called once.
     unsafe { GTC_TIME_DRIVER.init(arm_clocks, gtc) };
 }
 
@@ -44,9 +46,11 @@ pub fn init(arm_clocks: &ArmClocks, gtc: GlobalTimerCounter) {
 ///
 /// Needs to be called once in the global timer interrupt.
 pub unsafe fn on_interrupt() {
+    // SAFETY: Upheld by the caller.
     unsafe { GTC_TIME_DRIVER.on_interrupt(core_id()) };
 }
 
+/// Embassy time driver based on the global timer counter.
 pub struct TimeDriverGtc {
     timer: Mutex<RefCell<GlobalTimerCounter>>,
     // Timestamp at which to fire alarm. u64::MAX if no alarm is scheduled.
@@ -153,8 +157,7 @@ impl Driver for TimeDriverGtc {
         if SCALE.get().is_none() {
             return 0;
         }
-        // This is okay, we only read the GTC and do not re-configure it, avoids the
-        // need for a lock.
+        // SAFETY: The GTC is only read and not re-configured, which avoids the need for a lock.
         let gtc = unsafe { GlobalTimerCounter::steal_fixed(Some(*CPU_3X2X_CLK.get().unwrap())) };
 
         gtc.read_timer() / SCALE.get().unwrap()
@@ -178,8 +181,8 @@ impl Driver for TimeDriverGtc {
 
 #[cfg(feature = "time-driver-gtc")]
 time_driver_impl!(
-    // We assume ownership of the GTC, so it is okay to steal here.
     static GTC_TIME_DRIVER: TimeDriverGtc = TimeDriverGtc {
+        // SAFETY: The time driver owns the GTC once it was passed to [init].
         timer: Mutex::new(RefCell::new(unsafe { GlobalTimerCounter::steal_fixed(None)})),
         alarms: Mutex::new([const { AlarmState::new() }; 2]),
         queue: Mutex::new(RefCell::new([const { embassy_time_queue_utils::Queue::new() }; 2])),

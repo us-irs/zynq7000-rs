@@ -19,6 +19,7 @@ pub fn on_interrupt(eth_id: EthernetId) -> InterruptResult {
     super::on_interrupt(eth_id, true, true)
 }
 
+/// Current link state.
 #[inline]
 pub fn link_state() -> embassy_net_driver::LinkState {
     match LINK_STATE.load(core::sync::atomic::Ordering::Relaxed) {
@@ -27,6 +28,7 @@ pub fn link_state() -> embassy_net_driver::LinkState {
     }
 }
 
+/// Update the link state and wake the embassy-net link waker if it changed.
 pub fn update_link_state(new_state: embassy_net_driver::LinkState) {
     let new_value = match new_state {
         embassy_net_driver::LinkState::Up => true,
@@ -37,9 +39,11 @@ pub fn update_link_state(new_state: embassy_net_driver::LinkState) {
     }
 }
 
+/// embassy-net driver.
 pub struct Driver(super::smoltcp::CommonSmoltcpDriver);
 
 impl Driver {
+    /// Create the driver. The TX burst length is the number of TX descriptors.
     pub fn new(eth: &super::Ethernet, mac_addr: [u8; 6], bufs: DescriptorsAndBuffers) -> Self {
         let tx_burst_len = bufs.tx_burst_len();
         Self(super::smoltcp::CommonSmoltcpDriver::new(

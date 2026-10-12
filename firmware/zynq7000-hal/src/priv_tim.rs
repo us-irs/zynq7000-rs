@@ -1,5 +1,4 @@
 //! # CPU private timer module
-#![deny(missing_docs)]
 use core::{marker::PhantomData, sync::atomic::AtomicBool};
 
 use zynq7000::priv_tim::InterruptStatus;
@@ -13,6 +12,8 @@ static CORE_1_TIM_TAKEN: AtomicBool = AtomicBool::new(false);
 /// its per-core exclusivity tracking with [`CpuPrivateTimer`].
 pub struct CpuPrivateTimerRegs(pub zynq7000::priv_tim::MmioRegisters<'static>);
 
+// TODO: Probably should remove this.
+// SAFETY: Not sure.
 unsafe impl Send for CpuPrivateTimerRegs {}
 
 impl CpuPrivateTimerRegs {
@@ -41,6 +42,7 @@ impl CpuPrivateTimerRegs {
     /// This function allows to potentially create an arbitrary amount of timers for both cores.
     /// It also does not check the current core ID.
     pub const fn steal() -> Self {
+        // SAFETY: Upheld by the caller.
         Self(unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() })
     }
 }
@@ -72,6 +74,7 @@ impl CpuPrivateTimer {
     /// It also does not check the current core ID.
     pub fn steal(clocks: &ArmClocks) -> Self {
         Self {
+            // SAFETY: Upheld by the caller.
             regs: unsafe { zynq7000::priv_tim::Registers::new_mmio_fixed() },
             cpu_3x2x_clock: clocks.cpu_3x2x_clk(),
             _not_send: PhantomData,

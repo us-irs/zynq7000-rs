@@ -7,7 +7,6 @@
 //! - [Logger through UART](https://github.com/ustgt-irs/zynq7000-rs/blob/main/zynq/examples/simple/src/bin/logger.rs)
 //! - [Zedboard Blocking UART](https://github.com/ustgt-irs/zynq7000-rs/blob/main/zynq/examples/zedboard/src/bin/uart-blocking.rs)
 //! - [Zedboard Non-Blocking UART](https://github.com/ustgt-irs/zynq7000-rs/blob/main/zynq/examples/zedboard/src/bin/uart-non-blocking.rs)
-#![deny(missing_docs)]
 use core::convert::Infallible;
 
 use arbitrary_int::u3;
@@ -85,9 +84,12 @@ impl UartId {
     /// interfere with each other.
     #[inline]
     pub unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
-        match self {
-            UartId::Uart0 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_0() },
-            UartId::Uart1 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_1() },
+        // SAFETY: Upheld by the caller.
+        unsafe {
+            match self {
+                UartId::Uart0 => zynq7000::uart::Registers::new_mmio_fixed_0(),
+                UartId::Uart1 => zynq7000::uart::Registers::new_mmio_fixed_1(),
+            }
         }
     }
 }
@@ -103,10 +105,12 @@ pub trait PsUart {
 impl PsUart for MmioRegisters<'static> {
     #[inline]
     fn reg_block(&self) -> MmioRegisters<'static> {
+        // SAFETY: The block is passed to the driver by value, so there is only one user.
         unsafe { self.clone() }
     }
 
     fn uart_id(&self) -> Option<UartId> {
+        // SAFETY: Only the address is used, the pointer is not dereferenced.
         let base_addr = unsafe { self.ptr() } as usize;
         if base_addr == UART_0_BASE {
             return Some(UartId::Uart0);
@@ -124,9 +128,12 @@ impl UartId {
     ///
     /// Circumvents ownership and safety guarantees by the HAL.
     pub const unsafe fn regs(&self) -> MmioRegisters<'static> {
-        match self {
-            UartId::Uart0 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_0() },
-            UartId::Uart1 => unsafe { zynq7000::uart::Registers::new_mmio_fixed_1() },
+        // SAFETY: Upheld by the caller.
+        unsafe {
+            match self {
+                UartId::Uart0 => zynq7000::uart::Registers::new_mmio_fixed_0(),
+                UartId::Uart1 => zynq7000::uart::Registers::new_mmio_fixed_1(),
+            }
         }
     }
 }
@@ -625,6 +632,7 @@ impl Uart {
 
         Uart {
             rx: Rx {
+                // SAFETY: RX and TX only access their own parts of the UART registers.
                 regs: unsafe { reg_block.clone() },
             },
             tx: Tx {
@@ -641,9 +649,11 @@ impl Uart {
     /// Circumvents ownership and safety guarantees by the HAL. Also, the driver will not work
     /// unless the UART was configured beforehand.
     pub unsafe fn steal(id: UartId) -> Uart {
+        // SAFETY: Upheld by the caller.
         let reg_block = unsafe { id.steal_regs() };
         Self {
             rx: Rx {
+                // SAFETY: RX and TX only access their own parts of the UART registers.
                 regs: unsafe { reg_block.clone() },
             },
             tx: Tx {
@@ -755,6 +765,7 @@ pub fn reset(id: UartId) {
             .with_periph0_cpu1x_rst(false)
             .build(),
     };
+    // SAFETY: Only the UART reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_uart(assert_reset);

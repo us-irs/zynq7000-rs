@@ -33,7 +33,9 @@ use crate::{
 
 pub(crate) mod lqspi_configs;
 
+/// MIO multiplexer configuration for the QSPI pins.
 pub const QSPI_MUX_CONFIG: MuxConfig = MuxConfig::new_with_l0();
+/// Depth of the TX and RX FIFO in 32 bit words.
 pub const FIFO_DEPTH: usize = 63;
 /// From the TRM:
 ///
@@ -44,21 +46,28 @@ pub const MAX_BYTES_PER_TRANSFER_IO_MODE: usize = FIFO_DEPTH * 4;
 /// In linear-addressed mode, the QSPI is memory-mapped, with the address starting here.
 pub const QSPI_START_ADDRESS: usize = 0xFC00_0000;
 
+/// Error for the [ClockConfig] calculation.
 #[derive(Debug, thiserror::Error)]
 pub enum ClockCalculationError {
+    /// The QSPI reference clock must be greater than the CPU 1x clock.
     #[error("violated clock ratio restriction")]
     RefClockSmallerThanCpu1xClock,
+    /// The reference clock divisor is out of range.
     #[error("reference divisor out of range")]
     RefDivOutOfRange,
 }
 
+/// Baud rate configuration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BaudRateConfig {
+    /// Loopback clock mode, which requires a baud rate divisor of 2.
     WithLoopback,
+    /// No loopback clock, with the given baud rate divisor.
     WithoutLoopback(BaudRateDivisor),
 }
 
 impl BaudRateConfig {
+    /// Baud rate divisor.
     #[inline]
     pub const fn baud_rate_divisor(&self) -> BaudRateDivisor {
         match self {
@@ -68,26 +77,40 @@ impl BaudRateConfig {
     }
 }
 
+/// QSPI clock configuration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClockConfig {
+    /// Reference clock source.
     pub src_sel: SrcSelIo,
+    /// Reference clock divisor.
     pub ref_clk_div: u6,
+    /// Baud rate configuration.
     pub baud_rate_config: BaudRateConfig,
 }
 
+/// QSPI flash vendor, which determines the linear mode configuration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum QspiVendor {
+    /// Winbond or Spansion.
     WinbondAndSpansion,
+    /// Micron.
     Micron,
 }
 
+/// Read instruction used in linear addressing mode.
 pub type OperatingMode = InstructionCode;
 
+/// MIO pin which can be used as QSPI 0 chip select.
 pub trait Qspi0ChipSelectPin: MioPin {}
+/// MIO pin which can be used as QSPI 0 IO0.
 pub trait Qspi0Io0Pin: MioPin {}
+/// MIO pin which can be used as QSPI 0 IO1.
 pub trait Qspi0Io1Pin: MioPin {}
+/// MIO pin which can be used as QSPI 0 IO2.
 pub trait Qspi0Io2Pin: MioPin {}
+/// MIO pin which can be used as QSPI 0 IO3.
 pub trait Qspi0Io3Pin: MioPin {}
+/// MIO pin which can be used as QSPI 0 clock.
 pub trait Qspi0ClockPin: MioPin {}
 
 impl Qspi0ChipSelectPin for Pin<Mio1> {}
@@ -97,11 +120,17 @@ impl Qspi0Io2Pin for Pin<Mio4> {}
 impl Qspi0Io3Pin for Pin<Mio5> {}
 impl Qspi0ClockPin for Pin<Mio6> {}
 
+/// MIO pin which can be used as QSPI 1 chip select.
 pub trait Qspi1ChipSelectPin: MioPin {}
+/// MIO pin which can be used as QSPI 1 IO0.
 pub trait Qspi1Io0Pin: MioPin {}
+/// MIO pin which can be used as QSPI 1 IO1.
 pub trait Qspi1Io1Pin: MioPin {}
+/// MIO pin which can be used as QSPI 1 IO2.
 pub trait Qspi1Io2Pin: MioPin {}
+/// MIO pin which can be used as QSPI 1 IO3.
 pub trait Qspi1Io3Pin: MioPin {}
+/// MIO pin which can be used as QSPI 1 clock.
 pub trait Qspi1ClockPin: MioPin {}
 
 impl Qspi1ChipSelectPin for Pin<Mio0> {}
@@ -111,13 +140,18 @@ impl Qspi1Io2Pin for Pin<Mio12> {}
 impl Qspi1Io3Pin for Pin<Mio13> {}
 impl Qspi1ClockPin for Pin<Mio9> {}
 
+/// MIO pin which can be used as QSPI feedback clock.
 pub trait FeedbackClockPin: MioPin {}
 
 impl FeedbackClockPin for Pin<Mio8> {}
 
+/// QSPI flash setup, used to derive the linear mode configuration.
 pub struct QspiDeviceCombination {
+    /// Flash vendor.
     pub vendor: QspiVendor,
+    /// Read instruction.
     pub operating_mode: OperatingMode,
+    /// Two flash devices are used.
     pub two_devices: bool,
 }
 
@@ -127,6 +161,7 @@ impl From<QspiDeviceCombination> for LinearQspiConfig {
     }
 }
 
+/// Linear mode configuration for common QSPI flash devices.
 pub const fn linear_mode_config_for_common_devices(
     dev_combination: QspiDeviceCombination,
 ) -> LinearQspiConfig {
@@ -187,6 +222,7 @@ pub const fn linear_mode_config_for_common_devices(
 }
 
 impl ClockConfig {
+    /// Create a new configuration.
     pub fn new(src_sel: SrcSelIo, ref_clk_div: u6, baud_rate_config: BaudRateConfig) -> Self {
         Self {
             src_sel,
@@ -288,22 +324,27 @@ impl ClockConfig {
     }
 }
 
+/// Low-level QSPI driver.
 pub struct QspiLowLevel(zynq7000::qspi::MmioRegisters<'static>);
 
 impl QspiLowLevel {
+    /// Create a low-level driver. This does not configure the peripheral.
     #[inline]
     pub fn new(regs: zynq7000::qspi::MmioRegisters<'static>) -> Self {
         Self(regs)
     }
 
+    /// QSPI registers.
     pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioRegisters<'static> {
         &mut self.0
     }
 
+    /// Reset the peripheral, then configure the clock and the SPI mode.
     pub fn initialize(&mut self, clock_config: ClockConfig, mode: embedded_hal::spi::Mode) {
         enable_amba_peripheral_clock(PeriphSelect::Lqspi);
         reset();
         let (cpol, cpha) = spi_mode_const_to_cpol_cpha(mode);
+        // SAFETY: Only the QSPI clock control register is written.
         unsafe {
             Slcr::with(|slcr| {
                 slcr.clk_ctrl().write_lqspi_clk_ctrl(
@@ -343,6 +384,7 @@ impl QspiLowLevel {
         }
     }
 
+    /// Switch to linear addressing mode with the given configuration.
     pub fn enable_linear_addressing(&mut self, config: LinearQspiConfig) {
         self.0
             .write_spi_enable(SpiEnable::builder().with_enable(false).build());
@@ -356,6 +398,7 @@ impl QspiLowLevel {
         self.0.write_linear_qspi_config(config);
     }
 
+    /// Switch to IO mode.
     pub fn enable_io_mode(&mut self, dual_flash: bool) {
         self.0.modify_config(|mut val| {
             val.set_manual_start_enable(true);
@@ -380,6 +423,7 @@ impl QspiLowLevel {
         );
     }
 
+    /// Disable the peripheral and deassert the chip select.
     pub fn disable(&mut self) {
         self.0
             .write_spi_enable(SpiEnable::builder().with_enable(false).build());
@@ -390,11 +434,13 @@ impl QspiLowLevel {
     }
 }
 
+/// QSPI driver before the mode was selected.
 pub struct Qspi {
     ll: QspiLowLevel,
 }
 
 impl Qspi {
+    /// Create a driver for a single flash connected to the QSPI 0 MIO pins.
     pub fn new_single_qspi<
         ChipSelect: Qspi0ChipSelectPin,
         Io0: Qspi0Io0Pin,
@@ -446,6 +492,7 @@ impl Qspi {
         Self { ll }
     }
 
+    /// Like [Self::new_single_qspi], with the additional feedback clock pin.
     #[allow(clippy::too_many_arguments)]
     pub fn new_single_qspi_with_feedback<
         ChipSelect: Qspi0ChipSelectPin,
@@ -482,36 +529,43 @@ impl Qspi {
         Self::new_single_qspi(regs, clock_config, mode, voltage, cs, io, clock)
     }
 
+    /// QSPI registers.
     #[inline]
     pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioRegisters<'static> {
         &mut self.ll.0
     }
 
+    /// Switch to linear addressing mode.
     pub fn into_linear_addressed(mut self, config: LinearQspiConfig) -> QspiLinearAddressing {
         self.ll.enable_linear_addressing(config);
         QspiLinearAddressing { ll: self.ll }
     }
 
+    /// Switch to IO mode.
     pub fn into_io_mode(mut self, dual_flash: bool) -> QspiIoMode {
         self.ll.enable_io_mode(dual_flash);
         QspiIoMode { ll: self.ll }
     }
 }
 
+/// QSPI driver in IO mode, where commands are sent manually.
 pub struct QspiIoMode {
     ll: QspiLowLevel,
 }
 
 impl QspiIoMode {
+    /// QSPI registers.
     #[inline]
     pub fn regs(&mut self) -> &mut zynq7000::qspi::MmioRegisters<'static> {
         &mut self.ll.0
     }
 
+    /// Create a guard for one transfer.
     pub fn transfer_guard(&mut self) -> QspiIoTransferGuard<'_> {
         QspiIoTransferGuard::new(self)
     }
 
+    /// Disable the peripheral and convert back into a [Qspi] driver.
     pub fn into_qspi(mut self, ll: QspiLowLevel) -> Qspi {
         self.ll.disable();
         Qspi { ll }
@@ -541,11 +595,13 @@ impl QspiIoMode {
         self.regs().write_tx_data_11(word);
     }
 
+    /// Read one word from the RX FIFO.
     #[inline]
     pub fn read_rx_data(&mut self) -> u32 {
         self.regs().read_rx_data()
     }
 
+    /// Assert the chip select and enable the peripheral.
     pub fn transfer_init(&mut self) {
         self.regs().modify_config(|mut val| {
             val.set_peripheral_chip_select(false);
@@ -555,6 +611,7 @@ impl QspiIoMode {
             .write_spi_enable(SpiEnable::builder().with_enable(true).build());
     }
 
+    /// Start the transfer of the TX FIFO content.
     pub fn transfer_start(&mut self) {
         self.regs().modify_config(|mut val| {
             val.set_manual_start_command(true);
@@ -562,6 +619,7 @@ impl QspiIoMode {
         });
     }
 
+    /// Deassert the chip select and disable the peripheral.
     pub fn transfer_done(&mut self) {
         self.regs().modify_config(|mut val| {
             val.set_peripheral_chip_select(true);
@@ -571,16 +629,19 @@ impl QspiIoMode {
             .write_spi_enable(SpiEnable::builder().with_enable(false).build());
     }
 
+    /// Read the interrupt status.
     pub fn read_status(&mut self) -> InterruptStatus {
         self.regs().read_interrupt_status()
     }
 
+    /// Discard the RX FIFO content.
     pub fn clear_rx_fifo(&mut self) {
         while self.read_status().rx_above_threshold() {
             self.read_rx_data();
         }
     }
 
+    /// Switch to linear addressing mode.
     pub fn into_linear_addressed(mut self, config: LinearQspiConfig) -> QspiLinearAddressing {
         self.ll.enable_linear_addressing(config);
         QspiLinearAddressing { ll: self.ll }
@@ -592,6 +653,7 @@ impl QspiIoMode {
 pub struct QspiIoTransferGuard<'a>(&'a mut QspiIoMode);
 
 impl<'a> QspiIoTransferGuard<'a> {
+    /// Clear the RX FIFO and start the transfer setup.
     pub fn new(qspi: &'a mut QspiIoMode) -> Self {
         qspi.clear_rx_fifo();
         qspi.transfer_init();
@@ -600,6 +662,7 @@ impl<'a> QspiIoTransferGuard<'a> {
 }
 
 impl QspiIoTransferGuard<'_> {
+    /// Start the transfer of the TX FIFO content.
     pub fn start(&mut self) {
         self.0.transfer_start();
     }
@@ -625,6 +688,7 @@ impl<'a> Drop for QspiIoTransferGuard<'a> {
     }
 }
 
+/// QSPI driver in linear addressing mode, where the flash is memory mapped.
 pub struct QspiLinearAddressing {
     ll: QspiLowLevel,
 }
@@ -633,22 +697,26 @@ impl QspiLinearAddressing {
     /// Memory-mapped QSPI base address.
     pub const BASE_ADDRESS: usize = QSPI_START_ADDRESS;
 
+    /// Switch to IO mode.
     pub fn into_io_mode(mut self, dual_flash: bool) -> QspiIoMode {
         self.ll.enable_io_mode(dual_flash);
         QspiIoMode { ll: self.ll }
     }
 
+    /// Enable the peripheral for memory mapped reads while the guard lives.
     pub fn read_guard(&mut self) -> QspiLinearReadGuard<'_> {
         QspiLinearReadGuard::new(self)
     }
 }
 
+/// Keeps the peripheral enabled for memory mapped reads.
 pub struct QspiLinearReadGuard<'a>(&'a mut QspiLinearAddressing);
 
 impl QspiLinearReadGuard<'_> {
     /// Memory-mapped QSPI base address.
     pub const BASE_ADDRESS: usize = QSPI_START_ADDRESS;
 
+    /// Enable the peripheral.
     pub fn new(qspi: &mut QspiLinearAddressing) -> QspiLinearReadGuard<'_> {
         qspi.ll
             .0
@@ -672,6 +740,7 @@ impl Drop for QspiLinearReadGuard<'_> {
 /// QSPI instance.
 #[inline]
 pub fn reset() {
+    // SAFETY: Only the QSPI reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_lqspi(

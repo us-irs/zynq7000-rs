@@ -26,6 +26,7 @@ impl Tx {
     #[inline]
     pub const unsafe fn steal(id: UartId) -> Self {
         Tx {
+            // SAFETY: Upheld by the caller.
             regs: unsafe { id.regs() },
             id,
         }

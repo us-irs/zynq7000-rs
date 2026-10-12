@@ -15,6 +15,7 @@ use zynq7000::slcr::{
 
 use super::time::Hertz;
 
+/// CPU clock frequencies.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct ArmClocks {
@@ -39,6 +40,7 @@ impl ArmClocks {
         clock_ratio: CpuClockRatio,
         divisor: u6,
     ) -> Self {
+        // SAFETY: Upheld by the caller.
         unsafe {
             crate::slcr::Slcr::with(|slcr| {
                 slcr.clk_ctrl().write_clk_ratio_select(
@@ -76,6 +78,7 @@ impl ArmClocks {
         }
     }
 
+    /// CPU clock ratio.
     #[inline]
     pub const fn ratio(&self) -> CpuClockRatio {
         self.ratio
@@ -87,27 +90,32 @@ impl ArmClocks {
         self.ref_clk
     }
 
+    /// CPU 1x clock, used by most peripherals.
     #[inline]
     pub const fn cpu_1x_clk(&self) -> Hertz {
         self.cpu_1x_clk
     }
 
+    /// CPU 2x clock.
     #[inline]
     pub const fn cpu_2x_clk(&self) -> Hertz {
         self.cpu_2x_clk
     }
 
+    /// CPU 3x2x clock, used by the private timers and the GTC.
     #[inline]
     pub const fn cpu_3x2x_clk(&self) -> Hertz {
         self.cpu_3x2x_clk
     }
 
+    /// CPU 6x4x clock, the clock of the Cortex-A9 cores.
     #[inline]
     pub const fn cpu_6x4x_clk(&self) -> Hertz {
         self.cpu_6x4x_clk
     }
 }
 
+/// DDR clock frequencies.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct DdrClocks {
@@ -129,7 +137,7 @@ impl DdrClocks {
     ///
     /// This should only be called once during start-up. It accesses the SLCR register.
     pub unsafe fn configure_2x_3x_clk(ddr_3x_div: u6, ddr_2x_div: u6) {
-        // Safety: The DDR clock structure is a singleton.
+        // SAFETY: Upheld by the caller.
         unsafe {
             crate::slcr::Slcr::with(|slcr| {
                 slcr.clk_ctrl().modify_ddr_clk_ctrl(|mut val| {
@@ -152,6 +160,7 @@ impl DdrClocks {
     ///
     /// This should only be called once during start-up. It accesses the SLCR register.
     pub unsafe fn new_with_2x_3x_init(ref_clk: Hertz, ddr_3x_div: u6, ddr_2x_div: u6) -> Self {
+        // SAFETY: Upheld by the caller.
         unsafe { Self::configure_2x_3x_clk(ddr_3x_div, ddr_2x_div) };
         Self {
             ref_clk,
@@ -177,6 +186,7 @@ impl DdrClocks {
     }
 }
 
+/// IO peripheral reference clock frequencies.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct IoClocks {
@@ -193,62 +203,77 @@ pub struct IoClocks {
 }
 
 impl IoClocks {
+    /// Reference clock provided by the IO PLL.
     pub const fn ref_clk(&self) -> Hertz {
         self.ref_clk
     }
 
+    /// SMC reference clock.
     pub const fn smc_clk(&self) -> Hertz {
         self.smc_clk
     }
 
+    /// Update the SMC reference clock after reconfiguring it.
     pub fn update_smc_clk(&mut self, clk: Hertz) {
         self.smc_clk = clk
     }
 
+    /// QSPI reference clock.
     pub const fn qspi_clk(&self) -> Hertz {
         self.qspi_clk
     }
 
+    /// Update the QSPI reference clock after reconfiguring it.
     pub fn update_qspi_clk(&mut self, clk: Hertz) {
         self.qspi_clk = clk
     }
 
+    /// SDIO reference clock.
     pub const fn sdio_clk(&self) -> Hertz {
         self.sdio_clk
     }
 
+    /// Update the SDIO reference clock after reconfiguring it.
     pub fn update_sdio_clk(&mut self, clk: Hertz) {
         self.sdio_clk = clk
     }
 
+    /// UART reference clock.
     pub const fn uart_clk(&self) -> Hertz {
         self.uart_clk
     }
 
+    /// Update the UART reference clock after reconfiguring it.
     pub fn update_uart_clk(&mut self, clk: Hertz) {
         self.uart_clk = clk
     }
 
+    /// SPI reference clock.
     pub const fn spi_clk(&self) -> Hertz {
         self.spi_clk
     }
 
+    /// Update the SPI reference clock after reconfiguring it.
     pub fn update_spi_clk(&mut self, clk: Hertz) {
         self.spi_clk = clk
     }
 
+    /// CAN reference clock.
     pub fn can_clk(&self) -> Hertz {
         self.can_clk
     }
 
+    /// Update the CAN reference clock after reconfiguring it.
     pub fn update_can_clk(&mut self, clk: Hertz) {
         self.can_clk = clk
     }
 
+    /// PCAP 2x reference clock.
     pub fn pcap_2x_clk(&self) -> Hertz {
         self.pcap_2x_clk
     }
 
+    /// Update the PCAP 2x reference clock after reconfiguring it.
     pub fn update_pcap_2x_clk(&mut self, clk: Hertz) {
         self.pcap_2x_clk = clk
     }
@@ -260,6 +285,7 @@ impl IoClocks {
 }
 
 // TODO: Display impl for clock config.
+/// Clock configuration of the processing system.
 #[derive(Debug)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct Clocks {
@@ -273,25 +299,41 @@ pub struct Clocks {
     pl: [Hertz; 4],
 }
 
+/// Clock module, used for error reporting.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub enum ClockModuleId {
+    /// PLLs.
     Pll,
+    /// DDR clocks.
     Ddr,
+    /// CPU clocks.
     Arm,
+    /// Static memory controller.
     Smc,
+    /// Quad-SPI.
     Qspi,
+    /// SDIO.
     Sdio,
+    /// UART.
     Uart,
+    /// SPI.
     Spi,
+    /// Processor configuration access port.
     Pcap,
+    /// CAN.
     Can,
+    /// PL clocks.
     Fpga,
+    /// Trace port.
     Trace,
+    /// Ethernet 0.
     Gem0,
+    /// Ethernet 1.
     Gem1,
 }
 
+/// A divisor of the given clock module is zero.
 #[derive(Debug)]
 pub struct DivisorZeroError(pub ClockModuleId);
 
@@ -301,6 +343,7 @@ impl From<ClockModuleId> for DivisorZeroError {
     }
 }
 
+/// Error for [Clocks::new_from_regs].
 #[derive(Debug, thiserror::Error)]
 pub enum ClockReadError {
     /// Detected a divisor of zero.
@@ -322,6 +365,7 @@ impl Clocks {
     /// It assumes that the clock already has been configured, for example by a first-stage
     /// bootloader, or the PS7 initialization script.
     pub fn new_from_regs(ps_clk_freq: Hertz) -> Result<Self, ClockReadError> {
+        // SAFETY: The clock registers are only read.
         let mut clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
 
         let arm_pll_cfg = clk_regs.read_arm_pll_ctrl();
@@ -529,18 +573,22 @@ impl Clocks {
         })
     }
 
+    /// CPU clocks.
     pub fn arm_clocks(&self) -> &ArmClocks {
         &self.arm
     }
 
+    /// DDR clocks.
     pub fn ddr_clocks(&self) -> &DdrClocks {
         &self.ddr
     }
 
+    /// IO peripheral clocks.
     pub fn io_clocks(&self) -> &IoClocks {
         &self.io
     }
 
+    /// Mutable IO peripheral clocks, for updating them after reconfiguring a peripheral clock.
     pub fn io_clocks_mut(&mut self) -> &mut IoClocks {
         &mut self.io
     }
@@ -581,6 +629,7 @@ impl Clocks {
     /// The reference clock will only be the RX clock in loopback mode. For the TX block,
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
     pub fn calculate_gem_0_ref_clock(&self) -> Result<Hertz, DivisorZeroError> {
+        // SAFETY: The clock registers are only read.
         let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
         self.calculate_gem_ref_clock(clk_regs.read_gem_0_clk_ctrl(), ClockModuleId::Gem0)
     }
@@ -594,6 +643,7 @@ impl Clocks {
     /// The reference clock will only be the RX clock in loopback mode. For the TX block,
     /// the reference clock is used if the EMIO enable bit `GEM{0,1}_CLK_CTRL[6]` is set to 0.
     pub fn calculate_gem_1_ref_clock(&self) -> Result<Hertz, DivisorZeroError> {
+        // SAFETY: The clock registers are only read.
         let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
         self.calculate_gem_ref_clock(clk_regs.read_gem_1_clk_ctrl(), ClockModuleId::Gem1)
     }

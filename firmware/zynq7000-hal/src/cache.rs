@@ -13,8 +13,10 @@ use aarch32_cpu::{
 };
 use zynq7000::l2_cache::{MmioRegisters, Registers};
 
+/// L1 and L2 cache line size in bytes.
 pub const CACHE_LINE_SIZE: usize = 32;
 
+/// Address or length is not aligned to the cache line size.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[error("alignment error, addresses and lengths must be aligned to 32 byte cache line length")]
 pub struct AlignmentError;
@@ -32,6 +34,7 @@ pub struct AlignedBuffer<const N: usize>(pub [u8; N]);
 
 static_assertions::const_assert_eq!(core::mem::align_of::<AlignedBuffer<1>>(), CACHE_LINE_SIZE);
 
+/// Clean and invalidate a single L2 cache line by physical address.
 pub fn clean_and_invalidate_l2c_line(l2c: &mut MmioRegisters<'static>, addr: u32) {
     l2c.write_clean_by_pa(addr);
     l2c.write_invalidate_by_pa(addr);
@@ -45,6 +48,8 @@ pub fn clean_and_invalidate_data_cache() {
     dsb();
 
     // Clean all ways in L2 cache.
+    // SAFETY: Only cache maintenance operations are performed, the L2C configuration is not
+    // changed.
     let mut l2c = unsafe { Registers::new_mmio_fixed() };
     l2c.write_clean_invalidate_by_way(0xffff);
     while l2c.read_cache_sync().busy() {}
@@ -144,6 +149,8 @@ pub fn invalidate_data_cache_range(addr: u32, len: usize) -> Result<(), Alignmen
     check_alignment(addr, len)?;
     let mut current_addr = addr;
     let end_addr = addr.saturating_add(len as u32);
+    // SAFETY: Only cache maintenance operations are performed, the L2C configuration is not
+    // changed.
     let mut l2c = unsafe { Registers::new_mmio_fixed() };
 
     dsb();
@@ -179,6 +186,8 @@ pub fn clean_and_invalidate_data_cache_range(addr: u32, len: usize) -> Result<()
     // Clean and invalidate outer cache.
     let end_addr = addr.saturating_add(len as u32);
     let mut current_addr = addr;
+    // SAFETY: Only cache maintenance operations are performed, the L2C configuration is not
+    // changed.
     let mut l2c = unsafe { Registers::new_mmio_fixed() };
     while current_addr < end_addr {
         // ARM errate 588369 specifies that clean and invalidate need to be separate, but the
@@ -212,6 +221,8 @@ pub fn clean_data_cache_range(addr: u32, len: usize) -> Result<(), AlignmentErro
     // Clean outer cache.
     let end_addr = addr.saturating_add(len as u32);
     let mut current_addr = addr;
+    // SAFETY: Only cache maintenance operations are performed, the L2C configuration is not
+    // changed.
     let mut l2c = unsafe { Registers::new_mmio_fixed() };
     while current_addr < end_addr {
         l2c.write_clean_by_pa(current_addr);

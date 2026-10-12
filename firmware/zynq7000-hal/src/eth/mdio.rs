@@ -1,16 +1,20 @@
+//! MDIO interface to access the PHY registers.
 use arbitrary_int::{u2, u5};
 use zynq7000::eth::{MdcClockDivisor, PhyMaintenance};
 
 use super::{EthernetId, ll::EthernetLowLevel};
 
+/// MDIO interface of an Ethernet peripheral, used to access the PHY registers.
 pub struct Mdio {
     regs: zynq7000::eth::MmioRegisters<'static>,
     clause22: bool,
 }
 
 impl Mdio {
+    /// Create the MDIO interface. `clause22` selects clause 22 instead of clause 45 frames.
     pub fn new(ll: &EthernetLowLevel, clause22: bool) -> Self {
         Self {
+            // SAFETY: The MDIO interface only accesses the PHY maintenance and the MDC divisor bits.
             regs: unsafe { ll.regs.clone() },
             clause22,
         }
@@ -21,6 +25,7 @@ impl Mdio {
     /// Circumvents ownership and safety guarantees of the HAL.
     pub unsafe fn steal(eth_id: EthernetId, clause22: bool) -> Self {
         Self {
+            // SAFETY: Upheld by the caller.
             regs: unsafe { eth_id.steal_regs() },
             clause22,
         }
@@ -33,11 +38,13 @@ impl Mdio {
     /// Circumvents ownership and safety guarantees of the HAL.
     pub unsafe fn clone(&self) -> Self {
         Self {
+            // SAFETY: Upheld by the caller.
             regs: unsafe { self.regs.clone() },
             clause22: self.clause22,
         }
     }
 
+    /// Configure the MDC clock divisor.
     #[inline]
     pub fn configure_clock_div(&mut self, clk_div: MdcClockDivisor) {
         self.regs.modify_net_cfg(|mut val| {
@@ -46,6 +53,7 @@ impl Mdio {
         });
     }
 
+    /// Blocking read of a PHY register.
     pub fn read_blocking(&mut self, phy_addr: u5, reg_addr: u5) -> u16 {
         while !self.regs.read_net_status().phy_mgmt_idle() {}
         self.regs.write_phy_maintenance(
@@ -62,6 +70,7 @@ impl Mdio {
         self.regs.read_phy_maintenance().data()
     }
 
+    /// Blocking write of a PHY register.
     pub fn write_blocking(&mut self, phy_addr: u5, reg_addr: u5, data: u16) {
         while !self.regs.read_net_status().phy_mgmt_idle() {}
         self.regs.write_phy_maintenance(

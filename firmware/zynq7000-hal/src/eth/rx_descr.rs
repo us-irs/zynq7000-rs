@@ -21,14 +21,17 @@ pub struct Descriptor {
     pub status: VolatileCell<StatusWord>,
 }
 
+/// First descriptor word.
 #[bitbybit::bitfield(u32)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct Word0 {
     /// The full reception address with the last two bits cleared.
     #[bits(2..=31, rw)]
     addr_upper_30_bits: u30,
+    /// Last descriptor of the list.
     #[bit(1, rw)]
     wrap: bool,
+    /// Ownership of the descriptor.
     #[bit(0, rw)]
     ownership: Ownership,
 }
@@ -40,32 +43,43 @@ pub struct Word0 {
 #[bitbybit::bitfield(u32)]
 #[derive(Debug, PartialEq, Eq)]
 pub struct StatusWord {
+    /// Broadcast address detected.
     #[bit(31, r)]
     broadcast_detect: bool,
+    /// Multicast hash match.
     #[bit(30, r)]
     multicast_hash: bool,
+    /// Unicast hash match.
     #[bit(29, r)]
     unicast_hash: bool,
+    /// Specific address register match.
     #[bit(27, r)]
     specific_addr_match: bool,
     /// Specifies which of the 4 specific address registers was matched.
     #[bits(25..=26, r)]
     specific_addr_match_info: u2,
+    /// Type ID register match. With RX checksum offload: SNAP encoded frame.
     #[bit(24, r)]
     type_id_match_or_snap_info: bool,
+    /// Which type ID register matched. With RX checksum offload: checksum status.
     #[bits(22..=23, r)]
     type_id_match_info_or_chksum_status: u2,
+    /// VLAN tag detected.
     #[bit(21, r)]
     vlan_tag_detected: bool,
+    /// Priority tag detected.
     #[bit(20, r)]
     priority_tag_detected: bool,
+    /// VLAN priority.
     #[bits(17..=19, r)]
     vlan_prio: u3,
+    /// Canonical format indicator (CFI) bit.
     #[bit(16, r)]
     cfi_bit: bool,
     /// If this bit is not set, the only other valid status bit is the start of frame bit.
     #[bit(15, r)]
     end_of_frame: bool,
+    /// Start of frame.
     #[bit(14, r)]
     start_of_frame: bool,
     /// Relevant when FCS errors are not ignored.
@@ -73,11 +87,13 @@ pub struct StatusWord {
     /// functionality was enabled.
     #[bit(13, r)]
     fcs_status: bool,
+    /// Frame length in bytes.
     #[bits(0..=12, r)]
     rx_len: u13,
 }
 
 impl Descriptor {
+    /// Create a zeroed descriptor.
     #[inline]
     pub const fn new() -> Self {
         Self {
@@ -86,26 +102,31 @@ impl Descriptor {
         }
     }
 
+    /// Ownership of the descriptor.
     #[inline]
     pub fn ownership(&self) -> Ownership {
         self.word_0.get().ownership()
     }
 
+    /// Set the first descriptor word.
     #[inline]
     pub fn set_word_0(&mut self, word: Word0) {
         self.word_0.set(word);
     }
 
+    /// Set the status word.
     #[inline]
     pub fn set_word_1(&mut self, word: StatusWord) {
         self.status.set(word);
     }
 
+    /// First descriptor word.
     #[inline]
     pub fn word_0(&mut self) -> Word0 {
         self.word_0.get()
     }
 
+    /// Status word.
     #[inline]
     pub fn status_word(&mut self) -> StatusWord {
         self.status.get()
@@ -126,9 +147,11 @@ impl Default for Descriptor {
 #[repr(transparent)]
 pub struct DescriptorList<const SLOTS: usize>(pub UnsafeCell<MaybeUninit<[Descriptor; SLOTS]>>);
 
+// SAFETY: The descriptors are only accessed through the reference returned by [DescriptorList::take], which can only be called once.
 unsafe impl<const SLOTS: usize> Sync for DescriptorList<SLOTS> {}
 
 impl<const SLOTS: usize> DescriptorList<SLOTS> {
+    /// Create an uninitialized list.
     #[inline]
     pub const fn new() -> Self {
         Self(UnsafeCell::new(MaybeUninit::uninit()))
@@ -141,8 +164,10 @@ impl<const SLOTS: usize> DescriptorList<SLOTS> {
     /// This allows creating aliasing mutable references and circumventing ownership and safety
     /// guarantees of the HAL. You MUST call this function only once per descriptor instance.
     pub unsafe fn take(&self) -> &'static mut [Descriptor; SLOTS] {
+        // SAFETY: Upheld by the caller, this is only called once.
         let descr = unsafe { &mut *self.0.get() };
         descr.write([const { Descriptor::new() }; SLOTS]);
+        // SAFETY: Initialized by the write above.
         unsafe { descr.assume_init_mut() }
     }
 }
@@ -153,19 +178,31 @@ impl<const SLOTS: usize> Default for DescriptorList<SLOTS> {
     }
 }
 
+/// Result of a frame scan.
 pub enum FrameScanResult {
+    /// No received frames.
     NoFrames,
+    /// A frame in a single slot.
     SingleFrame {
+        /// Slot index.
         index: usize,
+        /// Frame size in bytes.
         size: usize,
+        /// Status word of the slot.
         status: StatusWord,
     },
+    /// A frame spanning multiple slots.
     MultiSlotFrame {
+        /// Index of the first slot.
         first_slot_index: usize,
+        /// Index of the last slot.
         last_slot_index: usize,
     },
+    /// Broken frame fragments, which were discarded.
     BrokenFragments {
+        /// Index of the first slot.
         first_slot_index: usize,
+        /// Index of the last slot.
         last_slot_index: usize,
     },
 }
@@ -180,6 +217,7 @@ pub struct DescriptorListWrapper<'a> {
 }
 
 impl<'a> DescriptorListWrapper<'a> {
+    /// Create a wrapper for the given descriptors.
     #[inline]
     pub fn new(descr_list: &'a mut [Descriptor]) -> Self {
         Self {
@@ -189,12 +227,13 @@ impl<'a> DescriptorListWrapper<'a> {
     }
 
     /// Unsafely clone this descriptor list. See safety notes.
-    //
+    ///
     /// # Safety
-    //
+    ///
     /// You must not use both the original and the clone at the same time.
     pub unsafe fn clone_unchecked(&mut self) -> Self {
         Self {
+            // SAFETY: Upheld by the caller.
             list: unsafe {
                 core::slice::from_raw_parts_mut(self.list.as_mut().as_mut_ptr(), self.list.len())
             },
@@ -204,17 +243,20 @@ impl<'a> DescriptorListWrapper<'a> {
 }
 
 impl DescriptorListWrapper<'_> {
+    /// Number of descriptors.
     #[allow(clippy::len_without_is_empty)]
     #[inline]
     pub fn len(&self) -> usize {
         self.list.len()
     }
 
+    /// Pointer to the first descriptor.
     #[inline]
     pub fn base_ptr(&self) -> *const Descriptor {
         self.list.as_ptr()
     }
 
+    /// Address of the first descriptor.
     #[inline]
     pub fn base_addr(&self) -> u32 {
         self.base_ptr() as u32
@@ -353,6 +395,7 @@ impl DescriptorListWrapper<'_> {
         }
     }
 
+    /// Give the slot back to the hardware after its frame was processed.
     pub fn clear_slot(&mut self, index: usize) {
         if index >= self.list.len() {
             return;

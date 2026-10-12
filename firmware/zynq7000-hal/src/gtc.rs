@@ -1,5 +1,4 @@
 //! # Global timer counter driver module
-#![deny(missing_docs)]
 use zynq7000::gtc::MmioRegisters;
 
 use crate::{clocks::ArmClocks, time::Hertz};
@@ -14,6 +13,7 @@ pub struct GlobalTimerCounter {
     cpu_3x2x_clock: Option<Hertz>,
 }
 
+// SAFETY: The GTC is a global peripheral which can be accessed from both cores.
 unsafe impl Send for GlobalTimerCounter {}
 
 /// Convert a frequency to GTC ticks given a clock frequency.
@@ -29,6 +29,7 @@ impl GlobalTimerCounter {
     /// Create a peripheral driver from a MMIO GTC block.
     #[inline]
     pub const fn new(_regs: MmioRegisters<'static>, clocks: &ArmClocks) -> Self {
+        // SAFETY: Ownership of the GTC register block is passed in.
         unsafe { Self::steal_fixed(Some(clocks.cpu_3x2x_clk())) }
     }
 
@@ -43,6 +44,7 @@ impl GlobalTimerCounter {
     #[inline]
     pub const unsafe fn steal_fixed(cpu_3x2x_clk: Option<Hertz>) -> Self {
         Self {
+            // SAFETY: Upheld by the caller.
             regs: unsafe { zynq7000::gtc::Registers::new_mmio_fixed() },
             cpu_3x2x_clock: cpu_3x2x_clk,
         }

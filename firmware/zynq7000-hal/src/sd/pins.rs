@@ -1,3 +1,4 @@
+//! MIO pins which can be used for the SDIO peripherals.
 use crate::gpio::mio::{
     Mio10, Mio11, Mio12, Mio13, Mio14, Mio15, Mio28, Mio29, Mio30, Mio31, Mio32, Mio33, Mio34,
     Mio35, Mio36, Mio37, Mio38, Mio39, Mio48, Mio49, MioPin, Pin,
@@ -8,11 +9,17 @@ use crate::gpio::mio::{
     Mio41, Mio42, Mio43, Mio44, Mio45, Mio46, Mio47, Mio50, Mio51,
 };
 
+/// MIO pin which can be used as SDIO 0 clock.
 pub trait Sdio0ClockPin: MioPin {}
+/// MIO pin which can be used as SDIO 0 command.
 pub trait Sdio0CommandPin: MioPin {}
+/// MIO pin which can be used as SDIO 0 data 0.
 pub trait Sdio0Data0Pin: MioPin {}
+/// MIO pin which can be used as SDIO 0 data 1.
 pub trait Sdio0Data1Pin: MioPin {}
+/// MIO pin which can be used as SDIO 0 data 2.
 pub trait Sdio0Data2Pin: MioPin {}
+/// MIO pin which can be used as SDIO 0 data 3.
 pub trait Sdio0Data3Pin: MioPin {}
 
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
@@ -51,11 +58,17 @@ impl Sdio0Data3Pin for Pin<Mio33> {}
 #[cfg(not(feature = "7z010-7z007s-clg225"))]
 impl Sdio0Data3Pin for Pin<Mio45> {}
 
+/// MIO pin which can be used as SDIO 1 clock.
 pub trait Sdio1ClockPin: MioPin {}
+/// MIO pin which can be used as SDIO 1 command.
 pub trait Sdio1CommandPin: MioPin {}
+/// MIO pin which can be used as SDIO 1 data 0.
 pub trait Sdio1Data0Pin: MioPin {}
+/// MIO pin which can be used as SDIO 1 data 1.
 pub trait Sdio1Data1Pin: MioPin {}
+/// MIO pin which can be used as SDIO 1 data 2.
 pub trait Sdio1Data2Pin: MioPin {}
+/// MIO pin which can be used as SDIO 1 data 3.
 pub trait Sdio1Data3Pin: MioPin {}
 
 impl Sdio1ClockPin for Pin<Mio12> {}
