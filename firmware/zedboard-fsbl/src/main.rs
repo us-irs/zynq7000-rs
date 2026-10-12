@@ -76,7 +76,8 @@ fn main() -> ! {
     );
 
     let mut periphs = zynq7000::Peripherals::take().unwrap();
-    l2_cache::disable();
+    // SAFETY: The L2 cache was not enabled yet.
+    unsafe { l2_cache::disable() };
 
     // Initialize the ARM clock. Safety: We only run this once.
     unsafe {
@@ -342,7 +343,8 @@ fn qspi_boot(mut qspi: QspiSpansionS25Fl256SLinearMode, _priv_tim: priv_tim::Cpu
             zynq7000_hal::cache::clean_and_invalidate_data_cache();
             aarch32_cpu::register::TlbIAll::write();
             aarch32_cpu::register::BpIAll::write();
-            l2_cache::disable();
+            // SAFETY: The caches were cleaned above.
+            unsafe { l2_cache::disable() };
             aarch32_cpu::asm::dsb();
             aarch32_cpu::asm::isb();
 

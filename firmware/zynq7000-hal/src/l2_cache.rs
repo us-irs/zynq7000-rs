@@ -83,8 +83,13 @@ pub fn init(
 }
 
 /// Disable the L2 cache.
+///
+/// # Safety
+///
+/// The L2 cache must be cleaned before, for example with
+/// [crate::cache::clean_and_invalidate_data_cache]. Otherwise dirty lines are lost.
 #[inline]
-pub fn disable() {
+pub unsafe fn disable() {
     // SAFETY: Only the control register is written.
     let mut l2c_mmio = unsafe { zynq7000::l2_cache::Registers::new_mmio_fixed() };
     l2c_mmio.write_control(Control::new_disabled());

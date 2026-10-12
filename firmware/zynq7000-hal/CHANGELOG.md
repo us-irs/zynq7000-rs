@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - I2C API now exposes transaction, write_read, read and write directly.
 - `gpio::GpioPins` is renamed to `gpio::Pins`. `Pins::new` takes the new `gpio::Config`, which
   registers the GPIO interrupt handler by default.
+- `l2_cache::disable` is now `unsafe`. The L2 cache must be cleaned before.
 
 ## Added
 
