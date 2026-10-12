@@ -1393,7 +1393,7 @@ pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6
 ///
 /// It is strongly advised to take a clock value which is substantially higher than the CPU 1x
 /// clock. It was proven that taking values which are only slightly larger than the CPU 1x
-/// clock are problematic for driving ceratin devices.
+/// clock are problematic for driving certain devices.
 pub fn configure_spi_ref_clock(clks: &mut Clocks, target_clock: Hertz) {
     // SAFETY: The SPI clock control register is only read.
     let slcr = unsafe { Slcr::steal() };
@@ -1406,7 +1406,7 @@ pub fn configure_spi_ref_clock(clks: &mut Clocks, target_clock: Hertz) {
         zynq7000::slcr::clocks::SrcSelIo::DdrPll => clks.ddr_clocks().ref_clk().to_raw(),
     };
     let div = ref_clk.div_ceil(target_clock.to_raw());
-    if div > u6::MAX.value() as u32 {
+    if div < u6::MAX.value() as u32 {
         configure_spi_ref_clock_with_divisor(clks, u6::new(div as u8));
     }
 }
