@@ -47,11 +47,8 @@ impl Channel {
             return 0;
         }
 
-        // Invalidate the header cache before fetching the read pointer, which is written
-        // by host tooling.
-        let addr = (&raw const crate::_SEGGER_RTT) as u32 + 32;
-        zynq7000_hal::cache::clean_and_invalidate_data_cache_range_inner(addr, 32)
-            .expect("cache clean + invalidate failed");
+        // The read pointer is written by the host.
+        clean_invalidate_control_block();
 
         // calculate how much space is left in the buffer
         let read = self.read.load(Ordering::Relaxed) as usize;
@@ -81,17 +78,15 @@ impl Channel {
             self.copy_wrapping(&bytes[..len], cursor);
         }
 
-        let buf_addr = (&raw const crate::BUFFER) as u32;
-        zynq7000_hal::cache::clean_data_cache_range_inner(buf_addr, crate::BUF_SIZE)
-            .expect("cache clean failed");
+        // The data must reach memory before the host can see the new write pointer.
+        flush_buffer();
 
         // adjust the write pointer, so the host knows that there is new data
         self.write.store(
             (cursor.wrapping_add(len) % BUF_SIZE) as u32,
             Ordering::Release,
         );
-        let addr = (&raw const crate::_SEGGER_RTT) as u32 + 32;
-        zynq7000_hal::cache::clean_data_cache_range(addr, 32).expect("cache clean failed");
+        flush_control_block();
 
         // return the number of bytes written
         len
@@ -120,13 +115,51 @@ impl Channel {
         // busy wait, until the read- catches up with the write-pointer
         let read = || self.read.load(Ordering::Relaxed);
         let write = || self.write.load(Ordering::Relaxed);
-        while read() != write() {}
+        while read() != write() {
+            clean_invalidate_control_block();
+        }
     }
 
     fn host_is_connected(&self) -> bool {
+        clean_invalidate_control_block();
+
         // we assume that a host is connected if we are in blocking-mode. this is what probe-run does.
         self.flags.load(Ordering::Relaxed) & MODE_MASK == MODE_BLOCK_IF_FULL
     }
+}
+
+/// Offset of the control block cache line holding `write`, `read` and `flags`, the only fields
+/// which change at runtime.
+const CONTROL_BLOCK_DYNAMIC_LINE: usize = 32;
+
+const _: () = {
+    let channel = core::mem::offset_of!(crate::Header, up_channel);
+    assert!(channel + core::mem::offset_of!(Channel, write) >= CONTROL_BLOCK_DYNAMIC_LINE);
+    assert!(channel + core::mem::size_of::<Channel>() <= CONTROL_BLOCK_DYNAMIC_LINE + 32);
+};
+
+fn control_block_dynamic_line_addr() -> u32 {
+    (&raw const crate::_SEGGER_RTT) as u32 + CONTROL_BLOCK_DYNAMIC_LINE as u32
+}
+
+fn flush_control_block() {
+    zynq7000_hal::cache::clean_data_cache_range_inner(control_block_dynamic_line_addr(), 32)
+        .expect("cache clean failed");
+}
+
+/// Also fetches the fields written by the host. Cleaning first ensures a pending write pointer
+/// update is not discarded.
+fn clean_invalidate_control_block() {
+    zynq7000_hal::cache::clean_and_invalidate_data_cache_range_inner(
+        control_block_dynamic_line_addr(),
+        32,
+    )
+    .expect("cache clean + invalidate failed");
+}
+
+fn flush_buffer() {
+    zynq7000_hal::cache::clean_data_cache_range_inner((&raw const crate::BUFFER) as u32, BUF_SIZE)
+        .expect("cache clean failed");
 }
 
 /// How much space is left in the buffer?
