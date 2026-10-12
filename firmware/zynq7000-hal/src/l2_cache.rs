@@ -1,5 +1,4 @@
 //! # L2 cache module
-#![deny(missing_docs)]
 use core::sync::atomic::compiler_fence;
 
 use arbitrary_int::{u2, u3};
@@ -74,6 +73,7 @@ pub fn init(
 
     let pending = l2c_mmio.read_interrupt_raw_status();
     l2c_mmio.write_interrupt_clear(InterruptControl::new_with_raw_value(pending.raw_value()));
+    // SAFETY: Only the magic L2C configuration register is written.
     unsafe {
         Slcr::with(|slcr| {
             slcr.write_magic_l2c_register(SLCR_L2C_CONFIG_MAGIC_VALUE);
@@ -85,6 +85,7 @@ pub fn init(
 /// Disable the L2 cache.
 #[inline]
 pub fn disable() {
+    // SAFETY: Only the control register is written.
     let mut l2c_mmio = unsafe { zynq7000::l2_cache::Registers::new_mmio_fixed() };
     l2c_mmio.write_control(Control::new_disabled());
 }

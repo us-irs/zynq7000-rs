@@ -17,9 +17,7 @@ impl core::fmt::Debug for Rx {
     }
 }
 
-/// # Safety
-///
-/// This is not a CPU specific register block.
+// SAFETY: The UART registers are not banked per core.
 unsafe impl Send for Rx {}
 
 /// RX errors structure.

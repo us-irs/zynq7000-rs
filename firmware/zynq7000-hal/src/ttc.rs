@@ -5,7 +5,6 @@
 //! ## Examples
 //!
 //! - [PWM](https://github.com/ustgt-irs/zynq7000-rs/blob/main/zynq/examples/embassy/src/bin/pwm.rs)
-#![deny(missing_docs)]
 use core::convert::Infallible;
 
 use arbitrary_int::{prelude::*, u3, u4};
@@ -53,11 +52,13 @@ pub trait PsTtc {
 impl PsTtc for MmioRegisters<'static> {
     #[inline]
     fn reg_block(&self) -> MmioRegisters<'static> {
+        // SAFETY: The block is passed to the driver by value, so there is only one user.
         unsafe { self.clone() }
     }
 
     #[inline]
     fn id(&self) -> Option<TtcId> {
+        // SAFETY: Only the address is used, the pointer is not dereferenced.
         let base_addr = unsafe { self.ptr() } as usize;
         if base_addr == TTC_0_BASE_ADDR {
             return Some(TtcId::Ttc0);
@@ -154,10 +155,12 @@ impl Ttc {
         ps_ttc.id()?;
         let regs = ps_ttc.reg_block();
         let ch0 = TtcChannel {
+            // SAFETY: Each channel only accesses its own registers.
             regs: unsafe { regs.clone() },
             id: ChannelId::Ch0,
         };
         let ch1 = TtcChannel {
+            // SAFETY: Each channel only accesses its own registers.
             regs: unsafe { regs.clone() },
             id: ChannelId::Ch1,
         };

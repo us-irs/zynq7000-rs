@@ -50,6 +50,7 @@ pub fn deassert_reset() {
     };
 }
 
+/// Bitstream address is not aligned to 64 bytes.
 #[derive(Debug, thiserror::Error)]
 #[error("unaligned address: {0}")]
 pub struct UnalignedAddrError(usize);
@@ -67,6 +68,7 @@ pub fn configure_bitstream_non_secure(
     if bitstream.is_empty() {
         return Ok(());
     }
+    // SAFETY: The device configuration interface is only used for PL configuration here.
     let mut devcfg = unsafe { zynq7000::devcfg::Registers::new_mmio_fixed() };
     devcfg.modify_control(|mut val| {
         val.set_config_access_select(zynq7000::devcfg::PlConfigAccess::ConfigAccessPort);

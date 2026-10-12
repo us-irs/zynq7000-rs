@@ -15,6 +15,7 @@ static TRANSFER_CONTEXTS: [Mutex<RefCell<TransferContext>>; 2] =
 // critical section.
 static DONE: [AtomicBool; 2] = [const { AtomicBool::new(false) }; 2];
 
+/// RX FIFO overrun.
 #[derive(Debug, Clone, Copy, thiserror::Error)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 #[error("SPI RX FIFO overrun")]
@@ -34,6 +35,7 @@ impl embedded_hal_async::spi::Error for RxOverrunError {
 /// This needs to be called once in the interrupt handler responsible for the SPI interrupts on
 /// the given SPI bank.
 pub unsafe fn on_interrupt(peripheral: SpiId) {
+    // SAFETY: Upheld by the caller.
     let mut spi = unsafe { SpiLowLevel::steal(peripheral) };
     let index = peripheral as usize;
     let enabled_irqs = spi.read_enabled_interrupts();
@@ -101,6 +103,7 @@ fn reset_trigger_levels(spi: &mut SpiLowLevel) {
 }
 
 fn on_interrupt_read(idx: usize, context: &mut TransferContext, spi: &mut SpiLowLevel) {
+    // SAFETY: The buffer was set by the active transfer future, which keeps it borrowed.
     let read_slice = unsafe { context.rx_slice.get_mut().unwrap() };
     let transfer_len = read_slice.len();
 
@@ -120,6 +123,7 @@ fn on_interrupt_read(idx: usize, context: &mut TransferContext, spi: &mut SpiLow
 }
 
 fn on_interrupt_write(idx: usize, context: &mut TransferContext, spi: &mut SpiLowLevel) {
+    // SAFETY: The buffer was set by the active transfer future, which keeps it borrowed.
     let write_slice = unsafe { context.tx_slice.get().unwrap() };
     let transfer_len = write_slice.len();
 
@@ -139,8 +143,10 @@ fn on_interrupt_write(idx: usize, context: &mut TransferContext, spi: &mut SpiLo
 }
 
 fn on_interrupt_transfer(idx: usize, context: &mut TransferContext, spi: &mut SpiLowLevel) {
+    // SAFETY: The buffer was set by the active transfer future, which keeps it borrowed.
     let read_slice = unsafe { context.rx_slice.get_mut().unwrap() };
     let read_len = read_slice.len();
+    // SAFETY: The buffer was set by the active transfer future, which keeps it borrowed.
     let write_slice = unsafe { context.tx_slice.get().unwrap() };
     let write_len = write_slice.len();
     let transfer_len = core::cmp::max(read_len, write_len);
@@ -172,6 +178,7 @@ fn on_interrupt_transfer_in_place(
     context: &mut TransferContext,
     spi: &mut SpiLowLevel,
 ) {
+    // SAFETY: The buffer was set by the active transfer future, which keeps it borrowed.
     let transfer_slice = unsafe { context.rx_slice.get_mut().unwrap() };
     let transfer_len = transfer_slice.len();
 
@@ -254,14 +261,20 @@ fn unfinished_transfer(spi: &mut SpiLowLevel, transfer_len: usize, context: &Tra
     spi.enable_interrupts_master_mode(tx_pending);
 }
 
+/// Type of the active transfer.
 #[derive(Debug, Clone, Copy)]
 pub enum TransferType {
+    /// Read.
     Read,
+    /// Write.
     Write,
+    /// Transfer with separate read and write buffers.
     Transfer,
+    /// In-place transfer.
     TransferInPlace,
 }
 
+/// State of the active transfer, shared with the interrupt handler.
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TransferContext {
     transfer_type: Option<TransferType>,
@@ -274,6 +287,7 @@ pub struct TransferContext {
 
 #[allow(clippy::new_without_default)]
 impl TransferContext {
+    /// Create an empty context.
     pub const fn new() -> Self {
         Self {
             transfer_type: None,
@@ -286,6 +300,7 @@ impl TransferContext {
     }
 }
 
+/// Future for one asynchronous transfer.
 pub struct SpiFuture<'spi, 'read, 'write> {
     id: super::SpiId,
     buffer_empty: bool,
@@ -325,6 +340,8 @@ impl<'spi, 'read, 'write> SpiFuture<'spi, 'read, 'write> {
             let context_ref = TRANSFER_CONTEXTS[spi_id as usize].borrow(cs);
             let mut context = context_ref.borrow_mut();
             context.transfer_type = Some(TransferType::Read);
+            // SAFETY: The future borrows the buffers and resets the peripheral if it is dropped
+            // before the transfer is finished.
             unsafe {
                 context.rx_slice.set(words);
             }
@@ -362,6 +379,8 @@ impl<'spi, 'read, 'write> SpiFuture<'spi, 'read, 'write> {
             let context_ref = TRANSFER_CONTEXTS[spi_id as usize].borrow(cs);
             let mut context = context_ref.borrow_mut();
             context.transfer_type = Some(TransferType::Write);
+            // SAFETY: The future borrows the buffers and resets the peripheral if it is dropped
+            // before the transfer is finished.
             unsafe {
                 context.tx_slice.set(words);
             }
@@ -419,6 +438,8 @@ impl<'spi, 'read, 'write> SpiFuture<'spi, 'read, 'write> {
             let context_ref = TRANSFER_CONTEXTS[spi_id as usize].borrow(cs);
             let mut context = context_ref.borrow_mut();
             context.transfer_type = Some(TransferType::Transfer);
+            // SAFETY: The future borrows the buffers and resets the peripheral if it is dropped
+            // before the transfer is finished.
             unsafe {
                 context.tx_slice.set(write);
                 context.rx_slice.set(read);
@@ -460,6 +481,8 @@ impl<'spi, 'read, 'write> SpiFuture<'spi, 'read, 'write> {
             let context_ref = TRANSFER_CONTEXTS[spi_id as usize].borrow(cs);
             let mut context = context_ref.borrow_mut();
             context.transfer_type = Some(TransferType::TransferInPlace);
+            // SAFETY: The future borrows the buffers and resets the peripheral if it is dropped
+            // before the transfer is finished.
             unsafe {
                 context.rx_slice.set(words);
             }
@@ -581,6 +604,7 @@ impl SpiAsync {
         match spi.inner.id {
             SpiId::Spi0 => {
                 unsafe fn spi0_interrupt_handler() {
+                    // SAFETY: Only called from the SPI 0 interrupt.
                     unsafe {
                         on_interrupt(SpiId::Spi0);
                     }
@@ -592,6 +616,7 @@ impl SpiAsync {
             }
             SpiId::Spi1 => {
                 unsafe fn spi1_interrupt_handler() {
+                    // SAFETY: Only called from the SPI 1 interrupt.
                     unsafe {
                         on_interrupt(SpiId::Spi1);
                     }
@@ -605,16 +630,19 @@ impl SpiAsync {
         Self(spi)
     }
 
+    /// Asynchronous read. Zeros are written.
     pub fn read<'read>(&mut self, words: &'read mut [u8]) -> SpiFuture<'_, 'read, '_> {
         let id = self.0.inner.id;
         SpiFuture::new_for_read(&mut self.0, id, words)
     }
 
+    /// Asynchronous write. The read data is discarded.
     pub fn write<'write>(&mut self, words: &'write [u8]) -> SpiFuture<'_, '_, 'write> {
         let id = self.0.inner.id;
         SpiFuture::new_for_write(&mut self.0, id, words)
     }
 
+    /// Asynchronous transfer.
     pub fn transfer<'read, 'write>(
         &mut self,
         read: &'read mut [u8],
@@ -624,6 +652,7 @@ impl SpiAsync {
         SpiFuture::new_for_transfer(&mut self.0, id, read, write)
     }
 
+    /// Asynchronous in-place transfer.
     pub fn transfer_in_place<'read>(&mut self, words: &'read mut [u8]) -> SpiFuture<'_, 'read, '_> {
         let id = self.0.inner.id;
         SpiFuture::new_for_transfer_in_place(&mut self.0, id, words)
@@ -675,16 +704,21 @@ impl embedded_hal_async::spi::SpiBus for SpiAsync {
 /// This structure is a wrapper for [SpiAsync] which implements the
 /// [embedded_hal_async::spi::SpiDevice] trait as well.
 pub struct SpiWithHwCsAsync<Delay: embedded_hal_async::delay::DelayNs> {
+    /// SPI bus.
     pub spi: SpiAsync,
+    /// Chip select of the device.
     pub cs: ChipSelect,
+    /// Delay provider for [embedded_hal::spi::Operation::DelayNs].
     pub delay: Delay,
 }
 
 impl<Delay: embedded_hal_async::delay::DelayNs> SpiWithHwCsAsync<Delay> {
+    /// Create a new device.
     pub fn new(spi: SpiAsync, cs: ChipSelect, delay: Delay) -> Self {
         Self { spi, cs, delay }
     }
 
+    /// Release the SPI bus.
     pub fn release(self) -> SpiAsync {
         self.spi
     }

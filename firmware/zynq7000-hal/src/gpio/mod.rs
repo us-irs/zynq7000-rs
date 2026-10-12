@@ -2,8 +2,6 @@
 //!
 //! This module contains a MIO and EMIO pin resource managements singleton as well as abstractions
 //! to use these pins as GPIOs.
-#![deny(missing_docs)]
-#![warn(clippy::undocumented_unsafe_blocks)]
 pub mod asynch;
 pub mod emio;
 pub mod ll;

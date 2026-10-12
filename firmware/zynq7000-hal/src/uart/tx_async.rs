@@ -46,6 +46,7 @@ impl TxContext {
 /// The user has to call this once in the interrupt handler responsible for the TX interrupts on
 /// the given UART bank.
 pub unsafe fn on_interrupt_tx(peripheral: UartId) {
+    // SAFETY: The interrupt handler only accesses the TX interrupt registers.
     let mut tx_with_irq = unsafe { Tx::steal(peripheral) };
     let idx = peripheral as usize;
     let enabled_irqs = tx_with_irq.regs().read_enabled_interrupts();
@@ -199,6 +200,7 @@ impl Future for TxFuture<'_, '_> {
 
 impl Drop for TxFuture<'_, '_> {
     fn drop(&mut self) {
+        // SAFETY: Only the TX interrupts are disabled.
         let mut tx = unsafe { Tx::steal(self.id) };
         tx.disable_interrupts();
         // On cancellation, clear the stale buffer pointer so a spurious or future interrupt for
@@ -238,6 +240,7 @@ impl TxAsync {
             match tx.uart_id() {
                 UartId::Uart0 => {
                     unsafe fn uart0_interrupt_handler() {
+                        // SAFETY: Only called from the UART 0 interrupt.
                         unsafe {
                             on_interrupt_tx(UartId::Uart0);
                         }
@@ -249,6 +252,7 @@ impl TxAsync {
                 }
                 UartId::Uart1 => {
                     unsafe fn uart1_interrupt_handler() {
+                        // SAFETY: Only called from the UART 1 interrupt.
                         unsafe {
                             on_interrupt_tx(UartId::Uart1);
                         }

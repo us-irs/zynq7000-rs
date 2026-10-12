@@ -10,11 +10,16 @@ const DCI_MAX_FREQ: Hertz = Hertz::from_raw(10_000_000);
 // These values were extracted from the ps7_init files and are not documented in the TMR.
 // zynq-rs uses the same values.. I assume they are constant.
 
+/// Drive and slew configuration of the address IOBs.
 pub const DRIVE_SLEW_ADDR_CFG: u32 = 0x0018_c61c;
+/// Drive and slew configuration of the data IOBs.
 pub const DRIVE_SLEW_DATA_CFG: u32 = 0x00f9_861c;
+/// Drive and slew configuration of the differential IOBs.
 pub const DRIVE_SLEW_DIFF_CFG: u32 = 0x00f9_861c;
+/// Drive and slew configuration of the clock IOBs.
 pub const DRIVE_SLEW_CLOCK_CFG: u32 = 0x00f9_861c;
 
+/// DCI clock divisors.
 #[derive(Debug, Clone, Copy)]
 pub struct DciClkConfig {
     div0: u6,
@@ -91,6 +96,7 @@ pub unsafe fn calibrate_iob_impedance_for_ddr3(
     dci_clk_cfg: DciClkConfig,
     poll_for_done: bool,
 ) {
+    // SAFETY: Upheld by the caller.
     unsafe {
         calibrate_iob_impedance(
             ddr_control,
@@ -101,16 +107,23 @@ pub unsafe fn calibrate_iob_impedance_for_ddr3(
     }
 }
 
-/// DDR IOB impedance calibration parameters.
+/// DDR IOB impedance calibration parameters. The fields have the names of the `DDRIOB_DCI_CTRL`
+/// register fields.
 pub struct CalibrationParams {
+    /// `PREF_OPT2` field.
     pub pref_opt2: u3,
+    /// `PREF_OPT1` field.
     pub pref_opt1: u2,
+    /// `NREF_OPT4` field.
     pub nref_opt4: u3,
+    /// `NREF_OPT2` field.
     pub nref_opt2: u3,
+    /// `NREF_OPT1` field.
     pub nref_opt1: u2,
 }
 
 impl CalibrationParams {
+    /// Calibration parameters for DDR3.
     pub const fn new_ddr3() -> Self {
         Self {
             pref_opt2: u3::new(0),
@@ -179,15 +192,23 @@ pub unsafe fn calibrate_iob_impedance(
     });
 }
 
-/// Static configuration for DDR IOBs.
+/// Static configuration for DDR IOBs. Each field is the value of the register with the same name.
 pub struct DdriobConfigSet {
+    /// `DDRIOB_DDR_CTRL` register.
     pub ddr_control: zynq7000::slcr::ddriob::DdrControl,
+    /// `DDRIOB_ADDR0` register.
     pub addr0: DdriobConfig,
+    /// `DDRIOB_ADDR1` register.
     pub addr1: DdriobConfig,
+    /// `DDRIOB_DATA0` register.
     pub data0: DdriobConfig,
+    /// `DDRIOB_DATA1` register.
     pub data1: DdriobConfig,
+    /// `DDRIOB_DIFF0` register.
     pub diff0: DdriobConfig,
+    /// `DDRIOB_DIFF1` register.
     pub diff1: DdriobConfig,
+    /// `DDRIOB_CLOCK` register.
     pub clock: DdriobConfig,
 }
 
@@ -220,60 +241,112 @@ pub unsafe fn configure_iob(cfg_set: &DdriobConfigSet) {
     });
 }
 
-/// Full static DDRC configuration set.
+/// Full static DDRC configuration set. Each field is the value of the register with the same name.
 #[derive(Debug)]
 pub struct DdrcConfigSet {
+    /// `ddrc_ctrl` register.
     pub ctrl: DdrcControl,
+    /// `Two_rank_cfg` register.
     pub two_rank: TwoRankConfig,
+    /// `HPR_reg` register.
     pub hpr: LprHprQueueControl,
+    /// `LPR_reg` register.
     pub lpr: LprHprQueueControl,
+    /// `WR_reg` register.
     pub wr: WriteQueueControl,
+    /// `DRAM_param_reg0` register.
     pub dram_param_0: DramParamReg0,
+    /// `DRAM_param_reg1` register.
     pub dram_param_1: DramParamReg1,
+    /// `DRAM_param_reg2` register.
     pub dram_param_2: DramParamReg2,
+    /// `DRAM_param_reg3` register.
     pub dram_param_3: DramParamReg3,
+    /// `DRAM_param_reg4` register.
     pub dram_param_4: DramParamReg4,
+    /// `DRAM_init_param` register.
     pub dram_init_param: DramInitParam,
+    /// `DRAM_EMR_reg` register.
     pub dram_emr: DramEmr,
+    /// `DRAM_EMR_MR_reg` register.
     pub dram_emr_mr: DramEmrMr,
+    /// `DRAM_burst8_rdwr` register.
     pub dram_burst8_rdwr: DramBurst8ReadWrite,
+    /// `DRAM_disable_DQ` register.
     pub disable_dq: DisableDq,
+    /// `DRAM_addr_map_bank` register.
     pub dram_addr_map_bank: DramAddrMapBank,
+    /// `DRAM_addr_map_col` register.
     pub dram_addr_map_col: DramAddrMapColumn,
+    /// `DRAM_addr_map_row` register.
     pub dram_addr_map_row: DramAddrMapRow,
+    /// `DRAM_ODT_reg` register.
     pub dram_odt: DramOdt,
+    /// `phy_cmd_timeout_rddata_cpt` register.
     pub phy_cmd_timeout_rddata_cpt: PhyCmdTimeoutRdDataCpt,
+    /// `DLL_calib` register.
     pub dll_calib: DllCalib,
+    /// `ODT_delay_hold` register.
     pub odt_delay_hold: OdtDelayHold,
+    /// `ctrl_reg1` register.
     pub ctrl_reg1: CtrlReg1,
+    /// `ctrl_reg2` register.
     pub ctrl_reg2: CtrlReg2,
+    /// `ctrl_reg3` register.
     pub ctrl_reg3: CtrlReg3,
+    /// `ctrl_reg4` register.
     pub ctrl_reg4: CtrlReg4,
+    /// `ctrl_reg5` register.
     pub ctrl_reg5: CtrlReg5,
+    /// `ctrl_reg6` register.
     pub ctrl_reg6: CtrlReg6,
+    /// `CHE_T_ZQ` register.
     pub che_t_zq: CheTZq,
+    /// `CHE_T_ZQ_Short_Interval_Reg` register.
     pub che_t_zq_short_interval_reg: CheTZqShortInterval,
+    /// `deep_pwrdwn_reg` register.
     pub deep_powerdown: DeepPowerdown,
+    /// `reg_2c` register.
     pub reg_2c: Reg2c,
+    /// `reg_2d` register.
     pub reg_2d: Reg2d,
+    /// `dfi_timing` register.
     pub dfi_timing: DfiTiming,
+    /// `CHE_ECC_CONTROL_REG_OFFSET` register.
     pub che_ecc_ctrl: CheEccControl,
+    /// `ECC_scrub` register.
     pub ecc_scrub: EccScrub,
+    /// `phy_rcvr_enable` register.
     pub phy_receiver_enable: PhyReceiverEnable,
+    /// `PHY_Config0` to `PHY_Config3` registers.
     pub phy_config: [PhyConfig; 4],
+    /// `phy_init_ratio0` to `phy_init_ratio3` registers.
     pub phy_init_ratio: [PhyInitRatio; 4],
+    /// `phy_rd_dqs_cfg0` to `phy_rd_dqs_cfg3` registers.
     pub phy_rd_dqs_config: [PhyDqsConfig; 4],
+    /// `phy_wr_dqs_cfg0` to `phy_wr_dqs_cfg3` registers.
     pub phy_wr_dqs_config: [PhyDqsConfig; 4],
+    /// `phy_we_cfg0` to `phy_we_cfg3` registers.
     pub phy_we_cfg: [PhyWriteEnableConfig; 4],
+    /// `wr_data_slv0` to `wr_data_slv3` registers.
     pub phy_wr_data_slv: [PhyWriteDataSlaveConfig; 4],
+    /// `reg_64` register.
     pub reg64: Reg64,
+    /// `reg_65` register.
     pub reg65: Reg65,
+    /// `page_mask` register.
     pub page_mask: u32,
+    /// `axi_priority_wr_port0` to `axi_priority_wr_port3` registers.
     pub axi_priority_wr_port: [AxiPriorityWritePort; 4],
+    /// `axi_priority_rd_port0` to `axi_priority_rd_port3` registers.
     pub axi_priority_rd_port: [AxiPriorityReadPort; 4],
+    /// `lpddr_ctrl0` register.
     pub lpddr_ctrl_0: LpddrControl0,
+    /// `lpddr_ctrl1` register.
     pub lpddr_ctrl_1: LpddrControl1,
+    /// `lpddr_ctrl2` register.
     pub lpddr_ctrl_2: LpddrControl2,
+    /// `lpddr_ctrl3` register.
     pub lpddr_ctrl_3: LpddrControl3,
 }
 

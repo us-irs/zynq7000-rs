@@ -1,3 +1,4 @@
+//! Low-level Ethernet driver.
 use arbitrary_int::{prelude::*, u6};
 use zynq7000::{
     eth::{InterruptControl, NetworkControl, RxStatus, TxStatus},
@@ -8,14 +9,19 @@ use crate::{clocks::IoClocks, enable_amba_peripheral_clock, slcr::Slcr, time::He
 
 use super::{EthernetId, PsEthernet as _};
 
+/// Link speed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Speed {
+    /// 10 Mbit/s.
     Mbps10,
+    /// 100 Mbit/s.
     Mbps100,
+    /// 1000 Mbit/s.
     Mbps1000,
 }
 
 impl Speed {
+    /// RGMII clock rate for the speed.
     pub const fn rgmii_clk_rate(&self) -> Hertz {
         match self {
             Speed::Mbps10 => Hertz::from_raw(2_500_000),
@@ -25,19 +31,26 @@ impl Speed {
     }
 }
 
+/// Duplex mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Duplex {
+    /// Half duplex.
     Half,
+    /// Full duplex.
     Full,
 }
 
+/// Divisors for the Ethernet reference clock.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClockDivisors {
+    /// Divisor 0.
     pub divisor_0: u6,
+    /// Divisor 1.
     pub divisor_1: u6,
 }
 
 impl ClockDivisors {
+    /// Create the divisors.
     pub const fn new(divisor_0: u6, divisor_1: u6) -> Self {
         Self {
             divisor_0,
@@ -89,14 +102,18 @@ impl ClockDivisors {
 /// Full clock configuration for the ethernet peripheral.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ClockConfig {
+    /// Reference clock source.
     pub src_sel: zynq7000::slcr::clocks::SrcSelIo,
+    /// Use the TX clock from EMIO instead of the reference clock.
     pub use_emio_tx_clk: bool,
+    /// Clock divisors.
     pub divs: ClockDivisors,
     /// Enable the clock.
     pub enable: bool,
 }
 
 impl ClockConfig {
+    /// Create a configuration sourced from the IO PLL.
     pub const fn new(divs: ClockDivisors) -> Self {
         Self {
             src_sel: zynq7000::slcr::clocks::SrcSelIo::IoPll,
@@ -114,12 +131,16 @@ impl ClockConfig {
 /// setting can be pre-calculated and stored using this data structure.
 #[derive(Debug, Clone, Copy)]
 pub struct ClockDivSet {
+    /// Divisors for 10 Mbit/s.
     pub cfg_10_mbps: ClockDivisors,
+    /// Divisors for 100 Mbit/s.
     pub cfg_100_mbps: ClockDivisors,
+    /// Divisors for 1000 Mbit/s.
     pub cfg_1000_mbps: ClockDivisors,
 }
 
 impl ClockDivSet {
+    /// Create a new set.
     pub const fn new(
         cfg_10_mbps: ClockDivisors,
         cfg_100_mbps: ClockDivisors,
@@ -132,6 +153,7 @@ impl ClockDivSet {
         }
     }
 
+    /// Divisors for the given speed.
     #[inline]
     pub fn clk_divs_for_speed(&self, speed: Speed) -> &ClockDivisors {
         match speed {
@@ -201,6 +223,7 @@ impl EthernetLowLevel {
     pub const unsafe fn steal(id: EthernetId) -> Self {
         Self {
             id,
+            // SAFETY: Upheld by the caller.
             regs: unsafe {
                 match id {
                     EthernetId::Eth0 => zynq7000::eth::Registers::new_mmio_fixed_0(),
@@ -210,10 +233,12 @@ impl EthernetLowLevel {
         }
     }
 
+    /// Reset the peripheral, keeping the reset asserted for the given number of cycles.
     pub fn reset(&mut self, cycles: usize) {
         reset(self.id, cycles);
     }
 
+    /// Enable the AMBA peripheral clock.
     #[inline]
     pub fn enable_peripheral_clock(&mut self) {
         let periph_sel = match self.id {
@@ -227,6 +252,7 @@ impl EthernetLowLevel {
     ///
     /// This should be called once when initializing the peripheral.
     pub fn configure_clock(&mut self, cfg: ClockConfig, enable_rx_clock: bool) {
+        // SAFETY: Only the clock control registers of this peripheral are changed.
         unsafe {
             Slcr::with(|regs| {
                 let (ptr_gig_eth_clk_ctrl, ptr_gig_eth_rclk_ctrl) = self.id().clk_config_regs(regs);
@@ -251,6 +277,7 @@ impl EthernetLowLevel {
     ///
     /// This might be necessary after auto-negotiation of speed settings.
     pub fn configure_clock_divs(&mut self, cfg: ClockDivisors) {
+        // SAFETY: Only the clock control register of this peripheral is changed.
         unsafe {
             Slcr::with(|regs| {
                 let (ptr_gig_eth_clk_ctrl, _ptr_gig_eth_rclk_ctrl) =
@@ -278,6 +305,7 @@ impl EthernetLowLevel {
         self.set_speed_and_duplex(speed, duplex);
     }
 
+    /// Configure the clock divisors for the given speed.
     pub fn configure_clock_for_speed(&mut self, speed: Speed, clk_collection: &ClockDivSet) {
         match speed {
             Speed::Mbps10 => self.configure_clock_divs(clk_collection.cfg_10_mbps),
@@ -286,6 +314,7 @@ impl EthernetLowLevel {
         }
     }
 
+    /// Receive all frames, regardless of their destination address.
     #[inline]
     pub fn set_promiscous_mode(&mut self, enable: bool) {
         self.regs.modify_net_cfg(|mut val| {
@@ -294,11 +323,13 @@ impl EthernetLowLevel {
         });
     }
 
+    /// Set the RX descriptor list base address.
     #[inline]
     pub fn set_rx_buf_descriptor_base_address(&mut self, addr: u32) {
         self.regs.write_rx_buf_queue_base_addr(addr);
     }
 
+    /// Set the TX descriptor list base address.
     #[inline]
     pub fn set_tx_buf_descriptor_base_address(&mut self, addr: u32) {
         self.regs.write_tx_buf_queue_base_addr(addr);
@@ -359,6 +390,7 @@ impl EthernetLowLevel {
         }
     }
 
+    /// Ethernet ID.
     #[inline]
     pub const fn id(&self) -> EthernetId {
         self.id
@@ -385,6 +417,7 @@ pub fn reset(id: EthernetId, cycles: usize) {
             .with_gem0_cpu1x_rst(false)
             .build(),
     };
+    // SAFETY: Only the Ethernet reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_eth(assert_reset);

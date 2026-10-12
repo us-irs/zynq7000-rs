@@ -5,7 +5,6 @@
 //!
 //! The HAL provides a more convenient interface through the [crate::register_interrupt] and
 //! [crate::generic_interrupt_handler] functions.
-#![deny(missing_docs)]
 use arbitrary_int::prelude::*;
 
 use aarch32_cpu::interrupt;
@@ -508,9 +507,12 @@ impl Configurator {
     /// used inside the interrupt handler.
     #[inline]
     pub unsafe fn steal() -> Self {
-        Configurator {
-            gicc: unsafe { CpuInterfaceRegisters::new_mmio_fixed() },
-            gicd: unsafe { DistributorRegisters::new_mmio_fixed() },
+        // SAFETY: Upheld by the caller.
+        unsafe {
+            Configurator {
+                gicc: CpuInterfaceRegisters::new_mmio_fixed(),
+                gicd: DistributorRegisters::new_mmio_fixed(),
+            }
         }
     }
 
@@ -675,6 +677,7 @@ impl Configurator {
     fn write_priority(&mut self, raw_id: usize, priority: Priority) {
         // The IPR arrays are byte accessible.
         let base_ptr = self.gicd.pointer_to_ipr_start() as *mut u8;
+        // SAFETY: `raw_id` is a valid interrupt ID, so the byte is inside the IPR array.
         unsafe {
             core::ptr::write_volatile(base_ptr.add(raw_id), priority.to_raw());
         }
@@ -685,6 +688,7 @@ impl Configurator {
     fn read_priority(&mut self, raw_id: usize) -> Priority {
         // The IPR arrays are byte accessible.
         let base_ptr = self.gicd.pointer_to_ipr_start() as *const u8;
+        // SAFETY: `raw_id` is a valid interrupt ID, so the byte is inside the IPR array.
         Priority::from_raw(unsafe { core::ptr::read_volatile(base_ptr.add(raw_id)) })
     }
 
@@ -732,6 +736,7 @@ impl Configurator {
         if int_id >= 16 {
             return Err(InvalidSpiInterruptId(int_id));
         }
+        // SAFETY: 0 is a valid ISER index.
         unsafe {
             self.gicd
                 .modify_iser_unchecked(0, |val| val | (1 << int_id))
@@ -763,6 +768,7 @@ impl Configurator {
     /// Enable all PPI interrupts.
     #[inline]
     pub fn enable_all_ppi_interrupts(&mut self) {
+        // SAFETY: 0 is a valid ISER index.
         unsafe {
             self.gicd.modify_iser_unchecked(0, |mut v| {
                 v |= ACTIVATE_ALL_PPIS_MASK_ISER;
@@ -858,6 +864,7 @@ impl Configurator {
     ///
     /// Do not call this in a critical section.
     pub unsafe fn enable_interrupts(&self) {
+        // SAFETY: Upheld by the caller.
         unsafe {
             interrupt::enable();
         }
@@ -887,9 +894,12 @@ pub struct InterruptGuard {
 impl InterruptGuard {
     /// Create the interrupt helper with the fixed GICC MMIO instance.
     pub fn new() -> Self {
+        // SAFETY: The CPU interface is banked per core, and the guard is only used inside the
+        // interrupt handler.
         let mut regs = unsafe { CpuInterfaceRegisters::new_mmio_fixed() };
         let interrupt_info = Self::acknowledge_interrupt(&mut regs);
         InterruptGuard {
+            // SAFETY: Same as above.
             regs: unsafe { CpuInterfaceRegisters::new_mmio_fixed() },
             interrupt_info,
             acknowledged: false,

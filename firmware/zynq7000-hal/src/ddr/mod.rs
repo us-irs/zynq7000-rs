@@ -12,15 +12,21 @@ pub mod ll;
 
 pub use ll::{DdrcConfigSet, DdriobConfigSet};
 
+/// DDR clock configuration for [configure_ddr_for_ddr3].
 #[derive(Debug, Clone, Copy)]
 pub struct DdrClockSetupConfig {
+    /// PS clock frequency.
     pub ps_clk: Hertz,
+    /// DDR PLL target frequency.
     pub ddr_clk: Hertz,
+    /// DDR 3x clock divisor.
     pub ddr_3x_div: u6,
+    /// DDR 2x clock divisor.
     pub ddr_2x_div: u6,
 }
 
 impl DdrClockSetupConfig {
+    /// Create a new configuration.
     pub const fn new(ps_clk: Hertz, ddr_clk: Hertz, ddr_3x_div: u6, ddr_2x_div: u6) -> Self {
         Self {
             ps_clk,
@@ -103,39 +109,48 @@ pub fn configure_ddr_for_ddr3(
     }
 }
 
+/// Simple memory tests, for example to verify the DDR after initialization.
 pub mod memtest {
+    /// Memory test error.
     #[derive(Debug, thiserror::Error)]
     pub enum MemTestError {
+        /// The base address is not aligned to 4 bytes.
         #[error("memory address is not aligned to 4 bytes")]
         AddrNotAligned,
+        /// A read value differs from the written value.
         #[error("memory test error")]
         Memory {
+            /// Address of the word.
             addr: usize,
+            /// Written value.
             expected: u32,
+            /// Read value.
             found: u32,
         },
     }
 
     /// # Safety
     ///
-    /// This tests writes and reads on a memory block starting at the base address
-    /// with the size `words` times 4.
+    /// The memory block starting at `base_addr` with `words` 32 bit words must be valid and must
+    /// not be used by anything else. Its content is overwritten.
     pub unsafe fn walking_zero_test(base_addr: usize, words: usize) -> Result<(), MemTestError> {
+        // SAFETY: Upheld by the caller.
         unsafe { walking_value_test(true, base_addr, words) }
     }
 
     /// # Safety
     ///
-    /// This tests writes and reads on a memory block starting at the base address
-    /// with the size `words` times 4.
+    /// The memory block starting at `base_addr` with `words` 32 bit words must be valid and must
+    /// not be used by anything else. Its content is overwritten.
     pub unsafe fn walking_one_test(base_addr: usize, words: usize) -> Result<(), MemTestError> {
+        // SAFETY: Upheld by the caller.
         unsafe { walking_value_test(false, base_addr, words) }
     }
 
     /// # Safety
     ///
-    /// This tests writes and reads on a memory block starting at the base address
-    /// with the size `words` times 4.
+    /// The memory block starting at `base_addr` with `words` 32 bit words must be valid and must
+    /// not be used by anything else. Its content is overwritten.
     pub unsafe fn walking_value_test(
         walking_zero: bool,
         base_addr: usize,
@@ -159,6 +174,7 @@ pub mod memtest {
 
             // write pass
             for i in 0..words {
+                // SAFETY: The caller ensures that the memory block is valid.
                 unsafe {
                     let p = base_ptr.add(i);
                     core::ptr::write_volatile(p, pattern);
@@ -168,6 +184,7 @@ pub mod memtest {
             // read/verify pass
             for i in 0..words {
                 let val;
+                // SAFETY: The caller ensures that the memory block is valid.
                 unsafe {
                     let p = base_ptr.add(i) as *const u32;
                     val = core::ptr::read_volatile(p);
@@ -186,8 +203,8 @@ pub mod memtest {
 
     /// # Safety
     ///
-    /// This tests writes and reads on a memory block starting at the base address
-    /// with the size `words` times 4.
+    /// The memory block starting at `base_addr` with `words` 32 bit words must be valid and must
+    /// not be used by anything else. Its content is overwritten.
     pub unsafe fn checkerboard_test(base_addr: usize, words: usize) -> Result<(), MemTestError> {
         if words == 0 {
             return Ok(());
@@ -203,6 +220,7 @@ pub mod memtest {
             // Write pass
             for i in 0..words {
                 let value = if i % 2 == 0 { pattern } else { !pattern };
+                // SAFETY: The caller ensures that the memory block is valid.
                 unsafe {
                     core::ptr::write_volatile(base_ptr.add(i), value);
                 }
@@ -211,6 +229,7 @@ pub mod memtest {
             // Read/verify pass
             for i in 0..words {
                 let expected = if i % 2 == 0 { pattern } else { !pattern };
+                // SAFETY: The caller ensures that the memory block is valid.
                 let val = unsafe { core::ptr::read_volatile(base_ptr.add(i)) };
 
                 if val != expected {

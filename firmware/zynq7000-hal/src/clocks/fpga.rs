@@ -1,3 +1,4 @@
+//! FPGA (PL) clock configuration.
 use arbitrary_int::traits::Integer as _;
 use arbitrary_int::u6;
 use zynq7000::slcr::ClockControlRegisters;
@@ -7,6 +8,7 @@ pub use zynq7000::slcr::clocks::SrcSelIo;
 pub use crate::clocks::DivisorZeroError;
 pub use crate::time::Hertz;
 
+/// Clock control values for the four FPGA clocks FCLK0 to FCLK3.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[cfg_attr(feature = "defmt", derive(defmt::Format))]
 pub struct FpgaClockConfig(pub [FpgaClockControl; 4]);
@@ -21,15 +23,18 @@ impl FpgaClockConfig {
         Self::calculate(ps_clk_freq, [Self::DEFAULT_FPGA_CLK; 4])
     }
 
+    /// Calculate the divisors for the given target frequencies, sourced from the IO PLL.
     pub fn calculate(ps_clk_freq: Hertz, clks: [Hertz; 4]) -> Result<Self, DivisorZeroError> {
         Self::calculate_generic(ps_clk_freq, SrcSelIo::IoPll, clks)
     }
 
+    /// Calculate the divisors for the given target frequencies and clock source.
     pub fn calculate_generic(
         ps_clk_freq: Hertz,
         src_sel: SrcSelIo,
         clks: [Hertz; 4],
     ) -> Result<Self, DivisorZeroError> {
+        // SAFETY: The PLL control registers are only read.
         let clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
 
         let arm_pll_cfg = clk_regs.read_arm_pll_ctrl();
@@ -78,6 +83,7 @@ impl FpgaClockConfig {
 
 /// Configures the FPGA clocks.
 pub fn configure(clock_config: FpgaClockConfig) {
+    // SAFETY: Only the FPGA clock control registers are written.
     let mut clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
 
     clk_regs.fpga_0_clk_ctrl().write_ctrl(clock_config.0[0]);

@@ -22,9 +22,12 @@ pub mod uart_blocking {
 
     use crate::uart::Uart;
 
+    /// Blocking UART logger which writes inside a critical section.
     pub struct UartLoggerBlocking(Mutex<RefCell<Option<Uart>>>);
 
+    // SAFETY: The UART is only accessed through the critical section mutex.
     unsafe impl Send for UartLoggerBlocking {}
+    // SAFETY: The UART is only accessed through the critical section mutex.
     unsafe impl Sync for UartLoggerBlocking {}
 
     static UART_LOGGER_BLOCKING: UartLoggerBlocking =
@@ -79,13 +82,16 @@ pub mod uart_blocking {
         }
     }
 
+    /// Blocking UART logger which uses a busy flag instead of a critical section.
     pub struct UartLoggerWithBusyFlag {
         busy: AtomicBool,
         skip_in_isr: AtomicBool,
         uart: UnsafeCell<Option<Uart>>,
     }
 
+    // SAFETY: The UART is only accessed while holding the busy flag.
     unsafe impl Send for UartLoggerWithBusyFlag {}
+    // SAFETY: The UART is only accessed while holding the busy flag.
     unsafe impl Sync for UartLoggerWithBusyFlag {}
 
     static UART_LOGGER_UNSAFE_SINGLE_THREAD: UartLoggerWithBusyFlag = UartLoggerWithBusyFlag {
@@ -144,6 +150,8 @@ pub mod uart_blocking {
             LOG_SEL_UNSAFE_SINGLE_CORE,
             core::sync::atomic::Ordering::Relaxed,
         );
+        // SAFETY: Only reached once because of `LOGGER_INIT_DONE`, before the logger is
+        // registered.
         let opt_uart = unsafe { &mut *UART_LOGGER_UNSAFE_SINGLE_THREAD.uart.get() };
         opt_uart.replace(uart);
 
@@ -166,6 +174,7 @@ pub mod uart_blocking {
                 return;
             }
 
+            // SAFETY: The busy flag is held.
             let uart_mut = unsafe { &mut *self.uart.get() }.as_mut();
             if uart_mut.is_none() {
                 return;
@@ -186,6 +195,7 @@ pub mod uart_blocking {
                 return;
             }
 
+            // SAFETY: The busy flag is held.
             let uart_mut = unsafe { &mut *self.uart.get() }.as_mut();
             if uart_mut.is_none() {
                 return;
@@ -194,7 +204,7 @@ pub mod uart_blocking {
         }
     }
 
-    // Flush the selected logger instance.
+    /// Flush the active logger.
     pub fn flush() {
         match LOG_SEL.load(core::sync::atomic::Ordering::Relaxed) {
             val if val == LOG_SEL_LOCKED => UART_LOGGER_BLOCKING.flush(),
@@ -220,6 +230,7 @@ pub mod uart_blocking {
             }),
             val if val == LOG_SEL_UNSAFE_SINGLE_CORE => {
                 if let Some(_guard) = UartGuard::new(&UART_LOGGER_UNSAFE_SINGLE_THREAD.busy) {
+                    // SAFETY: The busy flag is held.
                     let uart_mut =
                         unsafe { &mut *UART_LOGGER_UNSAFE_SINGLE_THREAD.uart.get() }.as_mut();
                     if let Some(uart) = uart_mut {
@@ -307,7 +318,9 @@ pub mod asynch {
         buf: critical_section::Mutex<core::cell::RefCell<heapless::String<4096>>>,
     }
 
+    // SAFETY: The pipe writer and the buffer are only accessed inside a critical section.
     unsafe impl Send for Logger {}
+    // SAFETY: The pipe writer and the buffer are only accessed inside a critical section.
     unsafe impl Sync for Logger {}
 
     static LOGGER: Logger = Logger {
@@ -377,6 +390,8 @@ pub mod asynch {
         });
     }
 
+    /// Initialize the logger. Returns the reader of the log pipe, which has to be drained by the
+    /// user. Returns [None] if a logger was already initialized.
     pub fn init_generic(
         level: LevelFilter,
     ) -> Option<embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>> {
@@ -391,16 +406,21 @@ pub mod asynch {
         Some(reader)
     }
 
+    /// Initialize the logger with a UART TX for the output. Returns [None] if a logger was already
+    /// initialized.
     pub fn init_with_uart_tx(level: LevelFilter, tx: TxAsync) -> Option<UartLoggerRunner> {
         init_generic(level).map(|reader| UartLoggerRunner { reader, tx })
     }
 
+    /// Writes the log pipe content to the UART. [UartLoggerRunner::run] has to be polled, for
+    /// example in a dedicated task.
     pub struct UartLoggerRunner {
         reader: embassy_sync::pipe::Reader<'static, CriticalSectionRawMutex, 4096>,
         tx: TxAsync,
     }
 
     impl UartLoggerRunner {
+        /// Drain the log pipe to the UART.
         pub async fn run(&mut self) -> ! {
             let mut log_buf = [0u8; 1024];
 

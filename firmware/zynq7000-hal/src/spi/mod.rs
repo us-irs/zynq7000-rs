@@ -25,7 +25,9 @@ use zynq7000::spi::{
     SPI_0_BASE_ADDR, SPI_1_BASE_ADDR,
 };
 
+/// Depth of the TX and RX FIFO in bytes.
 pub const FIFO_DEPTH: usize = 128;
+/// Value of the module ID register.
 pub const MODULE_ID: u32 = 0x90106;
 
 pub mod asynch;
@@ -34,13 +36,17 @@ pub use asynch::*;
 pub mod slave;
 pub use slave::*;
 
+/// SPI peripheral ID.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SpiId {
+    /// SPI 0.
     Spi0 = 0,
+    /// SPI 1.
     Spi1 = 1,
 }
 
 impl SpiId {
+    /// GIC interrupt of the peripheral.
     #[inline]
     pub const fn interrupt_id(&self) -> crate::Interrupt {
         match self {
@@ -58,26 +64,34 @@ impl SpiId {
     /// interfere with each other.
     #[inline]
     pub unsafe fn steal_regs(&self) -> MmioRegisters<'static> {
-        match self {
-            SpiId::Spi0 => unsafe { zynq7000::spi::Registers::new_mmio_fixed_0() },
-            SpiId::Spi1 => unsafe { zynq7000::spi::Registers::new_mmio_fixed_1() },
+        // SAFETY: Upheld by the caller.
+        unsafe {
+            match self {
+                SpiId::Spi0 => zynq7000::spi::Registers::new_mmio_fixed_0(),
+                SpiId::Spi1 => zynq7000::spi::Registers::new_mmio_fixed_1(),
+            }
         }
     }
 }
 
+/// Common trait for PS SPI peripherals.
 pub trait PsSpi {
+    /// SPI register block.
     fn reg_block(&self) -> MmioRegisters<'static>;
+    /// SPI ID. [None] if the register block is not a PS SPI peripheral.
     fn id(&self) -> Option<SpiId>;
 }
 
 impl PsSpi for MmioRegisters<'static> {
     #[inline]
     fn reg_block(&self) -> MmioRegisters<'static> {
+        // SAFETY: The block is passed to the driver by value, so there is only one user.
         unsafe { self.clone() }
     }
 
     #[inline]
     fn id(&self) -> Option<SpiId> {
+        // SAFETY: Only the address is used, the pointer is not dereferenced.
         let base_addr = unsafe { self.ptr() } as usize;
         if base_addr == SPI_0_BASE_ADDR {
             return Some(SpiId::Spi0);
@@ -88,27 +102,41 @@ impl PsSpi for MmioRegisters<'static> {
     }
 }
 
+/// MIO pin which can be used as SPI SCK.
 pub trait SckPin: MioPin {
+    /// SPI peripheral the pin belongs to.
     const SPI: SpiId;
+    /// Pin group. All pins of one SPI must be from the same group.
     const GROUP: usize;
 }
 
+/// MIO pin which can be used as SPI MOSI.
 pub trait MosiPin: MioPin {
+    /// SPI peripheral the pin belongs to.
     const SPI: SpiId;
+    /// Pin group. All pins of one SPI must be from the same group.
     const GROUP: usize;
 }
 
+/// MIO pin which can be used as SPI MISO.
 pub trait MisoPin: MioPin {
+    /// SPI peripheral the pin belongs to.
     const SPI: SpiId;
+    /// Pin group. All pins of one SPI must be from the same group.
     const GROUP: usize;
 }
 
+/// MIO pin which can be used as SPI slave select.
 pub trait SsPin: MioPin {
+    /// Slave select index.
     const IDX: usize;
+    /// SPI peripheral the pin belongs to.
     const SPI: SpiId;
+    /// Pin group. All pins of one SPI must be from the same group.
     const GROUP: usize;
 }
 
+/// MIO multiplexer configuration for the SPI pins.
 pub const SPI_MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b101));
 
 // SPI0, choice 1
@@ -338,16 +366,30 @@ impl SsPin for Pin<Mio51> {
     const IDX: usize = 2;
 }
 
+/// Hardware chip select.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum ChipSelect {
+    /// Slave select 0.
     Slave0,
+    /// Slave select 1.
     Slave1,
+    /// Slave select 2.
     Slave2,
-    Decoded { cs0: bool, cs1: bool, cs2: bool },
+    /// Raw slave select lines for an external 3 to 8 decoder.
+    Decoded {
+        /// Slave select 0 line.
+        cs0: bool,
+        /// Slave select 1 line.
+        cs1: bool,
+        /// Slave select 2 line.
+        cs2: bool,
+    },
+    /// No slave selected.
     None,
 }
 
 impl ChipSelect {
+    /// Raw value of the `PCS` config register field.
     pub const fn raw_reg(&self) -> u4 {
         u4::new(match self {
             ChipSelect::Slave0 => 0b0000,
@@ -360,6 +402,7 @@ impl ChipSelect {
         })
     }
 
+    /// Chip select from the raw `PCS` value, without external decoding.
     #[inline]
     pub const fn cs_no_ext_decoding(&self, raw: u4) -> Option<ChipSelect> {
         let val = raw.value();
@@ -429,6 +472,7 @@ pub enum SlaveSelectConfig {
     AutoCsAutoStart = 0b00,
 }
 
+/// SPI configuration.
 #[derive(Debug, Copy, Clone)]
 pub struct Config {
     baud_div: BaudDivSel,
@@ -438,6 +482,7 @@ pub struct Config {
 }
 
 impl Config {
+    /// Create a new configuration.
     pub fn new(baud_div: BaudDivSel, init_mode: Mode, ss_config: SlaveSelectConfig) -> Self {
         Self {
             baud_div,
@@ -447,6 +492,8 @@ impl Config {
         }
     }
 
+    /// Calculate the baud rate divisor which comes closest to the target clock, without
+    /// exceeding it.
     pub fn calculate_for_io_clock(
         target_clock: Hertz,
         io_clock: &IoClocks,
@@ -472,6 +519,7 @@ impl Config {
         }
     }
 
+    /// Use an external 3 to 8 decoder for the slave select lines.
     pub fn enable_external_decoding(&mut self) {
         self.with_ext_decoding = true;
     }
@@ -492,6 +540,7 @@ impl SpiLowLevel {
     /// from multiple threads. The user must ensure that concurrent accesses are safe and do not
     /// interfere with each other.
     pub unsafe fn steal(id: SpiId) -> Self {
+        // SAFETY: Upheld by the caller.
         let regs = unsafe {
             match id {
                 SpiId::Spi0 => zynq7000::spi::Registers::new_mmio_fixed_0(),
@@ -511,10 +560,12 @@ impl SpiLowLevel {
     pub unsafe fn clone(&self) -> Self {
         Self {
             id: self.id,
+            // SAFETY: Upheld by the caller.
             regs: unsafe { self.regs.clone() },
         }
     }
 
+    /// Enable the SPI reference clock of this peripheral.
     pub fn enable_ref_clock(&mut self) {
         // Safety: We only touch register bits of the specified peripheral to enable the clock.
         unsafe {
@@ -527,15 +578,18 @@ impl SpiLowLevel {
         }
     }
 
+    /// SPI ID.
     pub fn id(&self) -> SpiId {
         self.id
     }
 
+    /// Disable the peripheral.
     #[inline]
     pub fn disable(&mut self) {
         self.regs.write_enable(0);
     }
 
+    /// Enable the peripheral.
     #[inline]
     pub fn enable(&mut self) {
         self.regs.write_enable(1);
@@ -623,36 +677,43 @@ impl SpiLowLevel {
         self.select_hw_cs(ChipSelect::None);
     }
 
+    /// Write one byte to the TX FIFO without checking the fill level.
     #[inline(always)]
     pub fn write_fifo_unchecked(&mut self, data: u8) {
         self.regs.write_tx_data(FifoWrite::new(data));
     }
 
+    /// Read one byte from the RX FIFO without checking the fill level.
     #[inline(always)]
     pub fn read_fifo_unchecked(&mut self) -> u8 {
         self.regs.read_rx_data().value()
     }
 
+    /// Start the transfer in manual start mode.
     #[inline]
     pub fn issue_manual_start(&mut self) {
         self.regs.modify_config(|val| val.with_manual_start(true));
     }
 
+    /// Read the interrupt status.
     #[inline]
     pub fn read_interrupt_status(&self) -> InterruptStatus {
         self.regs.read_interrupt_status()
     }
 
+    /// Read the enabled interrupts.
     #[inline]
     pub fn read_enabled_interrupts(&self) -> InterruptEnabled {
         self.regs.read_enabled_interrupts()
     }
 
+    /// Read the RX FIFO not empty threshold.
     #[inline]
     pub fn read_rx_not_empty_threshold(&self) -> u32 {
         self.regs.read_rx_trig()
     }
 
+    /// Set the RX FIFO not empty threshold.
     #[inline]
     pub fn set_rx_fifo_trigger(&mut self, trigger: u32) -> Result<(), InvalidTriggerError> {
         if trigger > FIFO_DEPTH as u32 {
@@ -662,6 +723,7 @@ impl SpiLowLevel {
         Ok(())
     }
 
+    /// Set the TX FIFO not full threshold.
     #[inline]
     pub fn set_tx_fifo_trigger(&mut self, trigger: u32) -> Result<(), InvalidTriggerError> {
         if trigger > FIFO_DEPTH as u32 {
@@ -671,6 +733,7 @@ impl SpiLowLevel {
         Ok(())
     }
 
+    /// Write the delay control register.
     #[inline]
     pub fn write_delay_control(&mut self, delay_control: DelayControl) {
         self.regs.write_delay_control(delay_control);
@@ -765,17 +828,21 @@ pub struct Spi {
     config: Config,
 }
 
+/// The register block is not a PS SPI peripheral.
 #[derive(Debug, thiserror::Error)]
 #[error("invalid SPI ID")]
 pub struct InvalidPsSpiError;
 
+/// FIFO threshold is larger than the FIFO depth.
 #[derive(Debug, thiserror::Error)]
 #[error("invalid trigger value {0}")]
 pub struct InvalidTriggerError(pub usize);
 
 // TODO: Add and handle MUX config check.
+/// Error for the SPI constructors.
 #[derive(Debug, thiserror::Error)]
 pub enum SpiConstructionError {
+    /// The register block is not a PS SPI peripheral.
     #[error("invalid SPI ID {0}")]
     InvalidPsSpi(#[from] InvalidPsSpiError),
     /// The specified pins are not compatible to the specified SPI peripheral.
@@ -784,11 +851,13 @@ pub enum SpiConstructionError {
     /// The specified pins are not from the same pin group.
     #[error("pin group missmatch")]
     GroupMissmatch,
+    /// The pins belong to different SPI peripherals.
     #[error("invalid pin configuration for SPI")]
     InvalidPinConf,
 }
 
 impl Spi {
+    /// Create a driver with MIO pins and without hardware slave select.
     pub fn new_no_hw_ss<Sck: SckPin, Mosi: MosiPin, Miso: MisoPin>(
         spi: impl PsSpi,
         config: Config,
@@ -811,6 +880,7 @@ impl Spi {
         Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
     }
 
+    /// Create a driver with MIO pins and one hardware slave select.
     pub fn new_one_hw_cs<Sck: SckPin, Mosi: MosiPin, Miso: MisoPin, Ss: SsPin>(
         spi: impl PsSpi,
         config: Config,
@@ -835,6 +905,7 @@ impl Spi {
         Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
     }
 
+    /// Create a driver with MIO pins and two hardware slave selects.
     pub fn new_with_two_hw_cs<Sck: SckPin, Mosi: MosiPin, Miso: MisoPin, Ss0: SsPin, Ss1: SsPin>(
         spi: impl PsSpi,
         config: Config,
@@ -869,6 +940,7 @@ impl Spi {
         Ok(Self::new_generic_unchecked(spi_id, spi.reg_block(), config))
     }
 
+    /// Create a driver with MIO pins and three hardware slave selects.
     pub fn new_with_three_hw_cs<
         Sck: SckPin,
         Mosi: MosiPin,
@@ -926,6 +998,7 @@ impl Spi {
         ))
     }
 
+    /// Create a driver without configuring any pins and without checking the ID.
     pub fn new_generic_unchecked(id: SpiId, regs: MmioRegisters<'static>, config: Config) -> Self {
         let periph_sel = match id {
             SpiId::Spi0 => crate::PeriphSelect::Spi0,
@@ -940,16 +1013,19 @@ impl Spi {
         spi
     }
 
+    /// SPI ID.
     #[inline]
     pub const fn id(&self) -> SpiId {
         self.inner.id
     }
 
+    /// GIC interrupt of the peripheral.
     #[inline]
     pub const fn interrupt_id(&self) -> crate::Interrupt {
         self.inner.id.interrupt_id()
     }
 
+    /// Write the delay control register.
     pub fn write_delay_control(&mut self, delay_control: DelayControl) {
         self.inner.write_delay_control(delay_control);
     }
@@ -967,6 +1043,7 @@ impl Spi {
         self.reconfigure();
     }
 
+    /// Start the transfer if a manual start configuration is used.
     #[inline]
     pub fn issue_manual_start_for_manual_cfg(&mut self) {
         if self.config.ss_config == SlaveSelectConfig::AutoCsManualStart
@@ -982,6 +1059,7 @@ impl Spi {
         &mut self.inner
     }
 
+    /// SPI registers.
     #[inline]
     pub fn regs(&mut self) -> &mut MmioRegisters<'static> {
         &mut self.inner.regs
@@ -1011,6 +1089,7 @@ impl Spi {
         written
     }
 
+    /// Blocking read. Zeros are written.
     pub fn read(&mut self, words: &mut [u8]) {
         if words.is_empty() {
             return;
@@ -1046,6 +1125,7 @@ impl Spi {
         }
     }
 
+    /// Blocking write. The read data is discarded.
     pub fn write(&mut self, words: &[u8]) {
         if words.is_empty() {
             return;
@@ -1077,6 +1157,7 @@ impl Spi {
         self.inner.regs.write_tx_trig(1);
     }
 
+    /// Blocking transfer.
     pub fn transfer(&mut self, read: &mut [u8], write: &[u8]) {
         if read.is_empty() {
             return;
@@ -1113,6 +1194,7 @@ impl Spi {
         }
     }
 
+    /// Blocking in-place transfer.
     pub fn transfer_in_place(&mut self, words: &mut [u8]) {
         if words.is_empty() {
             return;
@@ -1185,17 +1267,23 @@ impl embedded_hal::spi::SpiBus for Spi {
     }
 }
 
+/// SPI device which uses a hardware chip select.
 pub struct SpiWithHwCs<Delay: DelayNs> {
+    /// SPI bus.
     pub spi: Spi,
+    /// Chip select of the device.
     pub cs: ChipSelect,
+    /// Delay provider for [embedded_hal::spi::Operation::DelayNs].
     pub delay: Delay,
 }
 
 impl<Delay: DelayNs> SpiWithHwCs<Delay> {
+    /// Create a new device.
     pub fn new(spi: Spi, cs: ChipSelect, delay: Delay) -> Self {
         Self { spi, cs, delay }
     }
 
+    /// Release the SPI bus.
     pub fn release(self) -> Spi {
         self.spi
     }
@@ -1256,6 +1344,7 @@ pub fn reset(id: SpiId) {
             .with_periph0_cpu1x_rst(false)
             .build(),
     };
+    // SAFETY: Only the SPI reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_spi(assert_reset);
@@ -1282,6 +1371,7 @@ pub fn reset(id: SpiId) {
 /// problematic for driving certain sensors and instead take a smaller value! Reduce the divisor
 /// calculated by this function subtracting a small value to get a functioning SPI clock.
 pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6> {
+    // SAFETY: The SPI clock control register is only read.
     let slcr = unsafe { Slcr::steal() };
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     let ref_clock = match spi_clk_ctrl.srcsel() {
@@ -1305,6 +1395,7 @@ pub fn calculate_largest_allowed_spi_ref_clk_divisor(clks: &Clocks) -> Option<u6
 /// clock. It was proven that taking values which are only slightly larger than the CPU 1x
 /// clock are problematic for driving ceratin devices.
 pub fn configure_spi_ref_clock(clks: &mut Clocks, target_clock: Hertz) {
+    // SAFETY: The SPI clock control register is only read.
     let slcr = unsafe { Slcr::steal() };
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     let ref_clk = match spi_clk_ctrl.srcsel() {
@@ -1320,7 +1411,9 @@ pub fn configure_spi_ref_clock(clks: &mut Clocks, target_clock: Hertz) {
     }
 }
 
+/// Configures the SPI reference clock with the given divisor and updates the clock information.
 pub fn configure_spi_ref_clock_with_divisor(clks: &mut Clocks, divisor: u6) {
+    // SAFETY: Only the SPI clock control register is changed.
     let mut slcr = unsafe { Slcr::steal() };
     let spi_clk_ctrl = slcr.regs().clk_ctrl_shared().read_spi_clk_ctrl();
     slcr.modify(|regs| {

@@ -1,3 +1,4 @@
+//! SD card driver for the PS SDIO peripherals.
 use arbitrary_int::{traits::Integer as _, u3, u4, u6, u12};
 use embedded_sdmmc_types::sdcard::{
     CardType,
@@ -29,7 +30,9 @@ pub use zynq7000::slcr::mio::IoType;
 pub mod commands;
 pub mod pins;
 
+/// MIO multiplexer configuration for the SDIO pins.
 pub const MUX_CONF: MuxConfig = MuxConfig::new_with_l3(u3::new(0b100));
+/// SD card block length in bytes.
 pub const BLOCK_LEN: usize = 512;
 
 /// Negotiated as part of ACMD41 during SD card initialization.
@@ -56,6 +59,7 @@ pub struct SdCardInfo {
 }
 
 impl SdCardInfo {
+    /// Card type.
     #[inline]
     pub fn card_type(&self) -> CardType {
         self.card_type
@@ -67,37 +71,48 @@ impl SdCardInfo {
         self.rca
     }
 
+    /// Card specific data (CSD).
     #[inline]
     pub fn csd(&self) -> &embedded_sdmmc_types::sdcard::csd::Csd {
         &self.csd
     }
 
+    /// Card identification (CID).
     #[inline]
     pub fn cid(&self) -> &embedded_sdmmc_types::sdcard::cid::Cid {
         &self.cid
     }
 }
 
+/// The register block is not a PS SDIO peripheral.
 #[derive(Debug, thiserror::Error)]
 #[error("invalid peripheral instance")]
 pub struct InvalidPeripheralError;
 
+/// Memory card interface error.
 #[derive(Debug, Clone, Copy, thiserror::Error)]
 pub enum MciError {
+    /// Response CRC error.
     #[error("response CRC")]
     ResponseCrc,
+    /// Response end bit error.
     #[error("response end bit")]
     ResponseEndBit,
+    /// Response timeout.
     #[error("response timeout")]
     ResponseTimeout,
+    /// Data CRC error.
     #[error("data CRC")]
     DataCrc,
+    /// Data timeout.
     #[error("data timeout")]
     DataTimeout,
+    /// Data end bit error.
     #[error("data end bit")]
     DataEndBit,
 }
 
+/// Response error bits of the interrupt status.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct ResponseErrorBits {
     index: bool,
@@ -107,32 +122,38 @@ pub struct ResponseErrorBits {
 }
 
 impl ResponseErrorBits {
+    /// Any response error is set.
     #[inline]
     pub const fn has_error(&self) -> bool {
         self.index || self.crc || self.end_bit || self.timeout
     }
 
+    /// Command index error.
     #[inline]
     pub const fn index(&self) -> bool {
         self.index
     }
 
+    /// Command CRC error.
     #[inline]
     pub const fn crc(&self) -> bool {
         self.crc
     }
 
+    /// Command end bit error.
     #[inline]
     pub const fn end_bit(&self) -> bool {
         self.end_bit
     }
 
+    /// Command timeout.
     #[inline]
     pub const fn response_timeout(&self) -> bool {
         self.timeout
     }
 }
 
+/// Data error bits of the interrupt status.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct DataErrorBits {
     crc: bool,
@@ -141,21 +162,25 @@ pub struct DataErrorBits {
 }
 
 impl DataErrorBits {
+    /// Data CRC error.
     #[inline]
     pub const fn crc(&self) -> bool {
         self.crc
     }
 
+    /// Data timeout.
     #[inline]
     pub const fn timeout(&self) -> bool {
         self.timeout
     }
 }
 
+/// Interrupt status with helpers for the error bits.
 #[derive(Debug, Copy, Clone)]
 pub struct StatusWrapper(pub zynq7000::sdio::InterruptStatus);
 
 impl StatusWrapper {
+    /// Response error bits.
     #[inline]
     pub fn response_errors(&self) -> ResponseErrorBits {
         ResponseErrorBits {
@@ -166,6 +191,7 @@ impl StatusWrapper {
         }
     }
 
+    /// Any response error is set.
     #[inline]
     pub fn has_response_errors(&self) -> bool {
         self.0.command_index_error()
@@ -174,11 +200,13 @@ impl StatusWrapper {
             || self.0.command_timeout_error()
     }
 
+    /// Any data error is set.
     #[inline]
     pub fn has_data_error(&self) -> bool {
         self.0.data_timeout_error() || self.0.data_crc_error() || self.0.data_end_bit_error()
     }
 
+    /// Data error bits.
     #[inline]
     pub fn data_errors(&self) -> DataErrorBits {
         DataErrorBits {
@@ -189,20 +217,27 @@ impl StatusWrapper {
     }
 }
 
+/// SD card initialization error.
 #[derive(Debug, Copy, Clone, thiserror::Error)]
 pub enum InitializationError {
+    /// A command response has errors.
     #[error("response error")]
     ResponseError(ResponseErrorBits),
+    /// The response content is not as expected.
     #[error("unexpected response")]
     UnexpectedResponse,
+    /// The card is in an unexpected state.
     #[error("unexpected SD state")]
     UnexpectedState,
+    /// The CSD is invalid.
     #[error("invalid CSD: {0}")]
     Csd(#[from] InvalidCsdStructureFieldError),
+    /// The CID checksum is invalid.
     #[error("invalid CID")]
     Cid(#[from] embedded_sdmmc_types::sdcard::cid::ChecksumInvalidError),
 }
 
+/// Initialization error together with the step in which it happened.
 #[derive(Debug, Copy, Clone)]
 pub struct InitializationErrorWithStep {
     step: InitStep,
@@ -210,35 +245,46 @@ pub struct InitializationErrorWithStep {
 }
 
 impl InitializationErrorWithStep {
+    /// Error.
     #[inline]
     pub fn error(&self) -> InitializationError {
         self.error
     }
 
+    /// Initialization step.
     #[inline]
     pub fn step(&self) -> InitStep {
         self.step
     }
 }
 
+/// SD card initialization step.
 #[derive(Debug, Copy, Clone)]
 pub enum InitStep {
     /// CMD0.
     IdleCommand,
+    /// CMD8.
     SendingIfCondCmd8,
+    /// ACMD41.
     SendingIfCondAcmd41,
+    /// CMD2.
     RequestCid,
+    /// CMD9.
     RequestCsd,
     /// CMD3.
     RequestRca,
+    /// CMD7.
     PutIntoTransferState,
     /// ACMD6.
     SetBusWidth,
 }
 
+/// SDIO peripheral ID.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SdioId {
+    /// SDIO 0.
     _0,
+    /// SDIO 1.
     _1,
 }
 
@@ -249,6 +295,7 @@ impl SdioId {
     ///
     /// Circumvents ownership and safety guarantees of the HAL.
     pub const unsafe fn steal_regs(&self) -> zynq7000::sdio::MmioRegisters<'static> {
+        // SAFETY: Upheld by the caller.
         unsafe {
             match self {
                 SdioId::_0 => zynq7000::sdio::Registers::new_mmio_fixed_0(),
@@ -258,19 +305,24 @@ impl SdioId {
     }
 }
 
+/// Common trait for PS SDIO peripherals.
 pub trait SdioRegisters {
+    /// SDIO register block.
     fn reg_block(&self) -> zynq7000::sdio::MmioRegisters<'static>;
+    /// SDIO ID. [None] if the register block is not a PS SDIO peripheral.
     fn id(&self) -> Option<SdioId>;
 }
 
 impl SdioRegisters for zynq7000::sdio::MmioRegisters<'static> {
     #[inline]
     fn reg_block(&self) -> zynq7000::sdio::MmioRegisters<'static> {
+        // SAFETY: The block is passed to the driver by value, so there is only one user.
         unsafe { self.clone() }
     }
 
     #[inline]
     fn id(&self) -> Option<SdioId> {
+        // SAFETY: Only the address is used, the pointer is not dereferenced.
         let base_addr = unsafe { self.ptr() } as usize;
         if base_addr == SDIO_BASE_ADDR_0 {
             return Some(SdioId::_0);
@@ -281,6 +333,7 @@ impl SdioRegisters for zynq7000::sdio::MmioRegisters<'static> {
     }
 }
 
+/// SD clock divisors for the initialization and the data transfer phase.
 #[derive(Debug, Clone, Copy)]
 pub struct SdioDivisors {
     /// Divisor which will be used during the initialization phase when ACMD41 is issued.
@@ -293,7 +346,7 @@ pub struct SdioDivisors {
 }
 
 impl SdioDivisors {
-    // Calculate the SDIO clock divisors for the given SDIO reference clock and target speed.
+    /// Calculate the SDIO clock divisors for the given SDIO reference clock and target speed.
     pub fn calculate(ref_clk: Hertz, target_speed: Hertz) -> Self {
         const INIT_CLOCK_HZ: u32 = 400_000;
         let divisor_select_from_value = |value: u32| match value {
@@ -322,6 +375,7 @@ impl SdioDivisors {
     }
 }
 
+/// SDIO clock configuration.
 #[derive(Debug, Clone, Copy)]
 pub struct SdClockConfig {
     /// Selects the source clock for the SDIO peripheral reference clock.
@@ -336,6 +390,7 @@ pub struct SdClockConfig {
 }
 
 impl SdClockConfig {
+    /// Create a new configuration.
     pub fn new(
         src_sel: SrcSelIo,
         ref_clock_divisor: u6,
@@ -350,6 +405,7 @@ impl SdClockConfig {
         }
     }
 
+    /// Calculate the configuration for the target SD speed, sourced from the IO PLL.
     pub fn calculate_for_io_clock(
         io_clocks: &IoClocks,
         target_ref_clock: Hertz,
@@ -396,10 +452,12 @@ impl SdLowLevel {
     pub unsafe fn clone(&self) -> Self {
         Self {
             id: self.id,
+            // SAFETY: Upheld by the caller.
             regs: unsafe { self.regs.clone() },
         }
     }
 
+    /// Disable the SD clock. Optionally reset the peripheral and disable the internal clock.
     #[inline]
     pub fn disable(&mut self, with_reset: bool, internal_clock_disable: bool) {
         self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
@@ -420,21 +478,25 @@ impl SdLowLevel {
         }
     }
 
+    /// Read the capabilities register.
     #[inline]
     pub fn capabilities(&self) -> zynq7000::sdio::Capabilities {
         self.regs.read_capabilities()
     }
 
+    /// Read the interrupt status.
     #[inline]
     pub fn read_status(&self) -> StatusWrapper {
         StatusWrapper(self.regs.read_interrupt_status())
     }
 
+    /// Read one word from the buffer data port.
     #[inline]
     pub fn read_data_word(&self) -> u32 {
         self.regs.read_buffer_data_port()
     }
 
+    /// Write one word to the buffer data port.
     #[inline]
     pub fn write_data_word(&mut self, word: u32) {
         self.regs.write_buffer_data_port(word)
@@ -449,6 +511,7 @@ impl SdLowLevel {
     /// divisor based on the initial phase divider specified in the [SdioDivisors] field of the
     /// configuration.
     pub fn configure_clock(&mut self, clock_config: &SdClockConfig) {
+        // SAFETY: Only the SDIO clock control register is written.
         unsafe {
             Slcr::with(|slcr| {
                 slcr.clk_ctrl().modify_sdio_clk_ctrl(|mut val| {
@@ -466,6 +529,7 @@ impl SdLowLevel {
         self.configure_sd_clock_div_init_phase(&clock_config.sdio_clock_divisors);
     }
 
+    /// Reset the peripheral, then configure the clocks and the initial bus settings.
     pub fn initialize(&mut self, clock_config: &SdClockConfig) {
         if self.id == SdioId::_0 {
             enable_amba_peripheral_clock(crate::PeriphSelect::Sdio0);
@@ -538,12 +602,14 @@ impl SdLowLevel {
         self.clear_all_status_bits();
     }
 
+    /// Read the 32 bit response of a 48 bit response type.
     #[inline]
     pub fn read_u32_response(&self) -> u32 {
         // Index valid, unwrap okay.
         self.regs.read_responses(0).unwrap()
     }
 
+    /// Read the 128 bit response of a 136 bit response type.
     #[inline]
     pub fn read_u128_response(&self, buf: &mut [u32; 4]) -> [u8; 16] {
         for (index, word) in buf.iter_mut().rev().enumerate() {
@@ -575,6 +641,7 @@ impl SdLowLevel {
         });
     }
 
+    /// Enable the internal clock.
     #[inline]
     pub fn enable_internal_clock(&mut self) {
         self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
@@ -583,6 +650,7 @@ impl SdLowLevel {
         });
     }
 
+    /// Enable the SD clock output.
     #[inline]
     pub fn enable_sd_clock(&mut self) {
         self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
@@ -591,6 +659,7 @@ impl SdLowLevel {
         });
     }
 
+    /// Disable the SD clock output.
     #[inline]
     pub fn disable_sd_clock(&mut self) {
         self.regs.modify_clock_timeout_sw_reset_control(|mut val| {
@@ -615,11 +684,13 @@ impl SdLowLevel {
         }
     }
 
+    /// Read the present state register.
     #[inline]
     pub fn read_present_state(&self) -> PresentState {
         self.regs.read_present_state()
     }
 
+    /// Clear all status bits, then write the argument and the command.
     #[inline]
     pub fn write_command(&mut self, command: CommandRegister, arg: u32) {
         self.clear_all_status_bits();
@@ -627,6 +698,7 @@ impl SdLowLevel {
         self.regs.write_command(command)
     }
 
+    /// Clear all interrupt status bits.
     #[inline]
     pub fn clear_all_status_bits(&mut self) {
         self.regs
@@ -635,6 +707,7 @@ impl SdLowLevel {
             ));
     }
 
+    /// Clear the given interrupt status bits.
     #[inline]
     pub fn clear_status_bits(&mut self, status: InterruptStatus) {
         self.regs.write_interrupt_status(status);
@@ -656,6 +729,7 @@ pub struct SdCardUninit {
 }
 
 impl SdCardUninit {
+    /// Create a driver for SDIO 0 with MIO pins.
     pub fn new_for_sdio_0<
         Sdio0Clock: pins::Sdio0ClockPin,
         Sdio0Command: pins::Sdio0CommandPin,
@@ -685,6 +759,7 @@ impl SdCardUninit {
         ))
     }
 
+    /// Create a driver for SDIO 1 with MIO pins.
     pub fn new_for_sdio_1<
         Sdio1Clock: pins::Sdio1ClockPin,
         Sdio1Command: pins::Sdio1CommandPin,
@@ -724,6 +799,7 @@ impl SdCardUninit {
     ) -> Self {
         let ll = SdLowLevel::new(regs).unwrap();
         // Configuration taken from ps7_init.html.
+        // SAFETY: Only SDIO related SLCR registers are written.
         unsafe {
             crate::slcr::Slcr::with(|slcr| {
                 IoPeriphPin::new_with_full_config_and_unlocked_slcr(
@@ -826,6 +902,7 @@ impl SdCardUninit {
         &mut self.ll
     }
 
+    /// Low-level driver.
     pub fn ll(&self) -> &SdLowLevel {
         &self.ll
     }
@@ -840,38 +917,49 @@ impl SdCardUninit {
         })
     }
 
+    /// Send a command and wait for the response.
     #[inline]
     pub fn send_command(&mut self, command: CommandRegister, argument: u32) -> StatusWrapper {
         self.ll.send_command(command, argument)
     }
 
+    /// Read the 32 bit response of a 48 bit response type.
     #[inline]
     pub fn read_u32_response(&self) -> u32 {
         self.ll.read_u32_response()
     }
 
+    /// SDIO registers.
     #[inline]
     pub fn regs(&mut self) -> &mut zynq7000::sdio::MmioRegisters<'static> {
         &mut self.ll.regs
     }
 }
 
+/// SD card operation error.
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum DeviceError {
+    /// A command response has errors.
     #[error("response error")]
     ResponseError(ResponseErrorBits),
+    /// A data transfer has errors.
     #[error("data error")]
     DataError(DataErrorBits),
+    /// The card is in an unexpected state.
     #[error("unexpected card state: {0:?}")]
     UnexpectedState(response::State),
+    /// The response content is not as expected.
     #[error("unexpected response")]
     UnexpectedResponse,
+    /// The buffer length is not a multiple of the block length.
     #[error("invalid block size, larger than 512, or not multiple of 512")]
     InvalidBlockSize,
+    /// Too many blocks for a single multi-block transfer.
     #[error("too many blocks for a single multi-block transfer")]
     TooManyBlocks,
 }
 
+/// Initialized SD card.
 pub struct SdCard {
     ll: core::cell::RefCell<SdLowLevel>,
     clock_config: SdClockConfig,
@@ -879,6 +967,7 @@ pub struct SdCard {
 }
 
 impl SdCard {
+    /// Run the card initialization again.
     pub fn reinitialize(&mut self) -> Result<(), InitializationErrorWithStep> {
         let mut ll = self.ll.borrow_mut();
         ll.disable(true, false);
@@ -894,6 +983,7 @@ impl SdCard {
     ///
     /// Allows to create multiple handles to the same SD card.
     pub unsafe fn clone(&self) -> SdCard {
+        // SAFETY: Upheld by the caller.
         unsafe {
             Self {
                 ll: core::cell::RefCell::new(self.ll.borrow_mut().clone()),
@@ -903,30 +993,36 @@ impl SdCard {
         }
     }
 
+    /// Low-level driver.
     #[inline]
     pub fn ll(&self) -> core::cell::RefMut<'_, SdLowLevel> {
         self.ll.borrow_mut()
     }
 
+    /// Send a command and wait for the response.
     pub fn send_command(&self, cmd: CommandRegister, arg: u32) -> StatusWrapper {
         self.ll.borrow_mut().send_command(cmd, arg)
     }
 
+    /// Information read from the card during initialization.
     #[inline]
     pub fn card_info(&self) -> &SdCardInfo {
         &self.sd_info
     }
 
+    /// Relative card address (RCA).
     #[inline]
     pub fn rca(&self) -> u16 {
         self.sd_info.rca
     }
 
+    /// Read the 32 bit response of a 48 bit response type.
     #[inline]
     pub fn read_u32_response(&self) -> u32 {
         self.ll.borrow_mut().read_u32_response()
     }
 
+    /// Read the card status with CMD13.
     pub fn read_status(&self) -> Result<response::CardStatus, DeviceError> {
         let status = self.send_command(
             commands::CMD13_SEND_STATUS,
@@ -960,6 +1056,7 @@ impl SdCard {
         self.sd_info.card_type
     }
 
+    /// Check that the card is in the transfer state.
     pub fn verify_sd_card_transfer_state(
         &self,
         target_state: response::State,
@@ -1394,6 +1491,7 @@ pub fn send_acmd(
     Ok(ll.send_command(acmd, arg))
 }
 
+/// Send ACMD41 until the card reports that it is ready.
 pub fn wait_for_amd41_card_ready(
     ll: &mut SdLowLevel,
     rca: u16,
@@ -1432,6 +1530,7 @@ pub fn reset(id: SdioId, cycles: u32) {
             .with_periph0_cpu1x_rst(false)
             .build(),
     };
+    // SAFETY: Only the SDIO reset register is written.
     unsafe {
         Slcr::with(|regs| {
             regs.reset_ctrl().write_sdio(assert_reset);

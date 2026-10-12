@@ -15,18 +15,22 @@ use super::{
 };
 use crate::enable_amba_peripheral_clock;
 
+/// I2C slave configuration.
 pub struct Config {
+    /// 7 bit slave address.
     pub address: u7,
     /// Must be at least as fast as the fastest SCL frequency on the bus, see TRM p.643.
     pub clk_cfg: ClockConfig,
 }
 
+/// I2C slave driver.
 pub struct I2cSlave {
     id: I2cId,
     regs: MmioRegisters<'static>,
 }
 
 impl I2cSlave {
+    /// Create a driver which uses MIO pins.
     pub fn new_with_mio<Sck: SckPin, Sda: SdaPin>(
         i2c: impl PsI2c,
         config: Config,
@@ -36,11 +40,13 @@ impl I2cSlave {
         Ok(Self::new_generic(id, i2c.reg_block(), config))
     }
 
+    /// Create a driver which uses EMIO pins.
     pub fn new_with_emio(i2c: impl PsI2c, config: Config) -> Result<Self, InvalidPsI2cError> {
         let id = i2c.id().ok_or(InvalidPsI2cError)?;
         Ok(Self::new_generic(id, i2c.reg_block(), config))
     }
 
+    /// Create a driver without configuring any pins.
     pub fn new_generic(id: I2cId, mut regs: MmioRegisters<'static>, config: Config) -> Self {
         let periph_sel = match id {
             I2cId::I2c0 => crate::PeriphSelect::I2c0,
@@ -75,30 +81,36 @@ impl I2cSlave {
     pub unsafe fn steal(id: I2cId) -> Self {
         Self {
             id,
+            // SAFETY: Upheld by the caller.
             regs: unsafe { id.steal_regs() },
         }
     }
 
+    /// I2C ID.
     #[inline]
     pub const fn id(&self) -> I2cId {
         self.id
     }
 
+    /// GIC interrupt of the peripheral.
     #[inline]
     pub const fn interrupt_id(&self) -> crate::Interrupt {
         self.id.interrupt_id()
     }
 
+    /// Enable the given interrupts.
     #[inline]
     pub fn enable_interrupts(&mut self, interrupts: InterruptControl) {
         self.regs.write_interrupt_enable(interrupts);
     }
 
+    /// Disable the given interrupts.
     #[inline]
     pub fn disable_interrupts(&mut self, interrupts: InterruptControl) {
         self.regs.write_interrupt_disable(interrupts);
     }
 
+    /// Read the interrupt status.
     #[inline]
     pub fn read_interrupt_status(&self) -> InterruptStatus {
         self.regs.read_interrupt_status()
@@ -122,16 +134,19 @@ impl I2cSlave {
         self.regs.read_transfer_size().size()
     }
 
+    /// Read one byte from the RX FIFO.
     #[inline]
     pub fn read_data(&mut self) -> u8 {
         self.regs.read_data().data()
     }
 
+    /// Write one byte to the TX FIFO.
     #[inline]
     pub fn write_data(&mut self, data: u8) {
         self.regs.write_data(Fifo::new_with_raw_value(data as u32));
     }
 
+    /// Clear the FIFO.
     #[inline]
     pub fn clear_fifo(&mut self) {
         self.regs.modify_control(|cr| cr.with_clear_fifo(true));

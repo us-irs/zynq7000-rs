@@ -1,5 +1,4 @@
 //! # System Level Control Register (SLCR) module
-#![deny(missing_docs)]
 use zynq7000::slcr::MmioRegisters;
 
 /// Lock key for the SLCR registers.
@@ -19,6 +18,7 @@ impl Slcr {
     /// with the [SLCR MMIO][MmioRegisters] block as an input argument. It is the user's responsibility
     /// that the SLCR is not used concurrently in a way which leads to data races.
     pub unsafe fn with<F: FnOnce(&mut MmioRegisters<'static>)>(f: F) {
+        // SAFETY: Upheld by the caller.
         let mut slcr = unsafe { zynq7000::slcr::Registers::new_mmio_fixed() };
         slcr.write_unlock(UNLOCK_KEY);
         f(&mut slcr);
@@ -38,6 +38,7 @@ impl Slcr {
     /// responsibility that these wrappers are not used concurrently in a way which leads to
     /// data races.
     pub unsafe fn steal() -> Self {
+        // SAFETY: Upheld by the caller.
         Self::new(unsafe { zynq7000::slcr::Registers::new_mmio_fixed() })
     }
 

@@ -14,18 +14,23 @@ static ARM_PLL_INIT: AtomicBool = AtomicBool::new(false);
 static IO_PLL_INIT: AtomicBool = AtomicBool::new(false);
 static DDR_PLL_INIT: AtomicBool = AtomicBool::new(false);
 
+/// PLL multiplier is out of range.
 #[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq)]
 #[error("pll muliplier value {0} is out of range ({PLL_MUL_MIN}..={PLL_MUL_MAX})")]
 pub struct MulOutOfRangeError(pub u32);
 
+/// Error for the [PllConfig] constructors.
 #[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PllConfigCtorError {
+    /// The PS clock is zero.
     #[error("invalid input")]
     InvalidInput,
+    /// PLL multiplier is out of range.
     #[error("pll multiplier out of range: {0}")]
     MulOutOfRange(#[from] MulOutOfRangeError),
 }
 
+/// PLL configuration.
 pub struct PllConfig {
     fdiv: u7,
     charge_pump: u4,
@@ -34,6 +39,7 @@ pub struct PllConfig {
 }
 
 impl PllConfig {
+    /// Create a configuration for the given target clock.
     pub fn new_from_target_clock(
         ps_clk: Hertz,
         target_clk: Hertz,
@@ -228,6 +234,7 @@ pub fn configure_ddr_pll(boot_mode: BootMode, pll_config: PllConfig) {
 /// This function should only be called once during system initialization, for example in the
 /// first-stage bootloader (FSBL).
 pub unsafe fn configure_arm_pll_unchecked(boot_mode: BootMode, pll_config: PllConfig) {
+    // SAFETY: Upheld by the caller.
     unsafe {
         crate::slcr::Slcr::with(|slcr| {
             let pll_ctrl_reg = slcr.clk_ctrl().pointer_to_arm_pll_ctrl();
@@ -251,6 +258,7 @@ pub unsafe fn configure_arm_pll_unchecked(boot_mode: BootMode, pll_config: PllCo
 /// This function should only be called once during system initialization, for example in the
 /// first-stage bootloader (FSBL).
 pub unsafe fn configure_io_pll_unchecked(boot_mode: BootMode, pll_config: PllConfig) {
+    // SAFETY: Upheld by the caller.
     unsafe {
         crate::slcr::Slcr::with(|slcr| {
             let pll_ctrl_reg = slcr.clk_ctrl().pointer_to_io_pll_ctrl();
@@ -274,6 +282,7 @@ pub unsafe fn configure_io_pll_unchecked(boot_mode: BootMode, pll_config: PllCon
 /// This function should only be called once during system initialization, for example in the
 /// first-stage bootloader (FSBL).
 pub unsafe fn configure_ddr_pll_unchecked(boot_mode: BootMode, pll_config: PllConfig) {
+    // SAFETY: Upheld by the caller.
     unsafe {
         crate::slcr::Slcr::with(|slcr| {
             let pll_ctrl_reg = slcr.clk_ctrl().pointer_to_ddr_pll_ctrl();
@@ -314,42 +323,45 @@ unsafe fn configure_pll_unchecked(
     pll_ctrl_reg: *mut zynq7000::slcr::clocks::PllControl,
     pll_cfg_reg: *mut zynq7000::slcr::clocks::PllConfig,
 ) {
-    // Step 1: Program the multiplier and other PLL configuration parameters.
-    // New values will only be consumed once the PLL is reset.
-    let mut pll_ctrl = unsafe { core::ptr::read_volatile(pll_ctrl_reg) };
-    pll_ctrl.set_fdiv(cfg.fdiv);
-    unsafe { core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl) };
+    // SAFETY: The pointers come from the unlocked SLCR passed in by the caller.
+    unsafe {
+        // Step 1: Program the multiplier and other PLL configuration parameters.
+        // New values will only be consumed once the PLL is reset.
+        let mut pll_ctrl = core::ptr::read_volatile(pll_ctrl_reg);
+        pll_ctrl.set_fdiv(cfg.fdiv);
+        core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl);
 
-    let mut pll_cfg = unsafe { core::ptr::read_volatile(pll_cfg_reg) };
-    pll_cfg.set_charge_pump(cfg.charge_pump);
-    pll_cfg.set_loop_resistor(cfg.loop_resistor);
-    pll_cfg.set_lock_count(cfg.lock_count);
-    unsafe { core::ptr::write_volatile(pll_cfg_reg, pll_cfg) };
+        let mut pll_cfg = core::ptr::read_volatile(pll_cfg_reg);
+        pll_cfg.set_charge_pump(cfg.charge_pump);
+        pll_cfg.set_loop_resistor(cfg.loop_resistor);
+        pll_cfg.set_lock_count(cfg.lock_count);
+        core::ptr::write_volatile(pll_cfg_reg, pll_cfg);
 
-    // Step 2: Force the PLL into bypass mode. If the PLL bypass mode pin is tied high,
-    // the PLLs need to be enabled. According to the TRM, this is done by setting the
-    // PLL_BYPASS_QUAL bit to 0, which de-asserts the reset to the Arm PLL.
-    pll_ctrl = unsafe { core::ptr::read_volatile(pll_ctrl_reg) };
-    if boot_mode.pll_config() == zynq7000::slcr::BootPllConfig::Bypassed {
-        pll_ctrl.set_bypass_qual(false);
+        // Step 2: Force the PLL into bypass mode. If the PLL bypass mode pin is tied high,
+        // the PLLs need to be enabled. According to the TRM, this is done by setting the
+        // PLL_BYPASS_QUAL bit to 0, which de-asserts the reset to the Arm PLL.
+        pll_ctrl = core::ptr::read_volatile(pll_ctrl_reg);
+        if boot_mode.pll_config() == zynq7000::slcr::BootPllConfig::Bypassed {
+            pll_ctrl.set_bypass_qual(false);
+        }
+        pll_ctrl.set_bypass_force(true);
+        pll_ctrl.set_pwrdwn(false);
+        core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl);
+
+        // Step 3: Reset the PLL. This also loads the new configuration.
+        pll_ctrl = core::ptr::read_volatile(pll_ctrl_reg);
+        pll_ctrl.set_reset(true);
+        core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl);
+        pll_ctrl.set_reset(false);
+        core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl);
+
+        while ((slcr.clk_ctrl().read_pll_status().raw_value() >> pll_type.bit_offset_pll_locked())
+            & 0b1)
+            != 1
+        {}
+
+        pll_ctrl = core::ptr::read_volatile(pll_ctrl_reg);
+        pll_ctrl.set_bypass_force(false);
+        core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl);
     }
-    pll_ctrl.set_bypass_force(true);
-    pll_ctrl.set_pwrdwn(false);
-    unsafe { core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl) };
-
-    // Step 3: Reset the PLL. This also loads the new configuration.
-    pll_ctrl = unsafe { core::ptr::read_volatile(pll_ctrl_reg) };
-    pll_ctrl.set_reset(true);
-    unsafe { core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl) };
-    pll_ctrl.set_reset(false);
-    unsafe { core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl) };
-
-    while ((slcr.clk_ctrl().read_pll_status().raw_value() >> pll_type.bit_offset_pll_locked())
-        & 0b1)
-        != 1
-    {}
-
-    pll_ctrl = unsafe { core::ptr::read_volatile(pll_ctrl_reg) };
-    pll_ctrl.set_bypass_force(false);
-    unsafe { core::ptr::write_volatile(pll_ctrl_reg, pll_ctrl) };
 }

@@ -1,5 +1,4 @@
 //! System watchdog timer (SWDT) driver.
-#![deny(missing_docs)]
 use arbitrary_int::{u3, u12};
 use zynq7000::slcr::WdtClockSelectRegister;
 

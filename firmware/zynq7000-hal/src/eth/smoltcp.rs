@@ -11,6 +11,7 @@ pub fn on_interrupt(eth_id: EthernetId) -> InterruptResult {
     super::on_interrupt(eth_id, false, false)
 }
 
+/// smoltcp RX token.
 pub struct SmoltcpRxToken<'a> {
     pub(crate) descr_list: &'a mut super::rx_descr::DescriptorListWrapper<'static>,
     pub(crate) slot_index: usize,
@@ -62,6 +63,7 @@ impl SmoltcpRxToken<'_> {
     }
 }
 
+/// smoltcp TX token.
 pub struct SmoltcpTxToken<'a> {
     pub(crate) eth_id: super::EthernetId,
     pub(crate) descr_list: &'a mut super::tx_descr::DescriptorListWrapper<'static>,
@@ -112,6 +114,7 @@ impl SmoltcpTxToken<'_> {
         log::trace!("tx data: {:x?}", &buffer.0[0..len]);
         self.descr_list
             .prepare_transfer_unchecked(Some(addr), u14::new(len as u16), true, false);
+        // SAFETY: Only the start TX bit is set.
         let mut regs = unsafe { self.eth_id.steal_regs() };
         regs.modify_net_ctrl(|mut val| {
             val.set_start_tx(true);
@@ -121,6 +124,7 @@ impl SmoltcpTxToken<'_> {
     }
 }
 
+/// smoltcp driver.
 pub struct Driver(CommonSmoltcpDriver);
 
 impl smoltcp::phy::Device for Driver {
@@ -157,14 +161,20 @@ impl smoltcp::phy::Device for Driver {
     }
 }
 
+/// Descriptor lists and buffers for the driver.
 pub struct DescriptorsAndBuffers {
+    /// RX descriptor list.
     pub rx_descr: super::rx_descr::DescriptorListWrapper<'static>,
+    /// RX buffers, one for each RX descriptor.
     pub rx_bufs: &'static mut [super::AlignedBuffer],
+    /// TX descriptor list.
     pub tx_descr: super::tx_descr::DescriptorListWrapper<'static>,
+    /// TX buffers, one for each TX descriptor.
     pub tx_bufs: &'static mut [super::AlignedBuffer],
 }
 
 impl DescriptorsAndBuffers {
+    /// Bundle descriptors and buffers. Returns [None] if a buffer count does not match its descriptor count.
     pub fn new(
         rx_descr: super::rx_descr::DescriptorListWrapper<'static>,
         rx_bufs: &'static mut [super::AlignedBuffer],
@@ -182,6 +192,7 @@ impl DescriptorsAndBuffers {
         })
     }
 
+    /// Number of TX descriptors.
     #[inline]
     pub fn tx_burst_len(&self) -> usize {
         self.tx_descr.len()
