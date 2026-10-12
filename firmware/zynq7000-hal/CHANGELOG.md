@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - I2C API now exposes transaction, write_read, read and write directly.
 - `gpio::GpioPins` is renamed to `gpio::Pins`. `Pins::new` takes the new `gpio::Config`, which
   registers the GPIO interrupt handler by default.
+- `sd::commands::ACMD41_SEND_IF_COND` is renamed to `ACMD41_SD_SEND_OP_COND`.
+- Removed the unused `eth::tx_descr::IncrementResult`.
 
 ## Added
 

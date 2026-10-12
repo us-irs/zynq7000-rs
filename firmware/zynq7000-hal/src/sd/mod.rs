@@ -1326,7 +1326,7 @@ pub fn initialize_card(
     };
     send_acmd(
         ll,
-        commands::ACMD41_SEND_IF_COND,
+        commands::ACMD41_SD_SEND_OP_COND,
         argument::Acmd41::builder()
             .with_host_capacity_support(hsc)
             .with_fast_boot(false)
@@ -1497,7 +1497,7 @@ pub fn wait_for_amd41_card_ready(
     rca: u16,
 ) -> Result<embedded_sdmmc_types::sdcard::response::R3, InitializationError> {
     loop {
-        let status = send_acmd(ll, commands::ACMD41_SEND_IF_COND, 0, rca)?;
+        let status = send_acmd(ll, commands::ACMD41_SD_SEND_OP_COND, 0, rca)?;
         // Explicitely check only for timeouts here. CRC errors have occured here..
         if status.0.command_timeout_error() {
             return Err(InitializationError::ResponseError(status.response_errors()));

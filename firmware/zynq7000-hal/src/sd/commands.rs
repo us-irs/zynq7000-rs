@@ -151,6 +151,6 @@ pub const ACMD6_SET_BUS_WIDTH: CommandRegister = build_command_without_data(
     CommandConfig::new_with_r1_response(AcmdId::ACMD6_SetBusWidth.raw_value()),
 );
 /// ACMD41: Send the operating condition.
-pub const ACMD41_SEND_IF_COND: CommandRegister = build_command_without_data(
+pub const ACMD41_SD_SEND_OP_COND: CommandRegister = build_command_without_data(
     CommandConfig::new_with_r3_response(AcmdId::ACMD41_SdSendOpCond.raw_value()),
 );

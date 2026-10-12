@@ -335,7 +335,6 @@ pub struct Pins {
     pub mio43: Pin<Mio43>,
     /// MIO pin 44.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]
-    #[cfg(not(feature = "7z010-7z007s-clg225"))]
     pub mio44: Pin<Mio44>,
     /// MIO pin 45.
     #[cfg(not(feature = "7z010-7z007s-clg225"))]

@@ -16,7 +16,7 @@ static DDR_PLL_INIT: AtomicBool = AtomicBool::new(false);
 
 /// PLL multiplier is out of range.
 #[derive(thiserror::Error, Debug, Clone, Copy, PartialEq, Eq)]
-#[error("pll muliplier value {0} is out of range ({PLL_MUL_MIN}..={PLL_MUL_MAX})")]
+#[error("pll multiplier value {0} is out of range ({PLL_MUL_MIN}..={PLL_MUL_MAX})")]
 pub struct MulOutOfRangeError(pub u32);
 
 /// Error for the [PllConfig] constructors.

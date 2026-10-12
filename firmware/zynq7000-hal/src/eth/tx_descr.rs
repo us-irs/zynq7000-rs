@@ -210,14 +210,6 @@ impl TxError {
     }
 }
 
-/// Result of incrementing the TX index.
-pub enum IncrementResult {
-    /// The next descriptor is still in use by the hardware.
-    Busy,
-    /// The index was incremented.
-    Ok,
-}
-
 /// Result of [DescriptorListWrapper::check_and_handle_completed_transfer].
 #[derive(Debug, PartialEq, Eq)]
 pub enum BusyHandlingResult {
