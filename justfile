@@ -121,7 +121,7 @@ bootgen:
 
 [no-cd]
 run binary:
-  z7-run --config {{justfile_directory()}}/scripts/z7_run.toml --regs {{justfile_directory()}}/scripts/zedboard_init_regs.ron {{binary}}
+  z7-run --defmt --config {{justfile_directory()}}/scripts/z7_run.toml --regs {{justfile_directory()}}/scripts/zedboard_init_regs.ron {{binary}}
 
 # Experimental: like `run`, but builds z7-run from this checkout and decodes defmt logs over RTT.
 [no-cd]
