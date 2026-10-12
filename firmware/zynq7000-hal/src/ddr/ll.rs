@@ -186,10 +186,11 @@ pub unsafe fn calibrate_iob_impedance(
             val.set_enable(true);
             val
         });
-        if poll_for_done {
-            while !slcr.ddriob().read_dci_status().done() {}
-        }
     });
+    // Reads work while the SLCR is locked, so the poll does not block interrupts.
+    if poll_for_done {
+        while !slcr.regs().ddriob_shared().read_dci_status().done() {}
+    }
 }
 
 /// Static configuration for DDR IOBs. Each field is the value of the register with the same name.

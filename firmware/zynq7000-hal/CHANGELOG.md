@@ -38,6 +38,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - `I2c::new_with_mio` now checks that the pins belong to the given I2C peripheral.
 - GPIO pin configuration is now protected by a critical section. Configuring two pins of the same
   bank concurrently could overwrite each other's direction and output enable bits.
+- `Slcr::with` and `Slcr::modify` now run inside a critical section. An interrupting SLCR user could
+  lock the SLCR in the middle of a modification, so the remaining writes were ignored. This also
+  makes the read-modify-write in `enable_amba_peripheral_clock` and `disable_amba_periph_clk` safe.
 - `ddr::ll::calculate_dci_divisors_with_ddr_clk` always returned 63 for both divisors. The DCI
   clock is now close to 10 MHz.
 - `spi::configure_spi_ref_clock` did nothing for valid divisors and panicked for too large ones.
