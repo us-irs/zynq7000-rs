@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
   bank concurrently could overwrite each other's direction and output enable bits.
 - `ddr::ll::calculate_dci_divisors_with_ddr_clk` always returned 63 for both divisors. The DCI
   clock is now close to 10 MHz.
+- `spi::configure_spi_ref_clock` did nothing for valid divisors and panicked for too large ones.
 
 # [v0.2.0] 2026-08-20
 
