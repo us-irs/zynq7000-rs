@@ -84,12 +84,15 @@ impl FpgaClockConfig {
 /// Configures the FPGA clocks.
 pub fn configure(clock_config: FpgaClockConfig) {
     // SAFETY: Only the FPGA clock control registers are written.
-    let mut clk_regs = unsafe { ClockControlRegisters::new_mmio_fixed() };
-
-    clk_regs.fpga_0_clk_ctrl().write_ctrl(clock_config.0[0]);
-    clk_regs.fpga_1_clk_ctrl().write_ctrl(clock_config.0[1]);
-    clk_regs.fpga_2_clk_ctrl().write_ctrl(clock_config.0[2]);
-    clk_regs.fpga_3_clk_ctrl().write_ctrl(clock_config.0[3]);
+    unsafe {
+        crate::slcr::Slcr::with(|slcr| {
+            let mut clk_regs = slcr.clk_ctrl();
+            clk_regs.fpga_0_clk_ctrl().write_ctrl(clock_config.0[0]);
+            clk_regs.fpga_1_clk_ctrl().write_ctrl(clock_config.0[1]);
+            clk_regs.fpga_2_clk_ctrl().write_ctrl(clock_config.0[2]);
+            clk_regs.fpga_3_clk_ctrl().write_ctrl(clock_config.0[3]);
+        });
+    }
 }
 
 // The divisor search itself is tested in the `z7-clock-calc` crate, which - unlike this
