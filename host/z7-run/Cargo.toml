@@ -14,8 +14,8 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 # probe-rs = { version = "0.32" }
 # Must match x7dap's own probe-rs source exactly (see x7dap/Cargo.toml) - a different source
 # (even pointing at identical code) makes Cargo treat it as a distinct crate, breaking every
-# JtagAccess/ScanChainElement type shared between the two.
-probe-rs = { git = "https://github.com/robamu/probe-rs.git", branch = "jtag-and-ftdi-updates" }
+# JtagChain/ScanChainElement type shared between the two.
+probe-rs = { git = "https://github.com/robamu/probe-rs.git", branch = "add-new-memory-port" }
 x7dap = { git = "https://github.com/ustgt-irs/x7dap.git", branch = "use-probe-rs-jtag-abstraction" }
 anyhow = { version = "1" }
 ron = { version = "0.12" }

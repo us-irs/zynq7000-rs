@@ -365,8 +365,8 @@ fn flash_bitstream(probe: &mut Probe, data: &[u8], no_progress: bool) -> anyhow:
     };
 
     probe.attach_to_unspecified()?;
-    let jtag = probe
-        .try_as_jtag_probe()
+    let mut jtag = probe
+        .try_as_jtag_chain()
         .with_context(|| "selected probe does not support JTAG")?;
 
     let chain = jtag.scan_chain()?.to_vec();
@@ -382,10 +382,10 @@ fn flash_bitstream(probe: &mut Probe, data: &[u8], no_progress: bool) -> anyhow:
     if idcode.is_zynq7000()
         && let Some(fixed) = fixup_zynq_ir_lengths(&chain)
     {
-        jtag.set_scan_chain(&fixed)?;
+        jtag.set_chain(&fixed);
     }
 
-    jtag.select_target(tap_idx)?;
+    jtag.select(tap_idx)?;
 
     let mut x7 = X7::new(jtag, idcode);
     x7.program_with_callback(data, |n| bar.set_position(n as u64))?;
